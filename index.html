@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Menú de Projectes - Portafoli</title>
+    <!-- Importació de Ropa Sans (alternativa web a Ropa Mix Pro) -->
+    <link href="https://fonts.googleapis.com/css2?family=Ropa+Sans&display=swap" rel="stylesheet">
+    <style>
+        /* Definició de colors actualitzada */
+        :root {
+            --blau-corporatiu: rgb(29, 113, 184);
+            --blanc: #FFFFFF;
+            --negre: #000000;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Ropa Sans', sans-serif;
+            background-color: var(--blanc);
+            color: var(--blau-corporatiu);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Capçalera Institucional */
+        .header-institucional {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px 40px;
+            border-bottom: 2px solid var(--blau-corporatiu);
+            background-color: var(--blanc);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .logo-container img {
+            height: 50px; /* Alçada fixa per harmonitzar els logos */
+            width: auto;
+            display: block;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px 0;
+        }
+
+        .container {
+            width: 95%;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        header.menu-title {
+            margin-bottom: 40px;
+            border-bottom: 4px solid var(--blau-corporatiu);
+            display: inline-block;
+            padding: 0 20px 10px 20px;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--blau-corporatiu);
+        }
+
+        nav {
+            margin-top: 20px;
+        }
+
+        .menu-list {
+            list-style: none;
+        }
+
+        .menu-item {
+            margin-bottom: 15px;
+            transition: transform 0.2s ease;
+        }
+
+        .menu-item:hover {
+            transform: translateX(10px);
+        }
+
+        .menu-link {
+            display: block;
+            background-color: var(--negre);
+            color: var(--blanc);
+            text-decoration: none;
+            padding: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-left: 8px solid var(--blau-corporatiu);
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .menu-link:hover {
+            background-color: var(--blau-corporatiu);
+            color: var(--blanc);
+            border-left-color: var(--negre);
+        }
+
+        .footer {
+            padding: 30px;
+            text-align: center;
+            font-size: 0.9rem;
+            color: var(--negre);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        /* Responsive per a mòbils */
+        @media (max-width: 600px) {
+            .header-institucional {
+                flex-direction: column;
+                gap: 20px;
+                padding: 20px;
+            }
+            .logo-container img {
+                height: 40px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Capçalera Institucional amb LOGOS ACTUALITZATS -->
+    <header class="header-institucional">
+        <!-- Logo Esquerra: Institut de l'Ebre -->
+        <div class="logo-container">
+            <img src="img/Nou_logo_Institut_Ebre_NEGRE_NEGRE (1).jpg" alt="Logo Institut de l'Ebre">
+        </div>
+        
+        <!-- Logo Centre: InnovaFP -->
+        <div class="logo-container">
+            <img src="img/Innovafp.png" alt="Logo InnovaFP">
+        </div>
+        
+        <!-- Logo Dreta: Creem Oportunitats -->
+        <div class="logo-container">
+            <img src="img/Creem Oportunitats_COLOR (1).jpg" alt="Logo Creem Oportunitats">
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+            <header class="menu-title">
+                <h1>Menú de Projectes</h1>
+            </header>
+
+            <nav>
+                <ul class="menu-list">
+                    <li class="menu-item">
+                        <a href="website/curs_notebooklm/curs_notebooklm.html" class="menu-link">
+                            CURS NOTEBOOKLM
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </main>
+
+    <footer class="footer">
+        © 2026 - Repositori de projectes
+    </footer>
+
+</body>
+</html>
