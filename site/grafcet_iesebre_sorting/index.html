@@ -1,0 +1,1164 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GRAFCET Architect — IEC 60848:2013</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@400;600;800&display=swap');
+
+  :root {
+    --bg: #0e1117;
+    --panel: #161b27;
+    --border: #2a3347;
+    --text: #c8d6f0;
+    --text-dim: #5a6a88;
+    --active-fill: #1a2640;
+    --active-stroke: #f0c040;
+    --active-glow: rgba(240,192,64,0.35);
+    --blue: #3b82f6;
+    --green: #22c55e;
+    --red: #ef4444;
+    --orange: #f97316;
+    --yellow: #f0c040;
+    --cyan: #06b6d4;
+    --mono: 'Share Tech Mono', monospace;
+    --head: 'Barlow Condensed', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--mono);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px;
+    gap: 16px;
+  }
+
+  header {
+    width: 100%; max-width: 1600px;
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 12px;
+  }
+  header h1 {
+    font-family: var(--head);
+    font-size: 1.8rem; font-weight: 800;
+    letter-spacing: 3px; text-transform: uppercase;
+    color: #fff;
+  }
+  header h1 span { color: var(--yellow); }
+  .norm-badge {
+    font-family: var(--mono); font-size: 0.65rem;
+    background: var(--panel); border: 1px solid var(--border);
+    padding: 4px 10px; color: var(--text-dim); letter-spacing: 2px;
+  }
+
+  /* ─── GRAFCET GRID ─── */
+  .grafcet-grid {
+    width: 100%; max-width: 1600px;
+    display: flex; flex-wrap: wrap; gap: 12px; justify-content: center;
+  }
+
+  .grafcet-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    padding: 12px 10px 10px;
+    display: flex; flex-direction: column; align-items: center;
+    position: relative;
+  }
+  .grafcet-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--yellow), transparent);
+  }
+
+  .card-title {
+    font-family: var(--head); font-weight: 800; font-size: 0.75rem;
+    letter-spacing: 3px; text-transform: uppercase;
+    background: #fff; color: #000;
+    padding: 3px 16px; margin-bottom: 14px; width: 100%; text-align: center;
+  }
+
+  svg { background: transparent; overflow: visible; font-family: var(--mono); }
+
+  /* IEC 60848 SVG classes */
+  .step-rect { fill: #111827; stroke: #4a5a7a; stroke-width: 1.5; transition: fill 0.15s, stroke 0.15s; }
+  .step-rect.active { fill: var(--active-fill); stroke: var(--active-stroke); stroke-width: 2.5; filter: drop-shadow(0 0 6px var(--active-glow)); }
+  .step-init { fill: none; stroke: #4a5a7a; stroke-width: 1; }
+  .step-init.active { stroke: var(--active-stroke); }
+  .flow-line { stroke: #4a5a7a; stroke-width: 1.5; fill: none; }
+  .flow-line-dashed { stroke: #4a5a7a; stroke-width: 1.5; stroke-dasharray: 5,4; fill: none; }
+  .transition-bar { stroke: #c8d6f0; stroke-width: 3.5; stroke-linecap: round; }
+  .transition-label { font-size: 10px; fill: var(--cyan); font-style: italic; }
+  .action-box { fill: #0d1520; stroke: #3a4a66; stroke-width: 1.2; }
+  .action-qual { fill: #1a2235; stroke: #3a4a66; stroke-width: 1.2; }
+  .action-txt { font-size: 9px; fill: #a0b8e0; dominant-baseline: middle; }
+  .qual-txt { font-size: 10px; font-weight: bold; text-anchor: middle; dominant-baseline: middle; fill: #f0c040; }
+  .step-id { font-size: 12px; font-weight: bold; text-anchor: middle; dominant-baseline: middle; fill: #c8d6f0; }
+  .step-id.active { fill: var(--yellow); }
+  .cond-line { stroke: #6a7a9a; stroke-width: 1.2; fill: none; }
+  .cond-txt { font-size: 9px; font-style: italic; fill: var(--cyan); dominant-baseline: middle; }
+  .dot { fill: #4a5a7a; }
+  .arrow { fill: #4a5a7a; }
+  .jump-label { font-size: 10px; text-anchor: middle; fill: var(--orange); font-weight: bold; }
+  .emer-line { stroke: #ef4444; stroke-width: 1.5; stroke-dasharray: 6,3; fill: none; }
+  .emer-txt { font-size: 9px; fill: #ef4444; text-anchor: middle; }
+  .divO-line { stroke: #4a5a7a; stroke-width: 1.5; fill: none; }
+  .branch-label { font-size: 9px; fill: var(--text-dim); text-anchor: middle; font-style: italic; }
+
+  /* ─── BOTTOM PANEL ─── */
+  .bottom-panel {
+    width: 100%; max-width: 1600px;
+    display: grid; grid-template-columns: 1fr 1fr 340px; gap: 12px;
+  }
+
+  .control-group {
+    background: var(--panel); border: 1px solid var(--border); padding: 14px;
+  }
+  .cg-title {
+    font-family: var(--head); font-size: 0.7rem; font-weight: 800;
+    letter-spacing: 3px; text-transform: uppercase; color: var(--text-dim);
+    border-bottom: 1px solid var(--border); padding-bottom: 6px; margin-bottom: 12px;
+  }
+  .btn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .btn {
+    padding: 10px 8px; border: 1px solid var(--border);
+    background: #0d1520; color: var(--text);
+    cursor: pointer; font-family: var(--mono);
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px;
+    transition: all 0.1s; position: relative;
+  }
+  .btn::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; background: var(--blue); transform: scaleX(0); transition: transform 0.15s; }
+  .btn:hover:not(:disabled)::after { transform: scaleX(1); }
+  .btn:hover:not(:disabled) { background: #1a2640; color: #fff; }
+  .btn:active:not(:disabled) { transform: translateY(1px); }
+  .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .btn-start::after { background: var(--green); }
+  .btn-stop::after { background: var(--orange); }
+  .btn-emer { border-color: #7f1d1d; color: #f87171; }
+  .btn-emer::after { background: var(--red); }
+  .btn-emer.active { background: #450a0a; color: #fca5a5; border-color: var(--red); box-shadow: 0 0 12px rgba(239,68,68,0.4); }
+  .btn-emer.active::after { transform: scaleX(1); }
+  .btn-sensor { border-color: #1e3a5f; }
+  .btn-sensor:hover:not(:disabled) { border-color: var(--blue); }
+
+  /* ─── MONITOR CONSOLE ─── */
+  .monitor {
+    background: #050810; border: 1px solid #1a2a44;
+    padding: 14px; font-family: var(--mono);
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  .mon-section-title {
+    font-size: 0.6rem; letter-spacing: 2px; color: #334; text-transform: uppercase;
+    border-bottom: 1px solid #112; padding-bottom: 4px; margin-bottom: 6px;
+    color: #3a5a3a;
+  }
+  .mon-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.72rem; padding: 3px 0; border-bottom: 1px solid #0d1520;
+  }
+  .mon-key { color: #4a6a8a; }
+  .mon-val { font-weight: bold; color: #c8d6f0; }
+  .mon-val.on { color: #22c55e; text-shadow: 0 0 6px rgba(34,197,94,0.6); }
+  .mon-val.off { color: #1f3025; }
+  .mon-val.active-step { color: var(--yellow); text-shadow: 0 0 6px rgba(240,192,64,0.5); }
+  .mon-val.warn { color: var(--red); text-shadow: 0 0 6px rgba(239,68,68,0.5); }
+
+  /* Stack Light */
+  .stack-row { display: flex; align-items: center; gap: 14px; }
+  .stack-light { display: flex; gap: 8px; background: #0a0f18; padding: 8px 14px; border: 1px solid #1a2a44; border-radius: 2px; }
+  .light { width: 22px; height: 22px; border-radius: 50%; background: #0d1520; border: 1px solid #1a2a44; transition: all 0.1s; }
+  .light.red.on { background: var(--red); box-shadow: 0 0 10px var(--red); }
+  .light.green.on { background: var(--green); box-shadow: 0 0 10px var(--green); }
+  .light.blue.on { background: var(--blue); box-shadow: 0 0 10px var(--blue); }
+
+  /* Counters */
+  .counter-row { display: flex; gap: 10px; margin-top: 4px; }
+  .counter-box {
+    flex: 1; background: #0a0f18; border: 1px solid #1a2a44; padding: 6px;
+    text-align: center;
+  }
+  .counter-label { font-size: 0.6rem; color: #3a5a4a; letter-spacing: 1px; }
+  .counter-val { font-size: 1.4rem; color: var(--green); line-height: 1.2; }
+
+  @media (max-width: 1100px) {
+    .bottom-panel { grid-template-columns: 1fr 1fr; }
+    .monitor { grid-column: 1 / -1; }
+  }
+  @media (max-width: 700px) {
+    .bottom-panel { grid-template-columns: 1fr; }
+    .grafcet-grid { flex-direction: column; align-items: center; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>GRAFCET <span>Architect</span></h1>
+  <div class="norm-badge">IEC 60848:2013 · GEMMA + G1 + G2 + G3 + G4</div>
+</header>
+
+<div class="grafcet-grid">
+
+  <!-- ═══════════════ G_GEMMA ═══════════════ -->
+  <div class="grafcet-card">
+    <div class="card-title">G_GEMMA — Mestre de Modes</div>
+    <svg id="svg-gemma" width="310" height="760" viewBox="0 0 310 760">
+      <!-- Salt Global Emergència: línia discontínua vertical curta a l'esquerra -->
+      <!-- Text indicatiu superior -->
+      <text class="emer-txt" x="55" y="440" text-anchor="middle">Des de qualsevol etapa</text>
+      <text class="emer-txt" x="55" y="450" text-anchor="middle">!i_ncS4emer</text>
+      <!-- Línia discontínua curta des del text fins a la transició d'emergència -->
+      <line class="emer-line" x1="55" y1="455" x2="55" y2="495"/>
+      <!-- Transició emergència -->
+      <line class="transition-bar" x1="38" y1="495" x2="72" y2="495" stroke="#ef4444"/>
+      <text class="transition-label" x="78" y="499" fill="#ef4444">!i_ncS4emer</text>
+      <!-- Línia fins a D1 -->
+      <line class="emer-line" x1="55" y1="495" x2="55" y2="528"/>
+      <polygon points="51,524 55,531 59,524" fill="#ef4444"/>
+
+      <!-- A5 Inicial (doble quadrat) -->
+      <g id="gs-A5">
+        <rect class="step-rect" id="r-A5" x="30" y="30" width="50" height="50"/>
+        <rect class="step-init" id="ri-A5" x="35" y="35" width="40" height="40"/>
+        <text class="step-id" id="t-A5" x="55" y="56">A5</text>
+        <!-- acció condicionada: H2resetlight clk_1s -->
+        <line class="flow-line" x1="80" y1="55" x2="98" y2="55"/>
+        <rect class="action-qual" x="98" y="42" width="18" height="26"/>
+        <text class="qual-txt" x="107" y="56">C</text>
+        <rect class="action-box" x="116" y="42" width="108" height="26"/>
+        <text class="action-txt" x="120" y="56">o_H2resetlight</text>
+        <!-- diagonal condició -->
+        <line class="cond-line" x1="224" y1="42" x2="238" y2="28"/>
+        <text class="cond-txt" x="242" y="27">clk_1s</text>
+      </g>
+
+      <!-- flux A5→trans1 -->
+      <line class="flow-line" x1="55" y1="80" x2="55" y2="118"/>
+      <!-- transició T1 -->
+      <line class="transition-bar" x1="38" y1="118" x2="72" y2="118"/>
+      <text class="transition-label" x="78" y="122">i_S2reset</text>
+      <!-- flux trans1→A1 -->
+      <line class="flow-line" x1="55" y1="118" x2="55" y2="145"/>
+      <polygon class="arrow" points="51,141 55,148 59,141"/>
+
+      <!-- A1 -->
+      <g id="gs-A1">
+        <rect class="step-rect" id="r-A1" x="30" y="148" width="50" height="50"/>
+        <text class="step-id" id="t-A1" x="55" y="174">A1</text>
+        <!-- bus acció doble -->
+        <line class="flow-line" x1="80" y1="174" x2="96" y2="174"/>
+        <circle class="dot" cx="96" cy="174" r="2.5"/>
+        <!-- Acció 1: F/(G1,G2,G3,G4):{0} -->
+        <line class="flow-line" x1="96" y1="174" x2="96" y2="158"/>
+        <line class="flow-line" x1="96" y1="158" x2="104" y2="158"/>
+        <rect class="action-qual" x="104" y="144" width="18" height="28"/>
+        <text class="qual-txt" x="113" y="159">F</text>
+        <rect class="action-box" x="122" y="144" width="162" height="28"/>
+        <text class="action-txt" x="126" y="159">F/(G1,G2,G3,G4):{0}</text>
+        <!-- Acció 2: H3stoplight -->
+        <line class="flow-line" x1="96" y1="174" x2="96" y2="190"/>
+        <line class="flow-line" x1="96" y1="190" x2="104" y2="190"/>
+        <rect class="action-qual" x="104" y="176" width="18" height="28"/>
+        <text class="qual-txt" x="113" y="191">N</text>
+        <rect class="action-box" x="122" y="176" width="112" height="28"/>
+        <text class="action-txt" x="126" y="191">o_H3stoplight</text>
+      </g>
+
+      <!-- flux A1→trans2 -->
+      <line class="flow-line" x1="55" y1="198" x2="55" y2="235"/>
+      <line class="transition-bar" x1="38" y1="235" x2="72" y2="235"/>
+      <text class="transition-label" x="78" y="239">i_S1start</text>
+      <line class="flow-line" x1="55" y1="235" x2="55" y2="262"/>
+      <polygon class="arrow" points="51,258 55,265 59,258"/>
+
+      <!-- F1 -->
+      <g id="gs-F1">
+        <rect class="step-rect" id="r-F1" x="30" y="265" width="50" height="50"/>
+        <text class="step-id" id="t-F1" x="55" y="291">F1</text>
+        <!-- bus acció doble -->
+        <line class="flow-line" x1="80" y1="291" x2="96" y2="291"/>
+        <circle class="dot" cx="96" cy="291" r="2.5"/>
+        <!-- Acció 1: H1startlight N -->
+        <line class="flow-line" x1="96" y1="291" x2="96" y2="274"/>
+        <line class="flow-line" x1="96" y1="274" x2="104" y2="274"/>
+        <rect class="action-qual" x="104" y="260" width="18" height="28"/>
+        <text class="qual-txt" x="113" y="275">N</text>
+        <rect class="action-box" x="122" y="260" width="112" height="28"/>
+        <text class="action-txt" x="126" y="275">o_H1startlight</text>
+        <!-- Acció 2: C resetcounters -->
+        <line class="flow-line" x1="96" y1="291" x2="96" y2="312"/>
+        <line class="flow-line" x1="96" y1="312" x2="104" y2="312"/>
+        <rect class="action-qual" x="104" y="298" width="18" height="28"/>
+        <text class="qual-txt" x="113" y="313">C</text>
+        <rect class="action-box" x="122" y="298" width="142" height="28"/>
+        <text class="action-txt" x="126" y="308">o_H2resetlight +</text>
+        <text class="action-txt" x="126" y="319">C1,C2 = 0</text>
+        <!-- diagonal condició C -->
+        <line class="cond-line" x1="264" y1="298" x2="278" y2="283"/>
+        <text class="cond-txt" x="282" y="282">i_S2reset ∧</text>
+        <text class="cond-txt" x="282" y="293">T2_5s.Q</text>
+      </g>
+
+      <!-- flux F1→trans3 -->
+      <line class="flow-line" x1="55" y1="315" x2="55" y2="348"/>
+      <line class="transition-bar" x1="38" y1="348" x2="72" y2="348"/>
+      <text class="transition-label" x="78" y="352">!i_ncS3stop</text>
+      <!-- salt F1→A1: fletxa avall + label, igual que G1/G3/G4 -->
+      <line class="flow-line" x1="55" y1="348" x2="55" y2="375"/>
+      <polygon class="arrow" points="51,371 55,378 59,371" fill="#f97316"/>
+      <text class="jump-label" x="55" y="395">→ A1</text>
+
+      <!-- D1 -->
+      <g id="gs-D1">
+        <rect class="step-rect" id="r-D1" x="30" y="534" width="50" height="50"/>
+        <text class="step-id" id="t-D1" x="55" y="560">D1</text>
+        <!-- bus accions doble -->
+        <line class="flow-line" x1="80" y1="560" x2="96" y2="560"/>
+        <circle class="dot" cx="96" cy="560" r="2.5"/>
+        <!-- Acció 1 (dalt): C — H3stoplight parpelleja clk_1s -->
+        <line class="flow-line" x1="96" y1="560" x2="96" y2="542"/>
+        <line class="flow-line" x1="96" y1="542" x2="104" y2="542"/>
+        <rect class="action-qual" x="104" y="528" width="18" height="28"/>
+        <text class="qual-txt" x="113" y="543">C</text>
+        <rect class="action-box" x="122" y="528" width="112" height="28"/>
+        <text class="action-txt" x="126" y="543">o_H3stoplight</text>
+        <!-- diagonal condició — surt cap a dreta-dalt, espai lliure -->
+        <line class="cond-line" x1="234" y1="528" x2="248" y2="513"/>
+        <text class="cond-txt" x="252" y="512">clk_1s</text>
+        <!-- Acció 2 (baix): F/(G1,G2,G3,G4):{0} -->
+        <line class="flow-line" x1="96" y1="560" x2="96" y2="578"/>
+        <line class="flow-line" x1="96" y1="578" x2="104" y2="578"/>
+        <rect class="action-qual" x="104" y="564" width="18" height="28"/>
+        <text class="qual-txt" x="113" y="579">F</text>
+        <rect class="action-box" x="122" y="564" width="162" height="28"/>
+        <text class="action-txt" x="126" y="579">F/(G1,G2,G3,G4):{0}</text>
+      </g>
+
+      <!-- Rearm D1→A5 (salt) -->
+      <line class="flow-line" x1="55" y1="584" x2="55" y2="630"/>
+      <line class="transition-bar" x1="38" y1="618" x2="72" y2="618"/>
+      <text class="transition-label" x="78" y="622">i_ncS4emer</text>
+      <line class="flow-line" x1="55" y1="618" x2="55" y2="645"/>
+      <polygon class="arrow" points="51,641 55,648 59,641" fill="#f97316"/>
+      <text class="jump-label" x="55" y="665">→ A5</text>
+    </svg>
+  </div>
+
+  <!-- ═══════════════ G1 — Conveyor Entry ═══════════════ -->
+  <div class="grafcet-card">
+    <div class="card-title">G1 — Conveyor Entry</div>
+    <svg id="svg-g1" width="290" height="700" viewBox="0 0 290 700">
+
+      <!-- X0 Inicial -->
+      <g id="gs-X10">
+        <rect class="step-rect" id="r-X10" x="30" y="30" width="50" height="50"/>
+        <rect class="step-init" id="ri-X10" x="35" y="35" width="40" height="40"/>
+        <text class="step-id" id="t-X10" x="55" y="56">0</text>
+        <!-- Acció: Timer T1_G1_X0_5s -->
+        <line class="flow-line" x1="80" y1="55" x2="98" y2="55"/>
+        <rect class="action-qual" x="98" y="42" width="18" height="26"/>
+        <text class="qual-txt" x="107" y="56">N</text>
+        <rect class="action-box" x="116" y="42" width="148" height="26"/>
+        <text class="action-txt" x="120" y="56">T1_G1_X0_5s</text>
+      </g>
+
+      <line class="flow-line" x1="55" y1="80" x2="55" y2="118"/>
+      <line class="transition-bar" x1="38" y1="118" x2="72" y2="118"/>
+      <text class="transition-label" x="78" y="117">GEMMA=F1 ∧</text>
+      <text class="transition-label" x="78" y="128">T1_5s.Q</text>
+      <line class="flow-line" x1="55" y1="118" x2="55" y2="148"/>
+      <polygon class="arrow" points="51,144 55,151 59,144"/>
+
+      <!-- X11 -->
+      <g id="gs-X11">
+        <rect class="step-rect" id="r-X11" x="30" y="151" width="50" height="50"/>
+        <text class="step-id" id="t-X11" x="55" y="177">1</text>
+        <line class="flow-line" x1="80" y1="177" x2="96" y2="177"/>
+        <circle class="dot" cx="96" cy="177" r="2.5"/>
+        <line class="flow-line" x1="96" y1="177" x2="96" y2="162"/>
+        <line class="flow-line" x1="96" y1="162" x2="104" y2="162"/>
+        <rect class="action-qual" x="104" y="149" width="18" height="26"/>
+        <text class="qual-txt" x="113" y="163">N</text>
+        <rect class="action-box" x="122" y="149" width="138" height="26"/>
+        <text class="action-txt" x="126" y="163">o_KM1conveyorentry</text>
+        <line class="flow-line" x1="96" y1="177" x2="96" y2="192"/>
+        <line class="flow-line" x1="96" y1="192" x2="104" y2="192"/>
+        <rect class="action-qual" x="104" y="179" width="18" height="26"/>
+        <text class="qual-txt" x="113" y="193">N</text>
+        <rect class="action-box" x="122" y="179" width="100" height="26"/>
+        <text class="action-txt" x="126" y="193">o_KM2load</text>
+      </g>
+
+      <line class="flow-line" x1="55" y1="201" x2="55" y2="238"/>
+      <line class="transition-bar" x1="38" y1="238" x2="72" y2="238"/>
+      <text class="transition-label" x="78" y="242">i_B3palletsensor</text>
+      <line class="flow-line" x1="55" y1="238" x2="55" y2="265"/>
+      <polygon class="arrow" points="51,261 55,268 59,261"/>
+
+      <!-- X12 -->
+      <g id="gs-X12">
+        <rect class="step-rect" id="r-X12" x="30" y="268" width="50" height="50"/>
+        <text class="step-id" id="t-X12" x="55" y="294">2</text>
+        <line class="flow-line" x1="80" y1="294" x2="96" y2="294"/>
+        <circle class="dot" cx="96" cy="294" r="2.5"/>
+        <line class="flow-line" x1="96" y1="294" x2="96" y2="279"/>
+        <line class="flow-line" x1="96" y1="279" x2="104" y2="279"/>
+        <rect class="action-qual" x="104" y="266" width="18" height="26"/>
+        <text class="qual-txt" x="113" y="280">N</text>
+        <rect class="action-box" x="122" y="266" width="138" height="26"/>
+        <text class="action-txt" x="126" y="280">o_KM1conveyorentry</text>
+        <line class="flow-line" x1="96" y1="294" x2="96" y2="309"/>
+        <line class="flow-line" x1="96" y1="309" x2="104" y2="309"/>
+        <rect class="action-qual" x="104" y="296" width="18" height="26"/>
+        <text class="qual-txt" x="113" y="310">N</text>
+        <rect class="action-box" x="122" y="296" width="100" height="26"/>
+        <text class="action-txt" x="126" y="310">o_KM2load</text>
+      </g>
+
+      <line class="flow-line" x1="55" y1="318" x2="55" y2="355"/>
+      <line class="transition-bar" x1="38" y1="355" x2="72" y2="355"/>
+      <text class="transition-label" x="78" y="359">!i_B3palletsensor</text>
+      <line class="flow-line" x1="55" y1="355" x2="55" y2="382"/>
+      <polygon class="arrow" points="51,378 55,385 59,378"/>
+
+      <!-- X13 -->
+      <g id="gs-X13">
+        <rect class="step-rect" id="r-X13" x="30" y="385" width="50" height="50"/>
+        <text class="step-id" id="t-X13" x="55" y="411">3</text>
+        <line class="flow-line" x1="80" y1="411" x2="98" y2="411"/>
+        <rect class="action-qual" x="98" y="398" width="18" height="26"/>
+        <text class="qual-txt" x="107" y="412">N</text>
+        <rect class="action-box" x="116" y="398" width="100" height="26"/>
+        <text class="action-txt" x="120" y="412">o_KM2load</text>
+      </g>
+
+      <line class="flow-line" x1="55" y1="435" x2="55" y2="472"/>
+      <line class="transition-bar" x1="38" y1="472" x2="72" y2="472"/>
+      <text class="transition-label" x="78" y="476">i_B4loaded</text>
+      <line class="flow-line" x1="55" y1="472" x2="55" y2="499"/>
+      <polygon class="arrow" points="51,495 55,502 59,495"/>
+
+      <!-- X14 -->
+      <g id="gs-X14">
+        <rect class="step-rect" id="r-X14" x="30" y="502" width="50" height="50"/>
+        <text class="step-id" id="t-X14" x="55" y="528">4</text>
+      </g>
+
+      <!-- Tancament a X11 -->
+      <line class="flow-line" x1="55" y1="552" x2="55" y2="585"/>
+      <line class="transition-bar" x1="38" y1="572" x2="72" y2="572"/>
+      <text class="transition-label" x="78" y="576">etapaG2==0</text>
+      <line class="flow-line" x1="55" y1="572" x2="55" y2="600"/>
+      <polygon class="arrow" points="51,596 55,603 59,596" fill="#f97316"/>
+      <text class="jump-label" x="55" y="618">→ X1</text>
+    </svg>
+  </div>
+
+  <!-- ═══════════════ G2 — Transferència Direccional ═══════════════ -->
+  <div class="grafcet-card">
+    <div class="card-title">G2 — Transferència Direccional</div>
+    <svg id="svg-g2" width="460" height="700" viewBox="0 0 460 700">
+
+      <!-- X20 Inicial -->
+      <g id="gs-X20">
+        <rect class="step-rect" id="r-X20" x="185" y="20" width="50" height="50"/>
+        <rect class="step-init" id="ri-X20" x="190" y="25" width="40" height="40"/>
+        <text class="step-id" id="t-X20" x="210" y="46">0</text>
+      </g>
+
+      <line class="flow-line" x1="210" y1="70" x2="210" y2="108"/>
+      <line class="transition-bar" x1="193" y1="108" x2="227" y2="108"/>
+      <text class="transition-label" x="233" y="112">i_B3pallet ∧ GEMMA=F1</text>
+      <line class="flow-line" x1="210" y1="108" x2="210" y2="135"/>
+      <polygon class="arrow" points="206,131 210,138 214,131"/>
+
+      <!-- X21 -->
+      <g id="gs-X21">
+        <rect class="step-rect" id="r-X21" x="185" y="138" width="50" height="50"/>
+        <text class="step-id" id="t-X21" x="210" y="164">1</text>
+        <line class="flow-line" x1="235" y1="164" x2="252" y2="164"/>
+        <circle class="dot" cx="252" cy="164" r="2.5"/>
+        <line class="flow-line" x1="252" y1="164" x2="252" y2="149"/>
+        <line class="flow-line" x1="252" y1="149" x2="260" y2="149"/>
+        <rect class="action-qual" x="260" y="136" width="18" height="26"/>
+        <text class="qual-txt" x="269" y="150">N</text>
+        <rect class="action-box" x="278" y="136" width="138" height="26"/>
+        <text class="action-txt" x="282" y="150">o_KM1conveyorentry</text>
+        <line class="flow-line" x1="252" y1="164" x2="252" y2="179"/>
+        <line class="flow-line" x1="252" y1="179" x2="260" y2="179"/>
+        <rect class="action-qual" x="260" y="166" width="18" height="26"/>
+        <text class="qual-txt" x="269" y="180">N</text>
+        <rect class="action-box" x="278" y="166" width="100" height="26"/>
+        <text class="action-txt" x="282" y="180">o_KM2load</text>
+      </g>
+
+      <!-- Divergència OR — LÍNIA SIMPLE (branca o l'altra, mai simultànies) -->
+      <line class="flow-line" x1="210" y1="188" x2="210" y2="215"/>
+      <!-- Una sola línia horitzontal = Divergència-OR -->
+      <line class="divO-line" x1="75" y1="215" x2="345" y2="215"/>
+      <!-- Labels branques -->
+      <text class="branch-label" x="112" y="208">ALT (i_B1high∧i_B2low)</text>
+      <text class="branch-label" x="295" y="208">BAIX (i_B2low∧!i_B1high)</text>
+      <!-- Branca Esquerra -->
+      <line class="flow-line" x1="80" y1="215" x2="80" y2="243"/>
+      <line class="transition-bar" x1="63" y1="232" x2="97" y2="232"/>
+      <text class="transition-label" x="4" y="229">i_B1high</text>
+      <text class="transition-label" x="4" y="239">∧ i_B2low</text>
+      <line class="flow-line" x1="80" y1="232" x2="80" y2="262"/>
+      <polygon class="arrow" points="76,258 80,265 84,258"/>
+      <!-- Branca Dreta -->
+      <line class="flow-line" x1="340" y1="215" x2="340" y2="243"/>
+      <line class="transition-bar" x1="323" y1="232" x2="357" y2="232"/>
+      <text class="transition-label" x="362" y="229">i_B2low ∧</text>
+      <text class="transition-label" x="362" y="239">!i_B1high</text>
+      <line class="flow-line" x1="340" y1="232" x2="340" y2="262"/>
+      <polygon class="arrow" points="336,258 340,265 344,258"/>
+
+      <!-- X22 (Alt) -->
+      <g id="gs-X22">
+        <rect class="step-rect" id="r-X22" x="55" y="265" width="50" height="50"/>
+        <text class="step-id" id="t-X22" x="80" y="291">2</text>
+        <line class="flow-line" x1="105" y1="291" x2="122" y2="291"/>
+        <circle class="dot" cx="122" cy="291" r="2.5"/>
+        <line class="flow-line" x1="122" y1="291" x2="122" y2="276"/>
+        <line class="flow-line" x1="122" y1="276" x2="130" y2="276"/>
+        <rect class="action-qual" x="130" y="263" width="18" height="26"/>
+        <text class="qual-txt" x="139" y="277">N</text>
+        <rect class="action-box" x="148" y="263" width="120" height="26"/>
+        <text class="action-txt" x="152" y="277">o_KM1conveyorentry</text>
+        <line class="flow-line" x1="122" y1="291" x2="122" y2="306"/>
+        <line class="flow-line" x1="122" y1="306" x2="130" y2="306"/>
+        <rect class="action-qual" x="130" y="293" width="18" height="26"/>
+        <text class="qual-txt" x="139" y="307">N</text>
+        <rect class="action-box" x="148" y="293" width="80" height="26"/>
+        <text class="action-txt" x="152" y="307">o_KM2load</text>
+      </g>
+
+      <line class="flow-line" x1="80" y1="315" x2="80" y2="352"/>
+      <line class="transition-bar" x1="63" y1="352" x2="97" y2="352"/>
+      <text class="transition-label" x="4" y="356">i_B4loaded</text>
+      <line class="flow-line" x1="80" y1="352" x2="80" y2="379"/>
+      <polygon class="arrow" points="76,375 80,382 84,375"/>
+
+      <!-- X23 (Alt→Trans esquerra) -->
+      <g id="gs-X23">
+        <rect class="step-rect" id="r-X23" x="55" y="382" width="50" height="50"/>
+        <text class="step-id" id="t-X23" x="80" y="408">3</text>
+        <line class="flow-line" x1="105" y1="408" x2="122" y2="408"/>
+        <circle class="dot" cx="122" cy="408" r="2.5"/>
+        <line class="flow-line" x1="122" y1="408" x2="122" y2="393"/>
+        <line class="flow-line" x1="122" y1="393" x2="130" y2="393"/>
+        <rect class="action-qual" x="130" y="380" width="18" height="26"/>
+        <text class="qual-txt" x="139" y="394">N</text>
+        <rect class="action-box" x="148" y="380" width="120" height="26"/>
+        <text class="action-txt" x="152" y="394">o_KM4transferleft</text>
+        <line class="flow-line" x1="122" y1="408" x2="122" y2="423"/>
+        <line class="flow-line" x1="122" y1="423" x2="130" y2="423"/>
+        <rect class="action-qual" x="130" y="410" width="18" height="26"/>
+        <text class="qual-txt" x="139" y="424">N</text>
+        <rect class="action-box" x="148" y="410" width="120" height="26"/>
+        <text class="action-txt" x="152" y="424">o_KM6conveyorleft</text>
+      </g>
+
+      <line class="flow-line" x1="80" y1="432" x2="80" y2="469"/>
+      <line class="transition-bar" x1="63" y1="469" x2="97" y2="469"/>
+      <text class="transition-label" x="4" y="473">!i_B4loaded</text>
+      <line class="flow-line" x1="80" y1="469" x2="80" y2="496"/>
+      <polygon class="arrow" points="76,492 80,499 84,492"/>
+
+      <!-- X24 (Alt) -->
+      <g id="gs-X24">
+        <rect class="step-rect" id="r-X24" x="55" y="499" width="50" height="50"/>
+        <text class="step-id" id="t-X24" x="80" y="525">4</text>
+        <line class="flow-line" x1="105" y1="525" x2="122" y2="525"/>
+        <circle class="dot" cx="122" cy="525" r="2.5"/>
+        <line class="flow-line" x1="122" y1="525" x2="122" y2="510"/>
+        <line class="flow-line" x1="122" y1="510" x2="130" y2="510"/>
+        <rect class="action-qual" x="130" y="497" width="18" height="26"/>
+        <text class="qual-txt" x="139" y="511">N</text>
+        <rect class="action-box" x="148" y="497" width="120" height="26"/>
+        <text class="action-txt" x="152" y="511">o_KM4transferleft</text>
+        <line class="flow-line" x1="122" y1="525" x2="122" y2="540"/>
+        <line class="flow-line" x1="122" y1="540" x2="130" y2="540"/>
+        <rect class="action-qual" x="130" y="527" width="18" height="26"/>
+        <text class="qual-txt" x="139" y="541">N</text>
+        <rect class="action-box" x="148" y="527" width="120" height="26"/>
+        <text class="action-txt" x="152" y="541">o_KM6conveyorleft</text>
+      </g>
+
+      <!-- Tancament X24→X20 -->
+      <line class="flow-line" x1="80" y1="549" x2="80" y2="586"/>
+      <line class="transition-bar" x1="63" y1="575" x2="97" y2="575"/>
+      <text class="transition-label" x="4" y="572">i_ncB5left</text>
+      <text class="transition-label" x="4" y="582">_FE</text>
+      <line class="flow-line" x1="80" y1="575" x2="80" y2="608"/>
+      <polygon class="arrow" points="76,604 80,611 84,604" fill="#f97316"/>
+      <text class="jump-label" x="80" y="626">→ X20</text>
+
+      <!-- ── BRANCA DRETA ── -->
+      <!-- X25 (Baix) -->
+      <g id="gs-X25">
+        <rect class="step-rect" id="r-X25" x="315" y="265" width="50" height="50"/>
+        <text class="step-id" id="t-X25" x="340" y="291">5</text>
+        <line class="flow-line" x1="365" y1="291" x2="382" y2="291"/>
+        <circle class="dot" cx="382" cy="291" r="2.5"/>
+        <line class="flow-line" x1="382" y1="291" x2="382" y2="276"/>
+        <line class="flow-line" x1="382" y1="276" x2="390" y2="276"/>
+        <rect class="action-qual" x="390" y="263" width="18" height="26"/>
+        <text class="qual-txt" x="399" y="277">N</text>
+        <rect class="action-box" x="408" y="263" width="48" height="26"/>
+        <text class="action-txt" x="412" y="277">KM1</text>
+        <line class="flow-line" x1="382" y1="291" x2="382" y2="306"/>
+        <line class="flow-line" x1="382" y1="306" x2="390" y2="306"/>
+        <rect class="action-qual" x="390" y="293" width="18" height="26"/>
+        <text class="qual-txt" x="399" y="307">N</text>
+        <rect class="action-box" x="408" y="293" width="48" height="26"/>
+        <text class="action-txt" x="412" y="307">KM2</text>
+      </g>
+
+      <line class="flow-line" x1="340" y1="315" x2="340" y2="352"/>
+      <line class="transition-bar" x1="323" y1="352" x2="357" y2="352"/>
+      <text class="transition-label" x="362" y="356">i_B4loaded</text>
+      <line class="flow-line" x1="340" y1="352" x2="340" y2="379"/>
+      <polygon class="arrow" points="336,375 340,382 344,375"/>
+
+      <!-- X26 -->
+      <g id="gs-X26">
+        <rect class="step-rect" id="r-X26" x="315" y="382" width="50" height="50"/>
+        <text class="step-id" id="t-X26" x="340" y="408">6</text>
+        <line class="flow-line" x1="365" y1="408" x2="382" y2="408"/>
+        <circle class="dot" cx="382" cy="408" r="2.5"/>
+        <line class="flow-line" x1="382" y1="408" x2="382" y2="393"/>
+        <line class="flow-line" x1="382" y1="393" x2="390" y2="393"/>
+        <rect class="action-qual" x="390" y="380" width="18" height="26"/>
+        <text class="qual-txt" x="399" y="394">N</text>
+        <rect class="action-box" x="408" y="380" width="48" height="26"/>
+        <text class="action-txt" x="412" y="394">KM5</text>
+        <line class="flow-line" x1="382" y1="408" x2="382" y2="423"/>
+        <line class="flow-line" x1="382" y1="423" x2="390" y2="423"/>
+        <rect class="action-qual" x="390" y="410" width="18" height="26"/>
+        <text class="qual-txt" x="399" y="424">N</text>
+        <rect class="action-box" x="408" y="410" width="48" height="26"/>
+        <text class="action-txt" x="412" y="424">KM7</text>
+      </g>
+
+      <line class="flow-line" x1="340" y1="432" x2="340" y2="469"/>
+      <line class="transition-bar" x1="323" y1="469" x2="357" y2="469"/>
+      <text class="transition-label" x="362" y="473">!i_B4loaded</text>
+      <line class="flow-line" x1="340" y1="469" x2="340" y2="496"/>
+      <polygon class="arrow" points="336,492 340,499 344,492"/>
+
+      <!-- X27 -->
+      <g id="gs-X27">
+        <rect class="step-rect" id="r-X27" x="315" y="499" width="50" height="50"/>
+        <text class="step-id" id="t-X27" x="340" y="525">7</text>
+        <line class="flow-line" x1="365" y1="525" x2="382" y2="525"/>
+        <circle class="dot" cx="382" cy="525" r="2.5"/>
+        <line class="flow-line" x1="382" y1="525" x2="382" y2="510"/>
+        <line class="flow-line" x1="382" y1="510" x2="390" y2="510"/>
+        <rect class="action-qual" x="390" y="497" width="18" height="26"/>
+        <text class="qual-txt" x="399" y="511">N</text>
+        <rect class="action-box" x="408" y="497" width="48" height="26"/>
+        <text class="action-txt" x="412" y="511">KM5</text>
+        <line class="flow-line" x1="382" y1="525" x2="382" y2="540"/>
+        <line class="flow-line" x1="382" y1="540" x2="390" y2="540"/>
+        <rect class="action-qual" x="390" y="527" width="18" height="26"/>
+        <text class="qual-txt" x="399" y="541">N</text>
+        <rect class="action-box" x="408" y="527" width="48" height="26"/>
+        <text class="action-txt" x="412" y="541">KM7</text>
+      </g>
+
+      <line class="flow-line" x1="340" y1="549" x2="340" y2="586"/>
+      <line class="transition-bar" x1="323" y1="575" x2="357" y2="575"/>
+      <text class="transition-label" x="362" y="572">i_ncB7right</text>
+      <text class="transition-label" x="362" y="582">_FE</text>
+      <line class="flow-line" x1="340" y1="575" x2="340" y2="608"/>
+      <polygon class="arrow" points="336,604 340,611 344,604" fill="#f97316"/>
+      <text class="jump-label" x="340" y="626">→ X20</text>
+
+      <!-- cada branca tanca individualment amb el seu salt → X20 (ja graficats dalt) -->
+    </svg>
+  </div>
+
+  <!-- ═══════════════ G3 — Conveyor Right ═══════════════ -->
+  <div class="grafcet-card">
+    <div class="card-title">G3 — Conveyor Right</div>
+    <svg id="svg-g3" width="280" height="340" viewBox="0 0 280 340">
+
+      <!-- X30 -->
+      <g id="gs-X30">
+        <rect class="step-rect" id="r-X30" x="30" y="30" width="50" height="50"/>
+        <rect class="step-init" id="ri-X30" x="35" y="35" width="40" height="40"/>
+        <text class="step-id" id="t-X30" x="55" y="56">0</text>
+      </g>
+
+      <line class="flow-line" x1="55" y1="80" x2="55" y2="118"/>
+      <line class="transition-bar" x1="38" y1="118" x2="72" y2="118"/>
+      <text class="transition-label" x="78" y="114">i_ncB7right_FE</text>
+      <text class="transition-label" x="78" y="125">∧ GEMMA=F1</text>
+      <line class="flow-line" x1="55" y1="118" x2="55" y2="148"/>
+      <polygon class="arrow" points="51,144 55,151 59,144"/>
+
+      <!-- X31 -->
+      <g id="gs-X31">
+        <rect class="step-rect" id="r-X31" x="30" y="151" width="50" height="50"/>
+        <text class="step-id" id="t-X31" x="55" y="177">1</text>
+        <line class="flow-line" x1="80" y1="177" x2="96" y2="177"/>
+        <circle class="dot" cx="96" cy="177" r="2.5"/>
+        <line class="flow-line" x1="96" y1="177" x2="96" y2="162"/>
+        <line class="flow-line" x1="96" y1="162" x2="104" y2="162"/>
+        <rect class="action-qual" x="104" y="149" width="18" height="26"/>
+        <text class="qual-txt" x="113" y="163">N</text>
+        <rect class="action-box" x="122" y="149" width="120" height="26"/>
+        <text class="action-txt" x="126" y="163">o_KM7conveyorright</text>
+        <!-- Increment comptador RE -->
+        <line class="flow-line" x1="96" y1="177" x2="96" y2="192"/>
+        <line class="flow-line" x1="96" y1="192" x2="104" y2="192"/>
+        <rect class="action-qual" x="104" y="179" width="18" height="26"/>
+        <text class="qual-txt" x="113" y="193">P</text>
+        <rect class="action-box" x="122" y="179" width="140" height="26"/>
+        <text class="action-txt" x="126" y="193">ow_C1counter++</text>
+      </g>
+
+      <!-- Tancament X31→X30 -->
+      <line class="flow-line" x1="55" y1="201" x2="55" y2="255"/>
+      <line class="transition-bar" x1="38" y1="245" x2="72" y2="245"/>
+      <text class="transition-label" x="78" y="249">i_ncB8right</text>
+      <text class="transition-label" x="78" y="260">exit_FE</text>
+      <line class="flow-line" x1="55" y1="245" x2="55" y2="275"/>
+      <polygon class="arrow" points="51,271 55,278 59,271" fill="#f97316"/>
+      <text class="jump-label" x="55" y="295">→ X30</text>
+    </svg>
+  </div>
+
+  <!-- ═══════════════ G4 — Conveyor Left ═══════════════ -->
+  <div class="grafcet-card">
+    <div class="card-title">G4 — Conveyor Left</div>
+    <svg id="svg-g4" width="280" height="340" viewBox="0 0 280 340">
+
+      <!-- X40 -->
+      <g id="gs-X40">
+        <rect class="step-rect" id="r-X40" x="30" y="30" width="50" height="50"/>
+        <rect class="step-init" id="ri-X40" x="35" y="35" width="40" height="40"/>
+        <text class="step-id" id="t-X40" x="55" y="56">0</text>
+      </g>
+
+      <line class="flow-line" x1="55" y1="80" x2="55" y2="118"/>
+      <line class="transition-bar" x1="38" y1="118" x2="72" y2="118"/>
+      <text class="transition-label" x="78" y="114">i_ncB5left_FE</text>
+      <text class="transition-label" x="78" y="125">∧ GEMMA=F1</text>
+      <line class="flow-line" x1="55" y1="118" x2="55" y2="148"/>
+      <polygon class="arrow" points="51,144 55,151 59,144"/>
+
+      <!-- X41 -->
+      <g id="gs-X41">
+        <rect class="step-rect" id="r-X41" x="30" y="151" width="50" height="50"/>
+        <text class="step-id" id="t-X41" x="55" y="177">1</text>
+        <line class="flow-line" x1="80" y1="177" x2="96" y2="177"/>
+        <circle class="dot" cx="96" cy="177" r="2.5"/>
+        <line class="flow-line" x1="96" y1="177" x2="96" y2="162"/>
+        <line class="flow-line" x1="96" y1="162" x2="104" y2="162"/>
+        <rect class="action-qual" x="104" y="149" width="18" height="26"/>
+        <text class="qual-txt" x="113" y="163">N</text>
+        <rect class="action-box" x="122" y="149" width="120" height="26"/>
+        <text class="action-txt" x="126" y="163">o_KM6conveyorleft</text>
+        <line class="flow-line" x1="96" y1="177" x2="96" y2="192"/>
+        <line class="flow-line" x1="96" y1="192" x2="104" y2="192"/>
+        <rect class="action-qual" x="104" y="179" width="18" height="26"/>
+        <text class="qual-txt" x="113" y="193">P</text>
+        <rect class="action-box" x="122" y="179" width="140" height="26"/>
+        <text class="action-txt" x="126" y="193">ow_C2counter++</text>
+      </g>
+
+      <line class="flow-line" x1="55" y1="201" x2="55" y2="255"/>
+      <line class="transition-bar" x1="38" y1="245" x2="72" y2="245"/>
+      <text class="transition-label" x="78" y="249">i_ncB6left</text>
+      <text class="transition-label" x="78" y="260">exit_FE</text>
+      <line class="flow-line" x1="55" y1="245" x2="55" y2="275"/>
+      <polygon class="arrow" points="51,271 55,278 59,271" fill="#f97316"/>
+      <text class="jump-label" x="55" y="295">→ X40</text>
+    </svg>
+  </div>
+
+</div><!-- /grafcet-grid -->
+
+
+<!-- ═══════════════ BOTTOM PANEL ═══════════════ -->
+<div class="bottom-panel">
+
+  <!-- GRUP GEMMA -->
+  <div class="control-group">
+    <div class="cg-title">▶ Control GEMMA</div>
+    <div class="btn-grid">
+      <button id="btn-reset" class="btn">RESET (i_S2reset)</button>
+      <button id="btn-start" class="btn btn-start">MARXA (i_S1start)</button>
+      <button id="btn-stop"  class="btn btn-stop">PARO (!i_ncS3stop)</button>
+      <button id="btn-emer"  class="btn btn-emer">EMERGÈNCIA (!i_ncS4emer)</button>
+    </div>
+  </div>
+
+  <!-- GRUP PROCÉS -->
+  <div class="control-group">
+    <div class="cg-title">⚙ Procés — Sensors i Entrades</div>
+    <div class="btn-grid">
+      <button id="btn-pallet"    class="btn btn-sensor">PALET (i_B3pallet)</button>
+      <button id="btn-high"      class="btn btn-sensor">SENSOR ALT (i_B1high)</button>
+      <button id="btn-low"       class="btn btn-sensor">SENSOR BAIX (i_B2low)</button>
+      <button id="btn-loaded"    class="btn btn-sensor">CARREGAT (i_B4loaded)</button>
+      <button id="btn-leftentry" class="btn btn-sensor">FE CINTA ESQ (B5_FE)</button>
+      <button id="btn-rightexit" class="btn btn-sensor">FE CINTA DRE (B7_FE)</button>
+      <button id="btn-leftexit"  class="btn btn-sensor">FI ESQ (B6_FE)</button>
+      <button id="btn-rightexit2" class="btn btn-sensor">FI DRE (B8_FE)</button>
+    </div>
+  </div>
+
+  <!-- MONITOR CONSOLA -->
+  <div class="monitor">
+    <!-- Balisa + Etapes -->
+    <div>
+      <div class="mon-section-title">▌ Balisa GEMMA</div>
+      <div class="stack-row">
+        <div class="stack-light">
+          <div id="light-red"   class="light red"  title="Paro/Emergència"></div>
+          <div id="light-green" class="light green" title="Marxa Normal"></div>
+          <div id="light-blue"  class="light blue"  title="Reset"></div>
+        </div>
+        <div style="flex:1">
+          <div class="mon-row"><span class="mon-key">GEMMA</span><span id="mon-gemma" class="mon-val active-step">A5</span></div>
+          <div class="mon-row"><span class="mon-key">G1</span><span id="mon-g1" class="mon-val">X1:0</span></div>
+          <div class="mon-row"><span class="mon-key">G2</span><span id="mon-g2" class="mon-val">X2:0</span></div>
+          <div class="mon-row"><span class="mon-key">G3</span><span id="mon-g3" class="mon-val">X3:0</span></div>
+          <div class="mon-row"><span class="mon-key">G4</span><span id="mon-g4" class="mon-val">X4:0</span></div>
+          <div class="mon-row"><span class="mon-key">T1_G1(5s)</span><span id="mon-t1" class="mon-val">0.0s</span></div>
+        </div>
+      </div>
+    </div>
+    <!-- Sortides -->
+    <div>
+      <div class="mon-section-title">▌ Sortides Actives</div>
+      <div class="mon-row"><span class="mon-key">o_H1startlight</span> <span id="out-h1" class="mon-val off">OFF</span></div>
+      <div class="mon-row"><span class="mon-key">o_H2resetlight</span> <span id="out-h2" class="mon-val off">OFF</span></div>
+      <div class="mon-row"><span class="mon-key">o_H3stoplight</span>  <span id="out-h3" class="mon-val off">OFF</span></div>
+      <div class="mon-row"><span class="mon-key">o_KM1conveyorentry</span><span id="out-km1" class="mon-val off">OFF</span></div>
+      <div class="mon-row"><span class="mon-key">o_KM2load</span>       <span id="out-km2" class="mon-val off">OFF</span></div>
+      <div class="mon-row"><span class="mon-key">o_KM4transferleft</span><span id="out-km4" class="mon-val off">OFF</span></div>
+      <div class="mon-row"><span class="mon-key">o_KM5transferright</span><span id="out-km5" class="mon-val off">OFF</span></div>
+      <div class="mon-row"><span class="mon-key">o_KM6conveyorleft</span><span id="out-km6" class="mon-val off">OFF</span></div>
+      <div class="mon-row"><span class="mon-key">o_KM7conveyorright</span><span id="out-km7" class="mon-val off">OFF</span></div>
+    </div>
+    <!-- Comptadors -->
+    <div>
+      <div class="mon-section-title">▌ Comptadors</div>
+      <div class="counter-row">
+        <div class="counter-box"><div class="counter-label">C1 DRETA</div><div id="cnt1" class="counter-val">0</div></div>
+        <div class="counter-box"><div class="counter-label">C2 ESQUERRA</div><div id="cnt2" class="counter-val">0</div></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /bottom-panel -->
+
+
+<script>
+// ══════════════════════════════════════════
+//  FSM — Màquina d'Estats Industrial
+// ══════════════════════════════════════════
+const S = {
+  // GEMMA
+  gemma: 'A5',
+  // G1: 0,1,2,3,4
+  g1: 0,
+  // G2: 0,1,2,3,4,5,6,7
+  g2: 0,
+  // G3: 0,1
+  g3: 0,
+  // G4: 0,1
+  g4: 0,
+  // Rellotge
+  clk: false,
+  // Temporitzadors
+  t_g1_x0: 0,   // Timer T1_G1_X0_5s
+  t_f1_reset: 0, // Timer T2_GEMMA_F1_5s
+  // Senyals de procés (impulsades)
+  sig_pallet: false,
+  sig_high: false,
+  sig_low: false,
+  sig_loaded: false,
+  sig_leftentry_FE: false,
+  sig_rightexit_FE: false,  // B7_FE
+  sig_leftexit_FE: false,   // B6_FE
+  sig_rightexit2_FE: false, // B8_FE
+  // Comptadors
+  c1: 0, c2: 0,
+  // Flancs de pujada interns
+  prev_g3: 0, prev_g4: 0,
+  // Reset counters flag
+  resetCountersFlag: false,
+};
+
+// ─── Referència als rects SVG ───
+const RECTS = {};
+[
+  'A5','A1','F1','D1',
+  'X10','X11','X12','X13','X14',
+  'X20','X21','X22','X23','X24','X25','X26','X27',
+  'X30','X31',
+  'X40','X41'
+].forEach(id => {
+  const el = document.querySelector(`#r-${id}`);
+  if (el) RECTS[id] = el;
+});
+
+// ─── Helpers ───
+function gemmaIs(s) { return S.gemma === s; }
+function g1Is(n)     { return S.g1 === n; }
+function g2Is(n)     { return S.g2 === n; }
+function g3Is(n)     { return S.g3 === n; }
+function g4Is(n)     { return S.g4 === n; }
+
+// ─── Rellotge 1Hz ───
+setInterval(() => { S.clk = !S.clk; }, 500);
+
+// ─── SCAN LOOP 100ms ───
+setInterval(() => {
+  scan();
+  renderUI();
+}, 100);
+
+function scan() {
+  const DT = 0.1;
+
+  // ── Forçament GEMMA A1 / D1 → reset tots GRAFCETs ──
+  if (gemmaIs('A1') || gemmaIs('D1')) {
+    S.g1 = 0; S.g2 = 0; S.g3 = 0; S.g4 = 0;
+    S.t_g1_x0 = 0; S.t_f1_reset = 0;
+    S.sig_pallet = S.sig_high = S.sig_low = S.sig_loaded = false;
+    S.sig_leftentry_FE = S.sig_rightexit_FE = S.sig_leftexit_FE = S.sig_rightexit2_FE = false;
+  }
+
+  // ══ G1 ══
+  if (g1Is(0)) {
+    S.t_g1_x0 += DT;
+    if (gemmaIs('F1') && S.t_g1_x0 >= 5.0) {
+      S.g1 = 1; S.t_g1_x0 = 0;
+    }
+  }
+  if (g1Is(1) && S.sig_pallet) { S.g1 = 2; S.sig_pallet = false; }
+  if (g1Is(2) && !S.sig_pallet) { S.g1 = 3; } // pallet ja baixat
+  if (g1Is(3) && S.sig_loaded) { S.g1 = 4; S.sig_loaded = false; }
+  if (g1Is(4) && g2Is(0)) { S.g1 = 1; }
+
+  // ══ G2 ══
+  if (g2Is(0) && S.sig_pallet && gemmaIs('F1')) { S.g2 = 1; S.sig_pallet = false; }
+  if (g2Is(1)) {
+    if (S.sig_high && S.sig_low) { S.g2 = 2; S.sig_high = false; }
+    else if (S.sig_low && !S.sig_high) { S.g2 = 5; S.sig_low = false; }
+  }
+  // Branca Alt
+  if (g2Is(2) && S.sig_loaded) { S.g2 = 3; S.sig_loaded = false; }
+  if (g2Is(3) && !S.sig_loaded) { S.g2 = 4; }
+  if (g2Is(4) && S.sig_leftentry_FE) { S.g2 = 0; S.sig_leftentry_FE = false; }
+  // Branca Baix
+  if (g2Is(5) && S.sig_loaded) { S.g2 = 6; S.sig_loaded = false; }
+  if (g2Is(6) && !S.sig_loaded) { S.g2 = 7; }
+  if (g2Is(7) && S.sig_rightexit_FE) { S.g2 = 0; S.sig_rightexit_FE = false; }
+
+  // ══ G3 ══
+  const prev_g3 = S.prev_g3;
+  if (g3Is(0) && S.sig_rightexit_FE && gemmaIs('F1')) {
+    S.g3 = 1; S.sig_rightexit_FE = false;
+  }
+  if (g3Is(1) && prev_g3 === 0) { S.c1++; } // Rising edge
+  if (g3Is(1) && S.sig_rightexit2_FE) { S.g3 = 0; S.sig_rightexit2_FE = false; }
+  S.prev_g3 = S.g3;
+
+  // ══ G4 ══
+  const prev_g4 = S.prev_g4;
+  if (g4Is(0) && S.sig_leftentry_FE && gemmaIs('F1')) {
+    S.g4 = 1; S.sig_leftentry_FE = false;
+  }
+  if (g4Is(1) && prev_g4 === 0) { S.c2++; } // Rising edge
+  if (g4Is(1) && S.sig_leftexit_FE) { S.g4 = 0; S.sig_leftexit_FE = false; }
+  S.prev_g4 = S.g4;
+
+  // ══ GEMMA F1: timer reset comptadors ══
+  if (gemmaIs('F1')) {
+    // timer T2 always runs (reset amb condició C)
+    if (S.sig_pallet) { // reutilitzem sig_pallet com a reset manual trigger (S2reset)
+      S.t_f1_reset += DT;
+      if (S.t_f1_reset >= 5.0) {
+        S.c1 = 0; S.c2 = 0;
+        S.t_f1_reset = 0;
+      }
+    } else {
+      S.t_f1_reset = 0;
+    }
+  }
+}
+
+// ─── RENDER UI ───
+function renderUI() {
+  const gKey = {
+    'A5':'A5','A1':'A1','F1':'F1','D1':'D1'
+  };
+  const g1map = { 0:'X10',1:'X11',2:'X12',3:'X13',4:'X14' };
+  const g2map = { 0:'X20',1:'X21',2:'X22',3:'X23',4:'X24',5:'X25',6:'X26',7:'X27' };
+  const g3map = { 0:'X30',1:'X31' };
+  const g4map = { 0:'X40',1:'X41' };
+
+  // Reset all
+  Object.keys(RECTS).forEach(k => RECTS[k].classList.remove('active'));
+
+  // Active
+  const actGemma = S.gemma;
+  const actG1    = g1map[S.g1];
+  const actG2    = g2map[S.g2];
+  const actG3    = g3map[S.g3];
+  const actG4    = g4map[S.g4];
+
+  [actGemma, actG1, actG2, actG3, actG4].forEach(k => {
+    if (k && RECTS[k]) RECTS[k].classList.add('active');
+  });
+
+  // ── Sortides Booleanes ──
+  const o_H1 = gemmaIs('F1');
+  const o_H2 = (gemmaIs('A5') && S.clk) || (gemmaIs('F1') && false); // parpelleja A5
+  const o_H2b = gemmaIs('A5') ? S.clk : false;
+  const o_H3 = gemmaIs('A1') || (gemmaIs('D1') && S.clk);
+
+  const o_KM1 = g1Is(1) || g1Is(2) || g2Is(1) || g2Is(2) || g2Is(5);
+  const o_KM2 = g1Is(1) || g1Is(2) || g1Is(3) || g2Is(1) || g2Is(2) || g2Is(5);
+  const o_KM4 = g2Is(3) || g2Is(4);
+  const o_KM5 = g2Is(6) || g2Is(7);
+  const o_KM6 = g2Is(3) || g2Is(4) || g4Is(1);
+  const o_KM7 = g2Is(6) || g2Is(7) || g3Is(1);
+
+  // ── Balisa ──
+  setLight('light-red',   gemmaIs('A1') || (gemmaIs('D1') && S.clk));
+  setLight('light-green', gemmaIs('F1'));
+  setLight('light-blue',  o_H2b);
+
+  // ── Monitor Etapes ──
+  monStep('mon-gemma', actGemma, 'warn', gemmaIs('D1'));
+  monStep('mon-g1', 'X1:'+S.g1, 'active-step', true);
+  monStep('mon-g2', 'X2:'+S.g2, 'active-step', true);
+  monStep('mon-g3', 'X3:'+S.g3, 'active-step', true);
+  monStep('mon-g4', 'X4:'+S.g4, 'active-step', true);
+  document.getElementById('mon-t1').textContent = S.t_g1_x0.toFixed(1)+'s';
+
+  // ── Sortides ──
+  setOut('out-h1', o_H1);
+  setOut('out-h2', o_H2b);
+  setOut('out-h3', o_H3);
+  setOut('out-km1', o_KM1);
+  setOut('out-km2', o_KM2);
+  setOut('out-km4', o_KM4);
+  setOut('out-km5', o_KM5);
+  setOut('out-km6', o_KM6);
+  setOut('out-km7', o_KM7);
+
+  // ── Comptadors ──
+  document.getElementById('cnt1').textContent = S.c1;
+  document.getElementById('cnt2').textContent = S.c2;
+
+  // ── Enclavaments UI ──
+  const e = S.gemma;
+  setBtnState('btn-reset', e === 'A5' && !gemmaIs('D1'));
+  setBtnState('btn-start', e === 'A1');
+  setBtnState('btn-stop',  e === 'F1');
+
+  // Sensors actius depenent de l'estat
+  setBtnState('btn-pallet',    gemmaIs('F1'));
+  setBtnState('btn-high',      g2Is(1) && gemmaIs('F1'));
+  setBtnState('btn-low',       g2Is(1) && gemmaIs('F1'));
+  setBtnState('btn-loaded',    (g1Is(2)||g1Is(3)||g2Is(2)||g2Is(3)||g2Is(5)||g2Is(6)) && gemmaIs('F1'));
+  setBtnState('btn-leftentry', gemmaIs('F1'));
+  setBtnState('btn-rightexit', gemmaIs('F1'));
+  setBtnState('btn-leftexit',  g4Is(1) && gemmaIs('F1'));
+  setBtnState('btn-rightexit2',g3Is(1) && gemmaIs('F1'));
+
+  const eb = document.getElementById('btn-emer');
+  eb.classList.toggle('active', gemmaIs('D1'));
+  eb.textContent = gemmaIs('D1') ? 'REARM (i_ncS4emer)' : 'EMERGÈNCIA (!i_ncS4emer)';
+}
+
+function setLight(id, on) {
+  const el = document.getElementById(id);
+  const cls = el.className.replace(' on','');
+  el.className = cls + (on ? ' on' : '');
+}
+function setOut(id, on) {
+  const el = document.getElementById(id);
+  el.textContent = on ? 'ON' : 'OFF';
+  el.className = 'mon-val ' + (on ? 'on' : 'off');
+}
+function monStep(id, val, cls, cond) {
+  const el = document.getElementById(id);
+  el.textContent = val;
+  el.className = 'mon-val ' + (cond ? cls : '');
+}
+function setBtnState(id, enabled) {
+  document.getElementById(id).disabled = !enabled;
+}
+
+// ══════════════════════════════════════════
+//  BOTONS — Transicions Manuals
+// ══════════════════════════════════════════
+
+// GEMMA
+document.getElementById('btn-reset').onclick = () => {
+  if (S.gemma === 'A5') S.gemma = 'A1';
+};
+document.getElementById('btn-start').onclick = () => {
+  if (S.gemma === 'A1') S.gemma = 'F1';
+};
+document.getElementById('btn-stop').onclick = () => {
+  if (S.gemma === 'F1') S.gemma = 'A1';
+};
+document.getElementById('btn-emer').onclick = () => {
+  if (S.gemma !== 'D1') {
+    S.gemma = 'D1';  // Salt global emergència
+  } else {
+    S.gemma = 'A5';  // Rearm → A5
+  }
+};
+
+// Procés — Sensors impulsats
+document.getElementById('btn-pallet').onclick = () => {
+  S.sig_pallet = true;
+};
+document.getElementById('btn-high').onclick = () => {
+  S.sig_high = true;
+};
+document.getElementById('btn-low').onclick = () => {
+  S.sig_low = true;
+};
+document.getElementById('btn-loaded').onclick = () => {
+  if (S.sig_loaded) S.sig_loaded = false; // toggle descarregar
+  else S.sig_loaded = true;
+};
+document.getElementById('btn-leftentry').onclick = () => {
+  S.sig_leftentry_FE = true;
+};
+document.getElementById('btn-rightexit').onclick = () => {
+  S.sig_rightexit_FE = true;
+};
+document.getElementById('btn-leftexit').onclick = () => {
+  S.sig_leftexit_FE = true;
+};
+document.getElementById('btn-rightexit2').onclick = () => {
+  S.sig_rightexit2_FE = true;
+};
+
+// Inicialització
+renderUI();
+</script>
+</body>
+</html>
