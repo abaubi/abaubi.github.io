@@ -125,7 +125,7 @@
                         <!-- START -->
                         <div class="flex flex-col items-center gap-2">
                             <div class="w-6 h-6 rounded-full indicator mb-1" :class="outputs.o_H1startlight ? 'bg-green-400 indicator-on text-green-400' : 'bg-slate-800'"></div>
-                            <button @mousedown="setButton('i_S1start', true)" @mouseup="setButton('i_S1start', false)" @mouseleave="setButton('i_S1start', false)" class="w-16 h-16 rounded-full border-4 btn-industrial flex items-center justify-center transition-colors" :class="inputs.i_S1start ? 'bg-green-500 border-green-400' : 'bg-green-600 border-green-800'">
+                            <button @mousedown="setButton('i_S1start', true)" @touchstart.prevent="setButton('i_S1start', true)" @mouseup="setButton('i_S1start', false)" @mouseleave="setButton('i_S1start', false)" @touchend.prevent="setButton('i_S1start', false)" @touchcancel.prevent="setButton('i_S1start', false)" class="w-16 h-16 rounded-full border-4 btn-industrial flex items-center justify-center transition-colors" :class="inputs.i_S1start ? 'bg-green-500 border-green-400' : 'bg-green-600 border-green-800'">
                                 <span class="text-xs font-bold text-green-900">START</span>
                             </button>
                             <span class="text-xs text-slate-400 font-mono">i_S1start (NO)</span>
@@ -134,7 +134,7 @@
                         <!-- RESET -->
                         <div class="flex flex-col items-center gap-2">
                             <div class="w-6 h-6 rounded-full indicator mb-1" :class="outputs.o_H2resetlight ? 'bg-blue-400 indicator-on text-blue-400' : 'bg-slate-800'"></div>
-                            <button @mousedown="setButton('i_S2reset', true)" @mouseup="setButton('i_S2reset', false)" @mouseleave="setButton('i_S2reset', false)" class="w-16 h-16 rounded-full border-4 btn-industrial flex items-center justify-center transition-colors" :class="inputs.i_S2reset ? 'bg-blue-400 border-blue-300' : 'bg-blue-500 border-blue-700'">
+                            <button @mousedown="setButton('i_S2reset', true)" @touchstart.prevent="setButton('i_S2reset', true)" @mouseup="setButton('i_S2reset', false)" @mouseleave="setButton('i_S2reset', false)" @touchend.prevent="setButton('i_S2reset', false)" @touchcancel.prevent="setButton('i_S2reset', false)" class="w-16 h-16 rounded-full border-4 btn-industrial flex items-center justify-center transition-colors" :class="inputs.i_S2reset ? 'bg-blue-400 border-blue-300' : 'bg-blue-500 border-blue-700'">
                                 <span class="text-xs font-bold text-blue-900">RESET</span>
                             </button>
                             <span class="text-xs text-slate-400 font-mono">i_S2reset (NO)</span>
@@ -143,7 +143,7 @@
                         <!-- STOP (NC) -->
                         <div class="flex flex-col items-center gap-2 mt-4">
                             <div class="w-6 h-6 rounded-full indicator mb-1" :class="outputs.o_H3stoplight ? 'bg-red-500 indicator-on text-red-500' : 'bg-slate-800'"></div>
-                            <button @mousedown="setButton('i_ncS3stop', false)" @mouseup="setButton('i_ncS3stop', true)" @mouseleave="setButton('i_ncS3stop', true)" class="w-16 h-16 rounded-full border-4 btn-industrial flex items-center justify-center transition-colors" :class="!inputs.i_ncS3stop ? 'bg-red-500 border-red-400' : 'bg-red-600 border-red-800'">
+                            <button @mousedown="setButton('i_ncS3stop', false)" @touchstart.prevent="setButton('i_ncS3stop', false)" @mouseup="setButton('i_ncS3stop', true)" @mouseleave="setButton('i_ncS3stop', true)" @touchend.prevent="setButton('i_ncS3stop', true)" @touchcancel.prevent="setButton('i_ncS3stop', true)" class="w-16 h-16 rounded-full border-4 btn-industrial flex items-center justify-center transition-colors" :class="!inputs.i_ncS3stop ? 'bg-red-500 border-red-400' : 'bg-red-600 border-red-800'">
                                 <span class="text-xs font-bold text-red-900">STOP</span>
                             </button>
                             <span class="text-xs text-slate-400 font-mono">i_ncS3stop (NC)</span>
