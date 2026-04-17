@@ -360,9 +360,9 @@
 
                         <!-- ===================== PALLETS ===================== -->
                         <div v-for="pallet in pallets" :key="pallet.id" 
-                             class="absolute rounded flex items-center justify-center font-bold text-xs z-40 transition-none"
+                             class="absolute top-0 left-0 rounded flex items-center justify-center font-bold text-xs z-40 transition-none will-change-transform"
                              :class="pallet.type === 'high' ? 'pallet-high text-amber-900' : 'pallet-low text-amber-200'"
-                             :style="{ width: '60px', height: '60px', left: pallet.x + 'px', top: pallet.y + 'px' }">
+                             :style="{ width: '60px', height: '60px', transform: `translate3d(${pallet.x}px, ${pallet.y}px, 0)` }">
                             {{ pallet.type === 'high' ? 'ALT' : 'BAIX' }}
                         </div>
 
@@ -838,86 +838,115 @@
                     prevEdgeInputs.i_ncB8atrightexit = inputs.i_ncB8atrightexit;
 
                     // GEMMA
-                    if (!etapaGEMMA.value) etapaGEMMA.value = "A5";
+                    let nextGemma = etapaGEMMA.value || "A5";
 
                     if (!inputs.i_ncS4emer) {
-                        etapaGEMMA.value = "D1"; // Emergència té prioritat
+                        nextGemma = "D1"; // Emergència té prioritat
                     } else {
-                        switch(etapaGEMMA.value) {
-                            case "A5": if (inputs.i_S2reset) etapaGEMMA.value = "A1"; break;
-                            case "A1": if (inputs.i_S1start) etapaGEMMA.value = "F1"; break;
-                            case "F1": if (!inputs.i_ncS3stop) etapaGEMMA.value = "A1"; break;
-                            case "D1": if (inputs.i_ncS4emer) etapaGEMMA.value = "A5"; break;
+                        switch(nextGemma) {
+                            case "A5": if (inputs.i_S2reset) nextGemma = "A1"; break;
+                            case "A1": if (inputs.i_S1start) nextGemma = "F1"; break;
+                            case "F1": if (!inputs.i_ncS3stop) nextGemma = "A1"; break;
+                            case "D1": if (inputs.i_ncS4emer) nextGemma = "A5"; break;
                         }
                     }
 
+                    if (etapaGEMMA.value !== nextGemma) etapaGEMMA.value = nextGemma;
+
+                    let nextG1 = grafcet.G1, nextG2 = grafcet.G2, nextG3 = grafcet.G3, nextG4 = grafcet.G4;
+
                     // Forçar reset de grafcets si estem en parada
                     if (etapaGEMMA.value === "A1" || etapaGEMMA.value === "D1") {
-                        grafcet.G1 = 0; grafcet.G2 = 0; grafcet.G3 = 0; grafcet.G4 = 0;
+                        nextG1 = 0; nextG2 = 0; nextG3 = 0; nextG4 = 0;
                     }
 
                     // Temporitzadors TON (5 segons)
-                    if (grafcet.G1 === 0) { if (!t1_start) t1_start = now; } else { t1_start = null; }
+                    if (nextG1 === 0) { if (!t1_start) t1_start = now; } else { t1_start = null; }
                     const t1_done = t1_start && (now - t1_start >= 5000);
 
                     if (etapaGEMMA.value === "F1" && inputs.i_S2reset) { if (!t2_start) t2_start = now; } else { t2_start = null; }
                     const t2_done = t2_start && (now - t2_start >= 5000);
 
                     // GRAFCET G1 (Entrada)
-                    switch(grafcet.G1) {
-                        case 0: if (etapaGEMMA.value === "F1" && t1_done) grafcet.G1 = 1; break;
-                        case 1: if (inputs.i_B3palletsensor) grafcet.G1 = 2; break;
-                        case 2: if (!inputs.i_B3palletsensor) grafcet.G1 = 3; break;
-                        case 3: if (inputs.i_B4loaded) grafcet.G1 = 4; break;
-                        case 4: if (grafcet.G2 === 0) grafcet.G1 = 1; break;
+                    switch(nextG1) {
+                        case 0: if (etapaGEMMA.value === "F1" && t1_done) nextG1 = 1; break;
+                        case 1: if (inputs.i_B3palletsensor) nextG1 = 2; break;
+                        case 2: if (!inputs.i_B3palletsensor) nextG1 = 3; break;
+                        case 3: if (inputs.i_B4loaded) nextG1 = 4; break;
+                        case 4: if (nextG2 === 0) nextG1 = 1; break;
                     }
 
                     // GRAFCET G2 (Transferidor)
-                    switch(grafcet.G2) {
-                        case 0: if (inputs.i_B3palletsensor && etapaGEMMA.value === "F1") grafcet.G2 = 1; break;
+                    switch(nextG2) {
+                        case 0: if (inputs.i_B3palletsensor && etapaGEMMA.value === "F1") nextG2 = 1; break;
                         case 1: 
-                            if (inputs.i_B1highsensor && inputs.i_B2lowsensor) grafcet.G2 = 2; 
-                            else if (inputs.i_B2lowsensor && !inputs.i_B1highsensor) grafcet.G2 = 5;
+                            if (inputs.i_B1highsensor && inputs.i_B2lowsensor) nextG2 = 2; 
+                            else if (inputs.i_B2lowsensor && !inputs.i_B1highsensor) nextG2 = 5;
                             break;
-                        case 2: if (inputs.i_B4loaded) grafcet.G2 = 3; break;
-                        case 3: if (!inputs.i_B4loaded) grafcet.G2 = 4; break;
-                        case 4: if (B5_FE) grafcet.G2 = 0; break; // Reseteja just quan MARXA del B5
-                        case 5: if (inputs.i_B4loaded) grafcet.G2 = 6; break;
-                        case 6: if (!inputs.i_B4loaded) grafcet.G2 = 7; break;
-                        case 7: if (B7_FE) grafcet.G2 = 0; break; // Reseteja just quan MARXA del B7
+                        case 2: if (inputs.i_B4loaded) nextG2 = 3; break;
+                        case 3: if (!inputs.i_B4loaded) nextG2 = 4; break;
+                        case 4: if (B5_FE) nextG2 = 0; break;
+                        case 5: if (inputs.i_B4loaded) nextG2 = 6; break;
+                        case 6: if (!inputs.i_B4loaded) nextG2 = 7; break;
+                        case 7: if (B7_FE) nextG2 = 0; break;
                     }
 
                     // GRAFCET G3 (Sortida Dreta)
-                    switch(grafcet.G3) {
-                        case 0: if (B7_FE && etapaGEMMA.value === "F1") grafcet.G3 = 1; break;
-                        case 1: if (B8_FE) grafcet.G3 = 0; break;
+                    switch(nextG3) {
+                        case 0: if (B7_FE && etapaGEMMA.value === "F1") nextG3 = 1; break;
+                        case 1: if (B8_FE) nextG3 = 0; break;
                     }
 
                     // GRAFCET G4 (Sortida Esquerra)
-                    switch(grafcet.G4) {
-                        case 0: if (B5_FE && etapaGEMMA.value === "F1") grafcet.G4 = 1; break;
-                        case 1: if (B6_FE) grafcet.G4 = 0; break;
+                    switch(nextG4) {
+                        case 0: if (B5_FE && etapaGEMMA.value === "F1") nextG4 = 1; break;
+                        case 1: if (B6_FE) nextG4 = 0; break;
                     }
 
-                    // ACCIONS (Actualitzar sortides en base als grafcets)
-                    outputs.o_KM1conveyorentry = (grafcet.G1===1 || grafcet.G1===2) || (grafcet.G2===1 || grafcet.G2===2 || grafcet.G2===5);
-                    outputs.o_KM2load = (grafcet.G1===1 || grafcet.G1===2 || grafcet.G1===3) || (grafcet.G2===1 || grafcet.G2===2 || grafcet.G2===5);
-                    outputs.o_KM4transferleft = (grafcet.G2===3 || grafcet.G2===4);
-                    outputs.o_KM5transferright = (grafcet.G2===6 || grafcet.G2===7);
-                    outputs.o_KM6conveyorleft = (grafcet.G2===3 || grafcet.G2===4) || (grafcet.G4===1);
-                    outputs.o_KM7conveyorright = (grafcet.G2===6 || grafcet.G2===7) || (grafcet.G3===1);
+                    // Assignacions condicionals per evitar reactivitat innecessària (Garbage Collection Stuttering)
+                    if (grafcet.G1 !== nextG1) grafcet.G1 = nextG1;
+                    if (grafcet.G2 !== nextG2) grafcet.G2 = nextG2;
+                    if (grafcet.G3 !== nextG3) grafcet.G3 = nextG3;
+                    if (grafcet.G4 !== nextG4) grafcet.G4 = nextG4;
+
+                    // ACCIONS
+                    const km1 = (grafcet.G1===1 || grafcet.G1===2) || (grafcet.G2===1 || grafcet.G2===2 || grafcet.G2===5);
+                    const km2 = (grafcet.G1===1 || grafcet.G1===2 || grafcet.G1===3) || (grafcet.G2===1 || grafcet.G2===2 || grafcet.G2===5);
+                    const km4 = (grafcet.G2===3 || grafcet.G2===4);
+                    const km5 = (grafcet.G2===6 || grafcet.G2===7);
+                    const km6 = (grafcet.G2===3 || grafcet.G2===4) || (grafcet.G4===1);
+                    const km7 = (grafcet.G2===6 || grafcet.G2===7) || (grafcet.G3===1);
+
+                    if (outputs.o_KM1conveyorentry !== km1) outputs.o_KM1conveyorentry = km1;
+                    if (outputs.o_KM2load !== km2) outputs.o_KM2load = km2;
+                    if (outputs.o_KM4transferleft !== km4) outputs.o_KM4transferleft = km4;
+                    if (outputs.o_KM5transferright !== km5) outputs.o_KM5transferright = km5;
+                    if (outputs.o_KM6conveyorleft !== km6) outputs.o_KM6conveyorleft = km6;
+                    if (outputs.o_KM7conveyorright !== km7) outputs.o_KM7conveyorright = km7;
 
                     // ACCIONS GEMMA
-                    outputs.o_H1startlight = (etapaGEMMA.value === "F1");
-                    outputs.o_H2resetlight = (etapaGEMMA.value === "A5" && inputs.i_clk_1s) || (etapaGEMMA.value === "F1" && inputs.i_S2reset && t2_done);
-                    outputs.o_H3stoplight = (etapaGEMMA.value === "A1") || (etapaGEMMA.value === "D1" && inputs.i_clk_1s);
+                    const h1 = (etapaGEMMA.value === "F1");
+                    const h2 = (etapaGEMMA.value === "A5" && inputs.i_clk_1s) || (etapaGEMMA.value === "F1" && inputs.i_S2reset && t2_done);
+                    const h3 = (etapaGEMMA.value === "A1") || (etapaGEMMA.value === "D1" && inputs.i_clk_1s);
+
+                    if (outputs.o_H1startlight !== h1) outputs.o_H1startlight = h1;
+                    if (outputs.o_H2resetlight !== h2) outputs.o_H2resetlight = h2;
+                    if (outputs.o_H3stoplight !== h3) outputs.o_H3stoplight = h3;
                 };
 
                 // --- PHYSICS ENGINE ---
                 const BASE_SPEED = 2;
+                let lastTime = performance.now();
 
-                const gameLoop = () => {
-                    const actualSpeed = (BASE_SPEED * Number(simSpeed.value)) / 100;
+                const gameLoop = (currentTime) => {
+                    if (!currentTime) currentTime = performance.now();
+                    const dt = currentTime - lastTime;
+                    lastTime = currentTime;
+                    
+                    // DeltaTime segur: si la pestanya es congela, evitem salts de càlcul gegants
+                    const safeDt = Math.min(dt, 50); 
+                    const frameMultiplier = safeDt / 16.666; // 16.666ms és 1 frame a 60FPS
+                    const actualSpeed = (BASE_SPEED * Number(simSpeed.value) / 100) * frameMultiplier;
                     
                     let B1 = false, B2 = false, B3 = false, B4 = false;
                     let B5 = true, B6 = true, B7 = true, B8 = true; 
@@ -947,17 +976,16 @@
                         }
                         else if (pallets.value[i].state === 'left') {
                             if (outputs.o_KM6conveyorleft || outputs.o_KM4transferleft) pallets.value[i].x -= actualSpeed;
-                            // S'elimina just quan traspassa el límit del sensor B6 (-30), evitant que s'aturi pel tall de motor
+                            // S'elimina just quan traspassa el límit del sensor B6 (-30)
                             if (pallets.value[i].x < -25) { pallets.value.splice(i, 1); continue; } 
                         }
                         else if (pallets.value[i].state === 'right') {
                             if (outputs.o_KM7conveyorright || outputs.o_KM5transferright) pallets.value[i].x += actualSpeed;
-                            // S'elimina just quan traspassa el límit del sensor B8 (+770), evitant que s'aturi pel tall de motor
+                            // S'elimina just quan traspassa el límit del sensor B8 (+770)
                             if (pallets.value[i].x > 765) { pallets.value.splice(i, 1); continue; } 
                         }
 
                         // CÀLCUL SENSORS FÍSICS EXACTES
-                        // B1, B2, i B3 ara han de ser activats junts quan la peça passa per davant seu
                         if (cx > 350 && cx < 450 && cy > 350 && cy < 460) B3 = true;
                         if (cx > 350 && cx < 450 && cy > 350 && cy < 460) B2 = true;
                         if (cx > 350 && cx < 450 && cy > 350 && cy < 460 && pallets.value[i].type === 'high') B1 = true;
@@ -973,14 +1001,15 @@
                         if (cx > 740 && cx < 800 && cy > 250 && cy < 350) B8 = false;
                     }
 
-                    inputs.i_B1highsensor = B1;
-                    inputs.i_B2lowsensor = B2;
-                    inputs.i_B3palletsensor = B3;
-                    inputs.i_B4loaded = B4;
-                    inputs.i_ncB5atleftentry = B5;
-                    inputs.i_ncB6atleftexit = B6;
-                    inputs.i_ncB7atrightentry = B7;
-                    inputs.i_ncB8atrightexit = B8;
+                    // Modificacions reactives THROTLEJADES (per evitar saturació i sacsades)
+                    if (inputs.i_B1highsensor !== B1) inputs.i_B1highsensor = B1;
+                    if (inputs.i_B2lowsensor !== B2) inputs.i_B2lowsensor = B2;
+                    if (inputs.i_B3palletsensor !== B3) inputs.i_B3palletsensor = B3;
+                    if (inputs.i_B4loaded !== B4) inputs.i_B4loaded = B4;
+                    if (inputs.i_ncB5atleftentry !== B5) inputs.i_ncB5atleftentry = B5;
+                    if (inputs.i_ncB6atleftexit !== B6) inputs.i_ncB6atleftexit = B6;
+                    if (inputs.i_ncB7atrightentry !== B7) inputs.i_ncB7atrightentry = B7;
+                    if (inputs.i_ncB8atrightexit !== B8) inputs.i_ncB8atrightexit = B8;
 
                     // Si som el cervell (PLC intern), calculem les sortides
                     if (internalPLC.value) {
