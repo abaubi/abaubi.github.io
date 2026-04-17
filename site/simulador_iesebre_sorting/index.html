@@ -102,6 +102,10 @@
                         </button>
                     </div>
                 </div>
+                <div class="flex flex-col sm:flex-row items-center gap-2 border-t border-slate-800 pt-2">
+                    <input v-model="mqttUser" type="text" class="bg-slate-800 text-xs text-slate-300 px-2 py-1 rounded border border-slate-600 focus:outline-none focus:border-blue-500 w-full sm:flex-1 font-mono placeholder-slate-500" placeholder="Usuari MQTT (Opcional)">
+                    <input v-model="mqttPassword" type="password" class="bg-slate-800 text-xs text-slate-300 px-2 py-1 rounded border border-slate-600 focus:outline-none focus:border-blue-500 w-full sm:flex-1 font-mono placeholder-slate-500" placeholder="Contrasenya (Opcional)">
+                </div>
                 <div class="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-800 pt-2">
                     <div class="flex items-center w-full sm:w-[300px]">
                         <span class="text-xs text-slate-500 font-bold mr-2 w-12">TOPIC:</span>
@@ -493,6 +497,8 @@
                 const showTopics = ref(false); // Modal info topics
 
                 const brokerUrl = ref('wss://test.mosquitto.org:8081/mqtt');
+                const mqttUser = ref('');
+                const mqttPassword = ref('');
                 const baseTopic = ref('iesebre/sorting/');
                 const connected = ref(false);
                 let client = null;
@@ -578,7 +584,17 @@
 
                 const connectMQTT = () => {
                     try {
-                        client = mqtt.connect(brokerUrl.value);
+                        const options = {};
+                        
+                        // Afegim l'autenticació només si s'ha omplert algun dels camps
+                        if (mqttUser.value.trim() !== '') {
+                            options.username = mqttUser.value.trim();
+                        }
+                        if (mqttPassword.value !== '') {
+                            options.password = mqttPassword.value;
+                        }
+
+                        client = mqtt.connect(brokerUrl.value, options);
                         
                         client.on('connect', () => {
                             connected.value = true;
@@ -1019,7 +1035,7 @@
 
                 return {
                     simContainer, scaleFactor, internalPLC, autoSpawnActive, showTopics,
-                    brokerUrl, baseTopic, connected, inputs, outputs, etapaGEMMA, grafcet, pallets, highPercentage, simSpeed, autoRate,
+                    brokerUrl, mqttUser, mqttPassword, baseTopic, connected, inputs, outputs, etapaGEMMA, grafcet, pallets, highPercentage, simSpeed, autoRate,
                     toggleConnection, setButton, toggleEmergency, spawnPallet, spawnRandomPallet, toggleAutoSpawn, clearPallets
                 };
             }
