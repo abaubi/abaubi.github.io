@@ -87,7 +87,7 @@
         <header class="bg-slate-800 border-b border-slate-700 p-3 flex flex-col md:flex-row justify-between items-center gap-4 shadow-lg z-10">
             <div class="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start">
                 <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                <h1 class="text-2xl font-bold tracking-wider text-slate-100">SORTING SIMULATOR <span class="text-xs text-blue-400 ml-2">v2.8</span></h1>
+                <h1 class="text-2xl font-bold tracking-wider text-slate-100">SORTING SIMULATOR <span class="text-xs text-blue-400 ml-2">v3.1</span></h1>
             </div>
             
             <div class="flex flex-col gap-2 bg-slate-900 p-2 rounded-lg border border-slate-700 w-full md:w-auto">
@@ -102,10 +102,12 @@
                         </button>
                     </div>
                 </div>
+                <!-- Autenticació MQTT -->
                 <div class="flex flex-col sm:flex-row items-center gap-2 border-t border-slate-800 pt-2">
                     <input v-model="mqttUser" type="text" class="bg-slate-800 text-xs text-slate-300 px-2 py-1 rounded border border-slate-600 focus:outline-none focus:border-blue-500 w-full sm:flex-1 font-mono placeholder-slate-500" placeholder="Usuari MQTT (Opcional)">
                     <input v-model="mqttPassword" type="password" class="bg-slate-800 text-xs text-slate-300 px-2 py-1 rounded border border-slate-600 focus:outline-none focus:border-blue-500 w-full sm:flex-1 font-mono placeholder-slate-500" placeholder="Contrasenya (Opcional)">
                 </div>
+                <!-- Topic i Estat -->
                 <div class="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-800 pt-2">
                     <div class="flex items-center w-full sm:w-[300px]">
                         <span class="text-xs text-slate-500 font-bold mr-2 w-12">TOPIC:</span>
@@ -115,6 +117,10 @@
                         <div class="w-3 h-3 rounded-full indicator" :class="connected ? 'bg-green-500 indicator-on text-green-500' : 'bg-slate-600'"></div>
                         <span class="text-xs font-mono uppercase" :class="connected ? 'text-green-400' : 'text-slate-500'">{{ connected ? 'Online' : 'Offline' }}</span>
                     </div>
+                </div>
+                <!-- Missatge d'error de connexió -->
+                <div v-if="connectionError" class="text-xs text-red-400 font-bold mt-2 bg-red-950/50 p-2 rounded border border-red-800">
+                    ⚠️ {{ connectionError }}
                 </div>
             </div>
         </header>
@@ -359,6 +365,7 @@
 
 
                         <!-- ===================== PALLETS ===================== -->
+                        <!-- Transformació 3D delegada a la GPU -->
                         <div v-for="pallet in pallets" :key="pallet.id" 
                              class="absolute top-0 left-0 rounded flex items-center justify-center font-bold text-xs z-40 transition-none will-change-transform"
                              :class="pallet.type === 'high' ? 'pallet-high text-amber-900' : 'pallet-low text-amber-200'"
@@ -494,27 +501,43 @@
             setup() {
                 const simContainer = ref(null);
                 const scaleFactor = ref(1);
-                const showTopics = ref(false); // Modal info topics
+                const showTopics = ref(false);
 
                 const brokerUrl = ref('wss://test.mosquitto.org:8081/mqtt');
                 const mqttUser = ref('');
                 const mqttPassword = ref('');
                 const baseTopic = ref('iesebre/sorting/');
                 const connected = ref(false);
+                const connectionError = ref('');
                 let client = null;
 
-                const internalPLC = ref(true); // Controla si la lògica GRAFCET s'executa a l'HTML
+                const internalPLC = ref(true); 
                 const etapaGEMMA = ref('');
                 const highPercentage = ref(50); 
                 const simSpeed = ref(100); 
-                const autoRate = ref(100); // 100% = 1 caixa / 5s
+                const autoRate = ref(100); 
                 const autoSpawnActive = ref(false);
-                let autoSpawnTimeout = null;
+
+                // Web Worker Metronome per evitar que el navegador aturi el simulador en segon pla
+                const workerBlob = new Blob([`
+                    let timer = null;
+                    self.onmessage = function(e) {
+                        if (e.data === 'start') {
+                            timer = setInterval(() => self.postMessage('tick'), 16); // ~60 FPS constant
+                        } else if (e.data === 'stop') {
+                            clearInterval(timer);
+                        }
+                    };
+                `], { type: 'application/javascript' });
+                const tickerWorker = new Worker(URL.createObjectURL(workerBlob));
 
                 // Estat intern PLC
                 const grafcet = reactive({ G1: 0, G2: 0, G3: 0, G4: 0 });
                 let t1_start = null;
                 let t2_start = null;
+
+                // Estat dels polsadors accionats per MQTT
+                const buttonTimers = reactive({ S1: 0, S2: 0, S3: 0 });
 
                 // INPUTS (Sempre HTML -> MQTT)
                 const inputs = reactive({
@@ -584,36 +607,23 @@
 
                 const connectMQTT = () => {
                     try {
+                        connectionError.value = '';
                         const options = {};
                         
-                        // Afegim l'autenticació només si s'ha omplert algun dels camps
-                        if (mqttUser.value.trim() !== '') {
-                            options.username = mqttUser.value.trim();
-                        }
-                        if (mqttPassword.value !== '') {
-                            options.password = mqttPassword.value;
-                        }
+                        if (mqttUser.value.trim() !== '') options.username = mqttUser.value.trim();
+                        if (mqttPassword.value !== '') options.password = mqttPassword.value;
 
                         client = mqtt.connect(brokerUrl.value, options);
                         
                         client.on('connect', () => {
                             connected.value = true;
+                            connectionError.value = '';
                             
-                            // Subscripció OUTPUTS i GEMMA
-                            Object.keys(outputs).forEach(key => {
-                                client.subscribe(getFullTopic(key));
-                            });
+                            Object.keys(outputs).forEach(key => client.subscribe(getFullTopic(key)));
                             client.subscribe(getFullTopic('etapaGEMMA'));
-
-                            // NOVA SUBSCRIPCIÓ: Comandes remotes
                             client.subscribe(getFullTopic('cmd/#'));
+                            ['i_S1start', 'i_S2reset', 'i_ncS3stop', 'i_ncS4emer/set'].forEach(k => client.subscribe(getFullTopic(k)));
                             
-                            // NOVA SUBSCRIPCIÓ: Botons de control remot (S1, S2, S3 polsadors directes, S4 amb set)
-                            ['i_S1start', 'i_S2reset', 'i_ncS3stop', 'i_ncS4emer/set'].forEach(k => {
-                                client.subscribe(getFullTopic(k));
-                            });
-                            
-                            // Forçar neteja de catxé per obligar a re-enviar TOT en connectar
                             for (let k in lastPublishedInputs) delete lastPublishedInputs[k];
                             for (let k in lastPublishedOutputs) delete lastPublishedOutputs[k];
                             lastPublishedGemma = null;
@@ -629,7 +639,6 @@
                             const valNum = Number(valStr);
                             const key = extractKeyFromTopic(topic);
                             
-                            // 1. GESTIÓ DE COMANDES I PARÀMETRES REMOTS
                             if (key.startsWith('cmd/')) {
                                 if (key.endsWith('/set')) {
                                     const cmd = key.replace('cmd/', '').replace('/set', '');
@@ -642,14 +651,11 @@
                                             autoSpawnActive.value = valBool;
                                             if (valBool) {
                                                 spawnRandomPallet();
-                                                scheduleNextSpawn();
-                                            } else {
-                                                if (autoSpawnTimeout) clearTimeout(autoSpawnTimeout);
+                                                spawnTimer = 0; // Resetegem el timer en arrancar
                                             }
                                         }
                                     }
                                 } else {
-                                    // Comandes d'acció immediata (polsadors sense estat memoritzat)
                                     const cmd = key.replace('cmd/', '');
                                     if (cmd === 'clearPallets' && valBool === true) clearPallets();
                                     else if (cmd === 'spawnPallet' && (valStr === 'high' || valStr === 'low')) spawnPallet(valStr);
@@ -657,73 +663,54 @@
                                 return;
                             }
 
-                            // 2. GESTIÓ DE BOTONS REMOTS (PUPITRE)
                             if (key === 'i_ncS4emer/set') {
-                                if (inputs.i_ncS4emer !== valBool) {
-                                    inputs.i_ncS4emer = valBool;
-                                }
+                                if (inputs.i_ncS4emer !== valBool) inputs.i_ncS4emer = valBool;
                             } else if (inputs.hasOwnProperty(key) && (key.startsWith('i_S') || key.startsWith('i_ncS'))) {
                                 if (inputs[key] !== valBool) {
                                     inputs[key] = valBool;
                                     
-                                    // Auto-reset per als polsadors físics al cap d'1 segon per simular el comportament d'un impuls MQTT
-                                    if (key === 'i_S1start' && valBool === true) {
-                                        setTimeout(() => { inputs.i_S1start = false; }, 1000);
-                                    } else if (key === 'i_S2reset' && valBool === true) {
-                                        setTimeout(() => { inputs.i_S2reset = false; }, 1000);
-                                    } else if (key === 'i_ncS3stop' && valBool === false) {
-                                        setTimeout(() => { inputs.i_ncS3stop = true; }, 1000);
-                                    }
+                                    // Assignació de l'auto-reset a la gestió del bucle de temps intern
+                                    if (key === 'i_S1start' && valBool === true) buttonTimers.S1 = 1000;
+                                    else if (key === 'i_S2reset' && valBool === true) buttonTimers.S2 = 1000;
+                                    else if (key === 'i_ncS3stop' && valBool === false) buttonTimers.S3 = 1000;
                                 }
                             }
 
-                            // 3. GESTIÓ D'OUTPUTS I GEMMA (Només si el PLC Extern governa)
                             if (!internalPLC.value) {
-                                if (key === 'etapaGEMMA') {
-                                    etapaGEMMA.value = valStr;
-                                } else if (outputs.hasOwnProperty(key)) {
-                                    outputs[key] = valBool;
-                                }
+                                if (key === 'etapaGEMMA') etapaGEMMA.value = valStr;
+                                else if (outputs.hasOwnProperty(key)) outputs[key] = valBool;
                             }
                         });
 
                         client.on('error', (err) => {
                             console.error('MQTT Error:', err);
+                            connectionError.value = "Connexió denegada. Si estàs a l'entorn Canvas, descarrega l'HTML i obre'l en una pestanya nova per permetre WebSockets.";
                             connected.value = false;
                             client.end();
                         });
 
-                        client.on('close', () => {
-                            connected.value = false;
-                        });
+                        client.on('close', () => { connected.value = false; });
 
                     } catch (err) {
                         console.error('Connection failed', err);
+                        connectionError.value = "S'ha denegat la connexió al Broker des d'aquest entorn restringit.";
                     }
                 };
 
                 const publishInput = (key, val) => {
-                    if (connected.value && client) {
-                        client.publish(getFullTopic(key), val ? 'true' : 'false', { retain: true });
-                    }
+                    if (connected.value && client) client.publish(getFullTopic(key), val ? 'true' : 'false', { retain: true });
                 };
                 
                 const publishOutput = (key, val) => {
-                    if (connected.value && client) {
-                        client.publish(getFullTopic(key), val ? 'true' : 'false', { retain: true });
-                    }
+                    if (connected.value && client) client.publish(getFullTopic(key), val ? 'true' : 'false', { retain: true });
                 };
 
                 const publishGemma = (val) => {
-                    if (connected.value && client && val) {
-                        client.publish(getFullTopic('etapaGEMMA'), val.toString(), { retain: true });
-                    }
+                    if (connected.value && client && val) client.publish(getFullTopic('etapaGEMMA'), val.toString(), { retain: true });
                 };
 
                 const publishCmd = (cmd, val) => {
-                    if (connected.value && client) {
-                        client.publish(getFullTopic('cmd/' + cmd), val.toString(), { retain: true });
-                    }
+                    if (connected.value && client) client.publish(getFullTopic('cmd/' + cmd), val.toString(), { retain: true });
                 };
 
                 const forcePublishAll = () => {
@@ -740,7 +727,6 @@
                         lastPublishedGemma = etapaGEMMA.value;
                     }
                     
-                    // Publicar estat inicial dels paràmetres perquè Node-RED ho sàpiga en arrencar
                     publishCmd('highPercentage', highPercentage.value);
                     publishCmd('simSpeed', simSpeed.value);
                     publishCmd('autoRate', autoRate.value);
@@ -754,7 +740,6 @@
                 watch(autoRate, (v) => publishCmd('autoRate', v));
                 watch(internalPLC, (v) => {
                     publishCmd('internalPLC', v ? 'true' : 'false');
-                    // Força republicació del PLC
                     for (let k in lastPublishedOutputs) delete lastPublishedOutputs[k];
                     lastPublishedGemma = null;
                     forcePublishAll();
@@ -762,86 +747,44 @@
                 watch(autoSpawnActive, (v) => publishCmd('autoSpawnActive', v ? 'true' : 'false'));
 
                 // --- UI INTERACTION ---
-                const setButton = (key, val) => {
-                    inputs[key] = val;
-                };
+                const setButton = (key, val) => { inputs[key] = val; };
+                const toggleEmergency = () => { inputs.i_ncS4emer = !inputs.i_ncS4emer; };
 
-                const toggleEmergency = () => {
-                    inputs.i_ncS4emer = !inputs.i_ncS4emer;
-                };
-
-                // Funcions de generació i neteja de caixes
                 const spawnPallet = (type) => {
-                    pallets.value.push({
-                        id: palletIdCounter++,
-                        type: type,
-                        x: 370, 
-                        y: 580, 
-                        state: 'entry'
-                    });
+                    pallets.value.push({ id: palletIdCounter++, type: type, x: 370, y: 580, state: 'entry' });
                 };
 
                 const spawnRandomPallet = () => {
-                    const rand = Math.random() * 100;
-                    const type = rand <= highPercentage.value ? 'high' : 'low';
+                    const type = (Math.random() * 100) <= highPercentage.value ? 'high' : 'low';
                     spawnPallet(type);
-                };
-
-                const scheduleNextSpawn = () => {
-                    if (!autoSpawnActive.value) return;
-                    // Calculem el retard: 100% = 5000ms. 200% = 2500ms. 50% = 10000ms.
-                    const delay = 500000 / Math.max(10, autoRate.value); 
-                    
-                    autoSpawnTimeout = setTimeout(() => {
-                        if (autoSpawnActive.value) {
-                            // Només comprova que el punt exacte d'aparició (y=580, caixa=60px) estigui lliure per no encavalcar-les
-                            const isClear = !pallets.value.some(p => p.state === 'entry' && p.y > 520);
-                            if (isClear) spawnRandomPallet();
-                            scheduleNextSpawn();
-                        }
-                    }, delay);
                 };
 
                 const toggleAutoSpawn = () => {
                     autoSpawnActive.value = !autoSpawnActive.value;
                     if (autoSpawnActive.value) {
-                        spawnRandomPallet(); // Genera la primera immediatament
-                        scheduleNextSpawn();
-                    } else {
-                        if (autoSpawnTimeout) clearTimeout(autoSpawnTimeout);
+                        spawnRandomPallet(); 
+                        spawnTimer = 0; // Inicia el recompte controlat pel gameLoop
                     }
                 };
 
-                const clearPallets = () => {
-                    pallets.value = [];
-                };
-
-                // Clock 1Hz intern
-                setInterval(() => {
-                    inputs.i_clk_1s = !inputs.i_clk_1s;
-                }, 500);
+                const clearPallets = () => { pallets.value = []; };
 
                 // --- LÒGICA DEL GRAFCET INTERN (PLC STANDALONE) ---
-                const runPLC = () => {
-                    const now = Date.now();
-
-                    // Detectar flancs de pujada dels sensors NC (quan passen de 0 a 1 -> Caixa abandona el sensor)
+                const runPLC = (now) => {
                     const B5_FE = !prevEdgeInputs.i_ncB5atleftentry && inputs.i_ncB5atleftentry;
                     const B7_FE = !prevEdgeInputs.i_ncB7atrightentry && inputs.i_ncB7atrightentry;
                     const B6_FE = !prevEdgeInputs.i_ncB6atleftexit && inputs.i_ncB6atleftexit;
                     const B8_FE = !prevEdgeInputs.i_ncB8atrightexit && inputs.i_ncB8atrightexit;
 
-                    // Guardar estats per als flancs
                     prevEdgeInputs.i_ncB5atleftentry = inputs.i_ncB5atleftentry;
                     prevEdgeInputs.i_ncB7atrightentry = inputs.i_ncB7atrightentry;
                     prevEdgeInputs.i_ncB6atleftexit = inputs.i_ncB6atleftexit;
                     prevEdgeInputs.i_ncB8atrightexit = inputs.i_ncB8atrightexit;
 
-                    // GEMMA
                     let nextGemma = etapaGEMMA.value || "A5";
 
                     if (!inputs.i_ncS4emer) {
-                        nextGemma = "D1"; // Emergència té prioritat
+                        nextGemma = "D1"; 
                     } else {
                         switch(nextGemma) {
                             case "A5": if (inputs.i_S2reset) nextGemma = "A1"; break;
@@ -855,19 +798,16 @@
 
                     let nextG1 = grafcet.G1, nextG2 = grafcet.G2, nextG3 = grafcet.G3, nextG4 = grafcet.G4;
 
-                    // Forçar reset de grafcets si estem en parada
                     if (etapaGEMMA.value === "A1" || etapaGEMMA.value === "D1") {
                         nextG1 = 0; nextG2 = 0; nextG3 = 0; nextG4 = 0;
                     }
 
-                    // Temporitzadors TON (5 segons)
                     if (nextG1 === 0) { if (!t1_start) t1_start = now; } else { t1_start = null; }
                     const t1_done = t1_start && (now - t1_start >= 5000);
 
                     if (etapaGEMMA.value === "F1" && inputs.i_S2reset) { if (!t2_start) t2_start = now; } else { t2_start = null; }
                     const t2_done = t2_start && (now - t2_start >= 5000);
 
-                    // GRAFCET G1 (Entrada)
                     switch(nextG1) {
                         case 0: if (etapaGEMMA.value === "F1" && t1_done) nextG1 = 1; break;
                         case 1: if (inputs.i_B3palletsensor) nextG1 = 2; break;
@@ -876,7 +816,6 @@
                         case 4: if (nextG2 === 0) nextG1 = 1; break;
                     }
 
-                    // GRAFCET G2 (Transferidor)
                     switch(nextG2) {
                         case 0: if (inputs.i_B3palletsensor && etapaGEMMA.value === "F1") nextG2 = 1; break;
                         case 1: 
@@ -885,31 +824,27 @@
                             break;
                         case 2: if (inputs.i_B4loaded) nextG2 = 3; break;
                         case 3: if (!inputs.i_B4loaded) nextG2 = 4; break;
-                        case 4: if (B5_FE) nextG2 = 0; break;
+                        case 4: if (B5_FE) nextG2 = 0; break; 
                         case 5: if (inputs.i_B4loaded) nextG2 = 6; break;
                         case 6: if (!inputs.i_B4loaded) nextG2 = 7; break;
-                        case 7: if (B7_FE) nextG2 = 0; break;
+                        case 7: if (B7_FE) nextG2 = 0; break; 
                     }
 
-                    // GRAFCET G3 (Sortida Dreta)
                     switch(nextG3) {
                         case 0: if (B7_FE && etapaGEMMA.value === "F1") nextG3 = 1; break;
                         case 1: if (B8_FE) nextG3 = 0; break;
                     }
 
-                    // GRAFCET G4 (Sortida Esquerra)
                     switch(nextG4) {
                         case 0: if (B5_FE && etapaGEMMA.value === "F1") nextG4 = 1; break;
                         case 1: if (B6_FE) nextG4 = 0; break;
                     }
 
-                    // Assignacions condicionals per evitar reactivitat innecessària (Garbage Collection Stuttering)
                     if (grafcet.G1 !== nextG1) grafcet.G1 = nextG1;
                     if (grafcet.G2 !== nextG2) grafcet.G2 = nextG2;
                     if (grafcet.G3 !== nextG3) grafcet.G3 = nextG3;
                     if (grafcet.G4 !== nextG4) grafcet.G4 = nextG4;
 
-                    // ACCIONS
                     const km1 = (grafcet.G1===1 || grafcet.G1===2) || (grafcet.G2===1 || grafcet.G2===2 || grafcet.G2===5);
                     const km2 = (grafcet.G1===1 || grafcet.G1===2 || grafcet.G1===3) || (grafcet.G2===1 || grafcet.G2===2 || grafcet.G2===5);
                     const km4 = (grafcet.G2===3 || grafcet.G2===4);
@@ -924,7 +859,6 @@
                     if (outputs.o_KM6conveyorleft !== km6) outputs.o_KM6conveyorleft = km6;
                     if (outputs.o_KM7conveyorright !== km7) outputs.o_KM7conveyorright = km7;
 
-                    // ACCIONS GEMMA
                     const h1 = (etapaGEMMA.value === "F1");
                     const h2 = (etapaGEMMA.value === "A5" && inputs.i_clk_1s) || (etapaGEMMA.value === "F1" && inputs.i_S2reset && t2_done);
                     const h3 = (etapaGEMMA.value === "A1") || (etapaGEMMA.value === "D1" && inputs.i_clk_1s);
@@ -934,110 +868,146 @@
                     if (outputs.o_H3stoplight !== h3) outputs.o_H3stoplight = h3;
                 };
 
-                // --- PHYSICS ENGINE ---
+                // --- PHYSICS ENGINE (FIXED TIMESTEP) ---
                 const BASE_SPEED = 2;
+                const STEP_MS = 16.666; // 60 FPS
                 let lastTime = performance.now();
+                let lastClockTime = performance.now();
+                let accumulator = 0;
+                let spawnTimer = 0;
 
-                const gameLoop = (currentTime) => {
-                    if (!currentTime) currentTime = performance.now();
-                    const dt = currentTime - lastTime;
+                const gameLoop = () => {
+                    const currentTime = performance.now();
+                    let dt = currentTime - lastTime;
                     lastTime = currentTime;
-                    
-                    // DeltaTime segur: si la pestanya es congela, evitem salts de càlcul gegants
-                    const safeDt = Math.min(dt, 50); 
-                    const frameMultiplier = safeDt / 16.666; // 16.666ms és 1 frame a 60FPS
-                    const actualSpeed = (BASE_SPEED * Number(simSpeed.value) / 100) * frameMultiplier;
-                    
-                    let B1 = false, B2 = false, B3 = false, B4 = false;
-                    let B5 = true, B6 = true, B7 = true, B8 = true; 
 
-                    for (let i = pallets.value.length - 1; i >= 0; i--) {
-                        let cx = pallets.value[i].x + 30;
-                        let cy = pallets.value[i].y + 30;
+                    // Limitem el delta time a 1000ms per evitar un "Death Spiral" si suspens el PC molta estona
+                    if (dt > 1000) dt = 1000;
 
-                        // MOVIMENT I FÍSICA APLICADA
-                        if (pallets.value[i].state === 'entry') {
-                            if (outputs.o_KM1conveyorentry) pallets.value[i].y -= actualSpeed;
-                            
-                            // Ens assegurem que la transició a transfer es fa ABANS de que el sensor B4 encengui i aturi el KM1.
-                            if (pallets.value[i].y <= 275) {
-                                pallets.value[i].y = 270; 
-                                pallets.value[i].state = 'transfer';
-                            }
-                        } 
-                        else if (pallets.value[i].state === 'transfer') {
-                            if (outputs.o_KM4transferleft && !outputs.o_KM5transferright) {
-                                pallets.value[i].x -= actualSpeed;
-                                if (pallets.value[i].x <= 350) pallets.value[i].state = 'left';
-                            } else if (outputs.o_KM5transferright && !outputs.o_KM4transferleft) {
-                                pallets.value[i].x += actualSpeed;
-                                if (pallets.value[i].x >= 390) pallets.value[i].state = 'right';
+                    // 1. Gestió del rellotge d'1Hz independent del throttling
+                    if (currentTime - lastClockTime >= 500) {
+                        inputs.i_clk_1s = !inputs.i_clk_1s;
+                        lastClockTime = currentTime;
+                    }
+
+                    // 2. Temporitzadors dels botons MQTT
+                    if (buttonTimers.S1 > 0) { buttonTimers.S1 -= dt; if (buttonTimers.S1 <= 0) inputs.i_S1start = false; }
+                    if (buttonTimers.S2 > 0) { buttonTimers.S2 -= dt; if (buttonTimers.S2 <= 0) inputs.i_S2reset = false; }
+                    if (buttonTimers.S3 > 0) { buttonTimers.S3 -= dt; if (buttonTimers.S3 <= 0) inputs.i_ncS3stop = true; }
+
+                    // 3. Generador Automàtic basat en el Delta Time
+                    if (autoSpawnActive.value) {
+                        spawnTimer += dt;
+                        const delay = 500000 / Math.max(10, autoRate.value); 
+                        if (spawnTimer >= delay) {
+                            const isClear = !pallets.value.some(p => p.state === 'entry' && p.y > 520);
+                            if (isClear) {
+                                spawnRandomPallet();
+                                spawnTimer %= delay; // Ens guardem els ms sobrants per ser precisos
                             }
                         }
-                        else if (pallets.value[i].state === 'left') {
-                            if (outputs.o_KM6conveyorleft || outputs.o_KM4transferleft) pallets.value[i].x -= actualSpeed;
-                            // S'elimina just quan traspassa el límit del sensor B6 (-30)
-                            if (pallets.value[i].x < -25) { pallets.value.splice(i, 1); continue; } 
-                        }
-                        else if (pallets.value[i].state === 'right') {
-                            if (outputs.o_KM7conveyorright || outputs.o_KM5transferright) pallets.value[i].x += actualSpeed;
-                            // S'elimina just quan traspassa el límit del sensor B8 (+770)
-                            if (pallets.value[i].x > 765) { pallets.value.splice(i, 1); continue; } 
+                    }
+
+                    accumulator += dt;
+                    let stateChanged = false;
+
+                    // 4. Fixed Timestep Loop: Si el navegador frena a 1FPS, el simulador calcularà 60 micro-passos de cop
+                    // assegurant que les caixes no es "teleportin" i s'activin tots els sensors pel camí de manera impecable.
+                    while (accumulator >= STEP_MS) {
+                        stateChanged = true;
+                        const actualSpeed = (BASE_SPEED * Number(simSpeed.value)) / 100;
+
+                        // MOVIMENT I FÍSICA
+                        for (let i = pallets.value.length - 1; i >= 0; i--) {
+                            let p = pallets.value[i];
+                            if (p.state === 'entry') {
+                                if (outputs.o_KM1conveyorentry) p.y -= actualSpeed;
+                                if (p.y <= 275) { p.y = 270; p.state = 'transfer'; }
+                            } 
+                            else if (p.state === 'transfer') {
+                                if (outputs.o_KM4transferleft && !outputs.o_KM5transferright) {
+                                    p.x -= actualSpeed;
+                                    if (p.x <= 350) p.state = 'left';
+                                } else if (outputs.o_KM5transferright && !outputs.o_KM4transferleft) {
+                                    p.x += actualSpeed;
+                                    if (p.x >= 390) p.state = 'right';
+                                }
+                            }
+                            else if (p.state === 'left') {
+                                if (outputs.o_KM6conveyorleft || outputs.o_KM4transferleft) p.x -= actualSpeed;
+                                if (p.x < -25) { pallets.value.splice(i, 1); continue; } 
+                            }
+                            else if (p.state === 'right') {
+                                if (outputs.o_KM7conveyorright || outputs.o_KM5transferright) p.x += actualSpeed;
+                                if (p.x > 765) { pallets.value.splice(i, 1); continue; } 
+                            }
                         }
 
-                        // CÀLCUL SENSORS FÍSICS EXACTES
-                        if (cx > 350 && cx < 450 && cy > 350 && cy < 460) B3 = true;
-                        if (cx > 350 && cx < 450 && cy > 350 && cy < 460) B2 = true;
-                        if (cx > 350 && cx < 450 && cy > 350 && cy < 460 && pallets.value[i].type === 'high') B1 = true;
+                        // SENSORS PER A CADA SUB-PÀS
+                        let B1 = false, B2 = false, B3 = false, B4 = false;
+                        let B5 = true, B6 = true, B7 = true, B8 = true; 
                         
-                        // B4 Només s'activa si realment s'ha ancorat exactament al centre (cy = 300) -> marge microscòpic [298, 302]
-                        if (cx > 380 && cx < 420 && cy > 298 && cy < 302) B4 = true;
+                        for (let i = 0; i < pallets.value.length; i++) {
+                            let cx = pallets.value[i].x + 30;
+                            let cy = pallets.value[i].y + 30;
 
-                        // Sensors de cintes amb lògica Normalment Tancat (NC)
-                        if (cx > 310 && cx < 360 && cy > 250 && cy < 350) B5 = false;
-                        if (cx > 0 && cx < 60 && cy > 250 && cy < 350) B6 = false;
+                            if (cx > 350 && cx < 450 && cy > 350 && cy < 460) B3 = true;
+                            if (cx > 350 && cx < 450 && cy > 350 && cy < 460) B2 = true;
+                            if (cx > 350 && cx < 450 && cy > 350 && cy < 460 && pallets.value[i].type === 'high') B1 = true;
+                            
+                            if (cx > 380 && cx < 420 && cy > 298 && cy < 302) B4 = true;
 
-                        if (cx > 440 && cx < 490 && cy > 250 && cy < 350) B7 = false;
-                        if (cx > 740 && cx < 800 && cy > 250 && cy < 350) B8 = false;
-                    }
+                            if (cx > 310 && cx < 360 && cy > 250 && cy < 350) B5 = false;
+                            if (cx > 0 && cx < 60 && cy > 250 && cy < 350) B6 = false;
 
-                    // Modificacions reactives THROTLEJADES (per evitar saturació i sacsades)
-                    if (inputs.i_B1highsensor !== B1) inputs.i_B1highsensor = B1;
-                    if (inputs.i_B2lowsensor !== B2) inputs.i_B2lowsensor = B2;
-                    if (inputs.i_B3palletsensor !== B3) inputs.i_B3palletsensor = B3;
-                    if (inputs.i_B4loaded !== B4) inputs.i_B4loaded = B4;
-                    if (inputs.i_ncB5atleftentry !== B5) inputs.i_ncB5atleftentry = B5;
-                    if (inputs.i_ncB6atleftexit !== B6) inputs.i_ncB6atleftexit = B6;
-                    if (inputs.i_ncB7atrightentry !== B7) inputs.i_ncB7atrightentry = B7;
-                    if (inputs.i_ncB8atrightexit !== B8) inputs.i_ncB8atrightexit = B8;
-
-                    // Si som el cervell (PLC intern), calculem les sortides
-                    if (internalPLC.value) {
-                        runPLC();
-                    }
-
-                    // PUBLICACIÓ MQTT CONDICIONAL DE TOTS ELS ESTATS (TX)
-                    for (const key in inputs) {
-                        if (inputs[key] !== lastPublishedInputs[key]) {
-                            publishInput(key, inputs[key]);
-                            lastPublishedInputs[key] = inputs[key];
+                            if (cx > 440 && cx < 490 && cy > 250 && cy < 350) B7 = false;
+                            if (cx > 740 && cx < 800 && cy > 250 && cy < 350) B8 = false;
                         }
+
+                        if (inputs.i_B1highsensor !== B1) inputs.i_B1highsensor = B1;
+                        if (inputs.i_B2lowsensor !== B2) inputs.i_B2lowsensor = B2;
+                        if (inputs.i_B3palletsensor !== B3) inputs.i_B3palletsensor = B3;
+                        if (inputs.i_B4loaded !== B4) inputs.i_B4loaded = B4;
+                        if (inputs.i_ncB5atleftentry !== B5) inputs.i_ncB5atleftentry = B5;
+                        if (inputs.i_ncB6atleftexit !== B6) inputs.i_ncB6atleftexit = B6;
+                        if (inputs.i_ncB7atrightentry !== B7) inputs.i_ncB7atrightentry = B7;
+                        if (inputs.i_ncB8atrightexit !== B8) inputs.i_ncB8atrightexit = B8;
+
+                        if (internalPLC.value) {
+                            runPLC(Date.now());
+                        }
+
+                        accumulator -= STEP_MS;
                     }
 
-                    if (internalPLC.value) {
-                        for (const key in outputs) {
-                            if (outputs[key] !== lastPublishedOutputs[key]) {
-                                publishOutput(key, outputs[key]);
-                                lastPublishedOutputs[key] = outputs[key];
+                    // PUBLICACIÓ MQTT (Només publiquem a la xarxa una vegada per "tick", evitant col·lapsar la connexió)
+                    if (stateChanged || dt > 0) {
+                        for (const key in inputs) {
+                            if (inputs[key] !== lastPublishedInputs[key]) {
+                                publishInput(key, inputs[key]);
+                                lastPublishedInputs[key] = inputs[key];
                             }
                         }
-                        if (etapaGEMMA.value !== lastPublishedGemma) {
-                            publishGemma(etapaGEMMA.value);
-                            lastPublishedGemma = etapaGEMMA.value;
+
+                        if (internalPLC.value) {
+                            for (const key in outputs) {
+                                if (outputs[key] !== lastPublishedOutputs[key]) {
+                                    publishOutput(key, outputs[key]);
+                                    lastPublishedOutputs[key] = outputs[key];
+                                }
+                            }
+                            if (etapaGEMMA.value !== lastPublishedGemma) {
+                                publishGemma(etapaGEMMA.value);
+                                lastPublishedGemma = etapaGEMMA.value;
+                            }
                         }
                     }
+                };
 
-                    requestAnimationFrame(gameLoop);
+                tickerWorker.onmessage = (e) => {
+                    if (e.data === 'tick') {
+                        gameLoop();
+                    }
                 };
 
                 const updateScale = () => {
@@ -1054,16 +1024,18 @@
                     if (internalPLC.value) etapaGEMMA.value = 'A5';
                     window.addEventListener('resize', updateScale);
                     setTimeout(updateScale, 50);
-                    requestAnimationFrame(gameLoop);
+                    // Arranquem el motor del Worker (60 FPS segurs i inaturables)
+                    tickerWorker.postMessage('start');
                 });
 
                 onUnmounted(() => {
                     window.removeEventListener('resize', updateScale);
-                    if (autoSpawnTimeout) clearTimeout(autoSpawnTimeout);
+                    tickerWorker.postMessage('stop');
+                    tickerWorker.terminate();
                 });
 
                 return {
-                    simContainer, scaleFactor, internalPLC, autoSpawnActive, showTopics,
+                    simContainer, scaleFactor, internalPLC, autoSpawnActive, showTopics, connectionError,
                     brokerUrl, mqttUser, mqttPassword, baseTopic, connected, inputs, outputs, etapaGEMMA, grafcet, pallets, highPercentage, simSpeed, autoRate,
                     toggleConnection, setButton, toggleEmergency, spawnPallet, spawnRandomPallet, toggleAutoSpawn, clearPallets
                 };
