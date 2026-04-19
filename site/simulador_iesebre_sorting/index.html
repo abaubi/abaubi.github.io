@@ -83,11 +83,10 @@
 </head>
 <body>
     <div id="app" class="min-h-screen flex flex-col relative">
-        <!-- Top Bar -->
         <header class="bg-slate-800 border-b border-slate-700 p-3 flex flex-col md:flex-row justify-between items-center gap-4 shadow-lg z-10">
             <div class="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start">
                 <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                <h1 class="text-2xl font-bold tracking-wider text-slate-100">SORTING SIMULATOR <span class="text-xs text-blue-400 ml-2">v3.1</span></h1>
+                <h1 class="text-2xl font-bold tracking-wider text-slate-100">SORTING SIMULATOR <span class="text-xs text-blue-400 ml-2">v3.2</span></h1>
             </div>
             
             <div class="flex flex-col gap-2 bg-slate-900 p-2 rounded-lg border border-slate-700 w-full md:w-auto">
@@ -102,12 +101,10 @@
                         </button>
                     </div>
                 </div>
-                <!-- Autenticació MQTT -->
                 <div class="flex flex-col sm:flex-row items-center gap-2 border-t border-slate-800 pt-2">
                     <input v-model="mqttUser" type="text" class="bg-slate-800 text-xs text-slate-300 px-2 py-1 rounded border border-slate-600 focus:outline-none focus:border-blue-500 w-full sm:flex-1 font-mono placeholder-slate-500" placeholder="Usuari MQTT (Opcional)">
                     <input v-model="mqttPassword" type="password" class="bg-slate-800 text-xs text-slate-300 px-2 py-1 rounded border border-slate-600 focus:outline-none focus:border-blue-500 w-full sm:flex-1 font-mono placeholder-slate-500" placeholder="Contrasenya (Opcional)">
                 </div>
-                <!-- Topic i Estat -->
                 <div class="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-800 pt-2">
                     <div class="flex items-center w-full sm:w-[300px]">
                         <span class="text-xs text-slate-500 font-bold mr-2 w-12">TOPIC:</span>
@@ -118,7 +115,6 @@
                         <span class="text-xs font-mono uppercase" :class="connected ? 'text-green-400' : 'text-slate-500'">{{ connected ? 'Online' : 'Offline' }}</span>
                     </div>
                 </div>
-                <!-- Missatge d'error de connexió -->
                 <div v-if="connectionError" class="text-xs text-red-400 font-bold mt-2 bg-red-950/50 p-2 rounded border border-red-800">
                     ⚠️ {{ connectionError }}
                 </div>
@@ -126,13 +122,11 @@
         </header>
 
         <main class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
-            <!-- Left Panel: Control Panel -->
             <aside class="w-full lg:w-80 bg-slate-800 border-b lg:border-b-0 lg:border-r border-slate-700 p-4 flex flex-col gap-5 lg:overflow-y-auto shrink-0">
                 <div class="bg-slate-700 rounded-xl p-4 border-2 border-slate-600 shadow-inner">
                     <h2 class="text-slate-300 font-bold mb-4 text-center border-b border-slate-600 pb-2">PUPITRE DE CONTROL</h2>
                     
                     <div class="grid grid-cols-2 gap-4">
-                        <!-- START -->
                         <div class="flex flex-col items-center gap-2">
                             <div class="w-6 h-6 rounded-full indicator mb-1" :class="outputs.o_H1startlight ? 'bg-green-400 indicator-on text-green-400' : 'bg-slate-800'"></div>
                             <button @mousedown="setButton('i_S1start', true)" @touchstart.prevent="setButton('i_S1start', true)" @mouseup="setButton('i_S1start', false)" @mouseleave="setButton('i_S1start', false)" @touchend.prevent="setButton('i_S1start', false)" @touchcancel.prevent="setButton('i_S1start', false)" class="w-16 h-16 rounded-full border-4 btn-industrial flex items-center justify-center transition-colors" :class="inputs.i_S1start ? 'bg-green-500 border-green-400' : 'bg-green-600 border-green-800'">
@@ -141,7 +135,6 @@
                             <span class="text-xs text-slate-400 font-mono">i_S1start (NO)</span>
                         </div>
                         
-                        <!-- RESET -->
                         <div class="flex flex-col items-center gap-2">
                             <div class="w-6 h-6 rounded-full indicator mb-1" :class="outputs.o_H2resetlight ? 'bg-blue-400 indicator-on text-blue-400' : 'bg-slate-800'"></div>
                             <button @mousedown="setButton('i_S2reset', true)" @touchstart.prevent="setButton('i_S2reset', true)" @mouseup="setButton('i_S2reset', false)" @mouseleave="setButton('i_S2reset', false)" @touchend.prevent="setButton('i_S2reset', false)" @touchcancel.prevent="setButton('i_S2reset', false)" class="w-16 h-16 rounded-full border-4 btn-industrial flex items-center justify-center transition-colors" :class="inputs.i_S2reset ? 'bg-blue-400 border-blue-300' : 'bg-blue-500 border-blue-700'">
@@ -150,7 +143,6 @@
                             <span class="text-xs text-slate-400 font-mono">i_S2reset (NO)</span>
                         </div>
 
-                        <!-- STOP (NC) -->
                         <div class="flex flex-col items-center gap-2 mt-4">
                             <div class="w-6 h-6 rounded-full indicator mb-1" :class="outputs.o_H3stoplight ? 'bg-red-500 indicator-on text-red-500' : 'bg-slate-800'"></div>
                             <button @mousedown="setButton('i_ncS3stop', false)" @touchstart.prevent="setButton('i_ncS3stop', false)" @mouseup="setButton('i_ncS3stop', true)" @mouseleave="setButton('i_ncS3stop', true)" @touchend.prevent="setButton('i_ncS3stop', true)" @touchcancel.prevent="setButton('i_ncS3stop', true)" class="w-16 h-16 rounded-full border-4 btn-industrial flex items-center justify-center transition-colors" :class="!inputs.i_ncS3stop ? 'bg-red-500 border-red-400' : 'bg-red-600 border-red-800'">
@@ -159,10 +151,8 @@
                             <span class="text-xs text-slate-400 font-mono">i_ncS3stop (NC)</span>
                         </div>
 
-                        <!-- EMERGENCY (NC Toggle) -->
                         <div class="flex flex-col items-center gap-2 mt-4">
-                            <div class="w-4 h-4 mb-2"></div> <!-- Spacer -->
-                            <button @click="toggleEmergency" class="w-20 h-20 rounded-full btn-emer flex items-center justify-center shadow-xl" :class="{'pressed': !inputs.i_ncS4emer}">
+                            <div class="w-4 h-4 mb-2"></div> <button @click="toggleEmergency" class="w-20 h-20 rounded-full btn-emer flex items-center justify-center shadow-xl" :class="{'pressed': !inputs.i_ncS4emer}">
                                 <span class="text-xs font-bold text-white text-center leading-tight">EMERG<br>STOP</span>
                             </button>
                             <span class="text-xs text-slate-400 font-mono">i_ncS4emer (NC)</span>
@@ -189,7 +179,6 @@
                         </div>
                     </div>
 
-                    <!-- RITME AUTOMÀTIC -->
                     <div class="flex items-center justify-between mb-4 border-t border-slate-600 pt-3">
                         <span class="text-xs text-slate-400 font-bold" title="100% = 1 caixa cada 5 segons">RITME AUTOMÀTIC</span>
                         <div class="flex items-center gap-1">
@@ -198,7 +187,6 @@
                         </div>
                     </div>
 
-                    <!-- TOGGLE PLC INTERN -->
                     <div class="flex items-center justify-between mb-4 border-t border-slate-600 pt-3">
                         <span class="text-[11px] text-slate-300 font-bold" title="Si està actiu, el simulador processa el GRAFCET i envia les sortides.">PLC INTERN (STANDALONE)</span>
                         <button @click="internalPLC = !internalPLC" class="w-10 h-5 rounded-full relative transition-colors shadow-inner shrink-0" :class="internalPLC ? 'bg-blue-500' : 'bg-slate-600'">
@@ -207,7 +195,6 @@
                     </div>
 
                     <div class="flex flex-col gap-2">
-                        <!-- Botons individuals (Alta / Baixa) -->
                         <div class="flex gap-2">
                             <button @click="spawnPallet('high')" class="flex-1 bg-amber-200 hover:bg-amber-100 text-amber-900 py-1.5 rounded text-xs btn-industrial font-bold border border-amber-400">
                                 + PEÇA ALTA
@@ -216,19 +203,16 @@
                                 + PEÇA BAIXA
                             </button>
                         </div>
-                        <!-- Botó automàtic basat en percentatge -->
                         <button @click="toggleAutoSpawn" class="w-full text-white py-2 rounded text-sm btn-industrial font-bold border transition-colors"
                                 :class="autoSpawnActive ? 'bg-red-600 hover:bg-red-500 border-red-800' : 'bg-indigo-600 hover:bg-indigo-500 border-indigo-800'">
                             {{ autoSpawnActive ? '⏹ ATURAR AUTOMÀTIC' : '▶ INICIAR AUTOMÀTIC (%)' }}
                         </button>
-                        <!-- Botó netejar màquina -->
                         <button @click="clearPallets" class="w-full bg-slate-900 hover:bg-red-900 text-slate-300 hover:text-white py-2 mt-2 rounded text-sm btn-industrial font-bold border border-slate-700 transition-colors">
                             🗑️ NETEJAR MÀQUINA
                         </button>
                     </div>
                 </div>
 
-                <!-- ESTRUCTURA GEMMA + GRAFCETS -->
                 <div class="bg-slate-900 rounded p-3 border border-slate-700 flex flex-col gap-3 shrink-0">
                     <div class="flex flex-row items-center justify-between">
                         <div class="flex-1">
@@ -236,7 +220,6 @@
                             <div class="text-4xl font-mono text-center text-blue-400 font-bold leading-none">{{ etapaGEMMA || '--' }}</div>
                         </div>
                         
-                        <!-- BALISSA -->
                         <div class="flex flex-col items-center ml-2">
                             <div class="w-10 bg-slate-800 border-2 border-slate-600 rounded flex flex-col items-center p-1.5 gap-1.5 shadow-xl">
                                 <div class="w-6 h-6 rounded-full border border-slate-500 indicator transition-colors duration-100" :class="outputs.o_H3stoplight ? 'bg-red-500 indicator-on shadow-[0_0_15px_4px_#ef4444]' : 'bg-red-950'"></div>
@@ -248,7 +231,6 @@
                         </div>
                     </div>
 
-                    <!-- ESTATS DELS GRAFCETS -->
                     <div class="border-t border-slate-700 pt-3 mt-1">
                         <h2 class="text-slate-400 font-bold mb-2 text-xs uppercase tracking-wider text-center">ETAPES GRAFCET</h2>
                         <div class="flex justify-around items-center bg-slate-800 rounded p-2 border border-slate-700 shadow-inner">
@@ -274,15 +256,11 @@
 
             </aside>
 
-            <!-- Center: 2D Plant Simulation -->
             <section ref="simContainer" class="flex-1 bg-[#1a1a1a] relative overflow-hidden min-h-[450px] lg:min-h-0 w-full">
-                <!-- Centrat absolut per evitar desplaçaments de flexbox amb elements escalats -->
                 <div class="absolute left-1/2 top-1/2 flex items-center justify-center w-0 h-0">
                     
-                    <!-- Synoptic Container -->
                     <div class="relative w-[800px] h-[600px] floor-pattern rounded-xl border-4 border-slate-600 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden shrink-0 origin-center" id="factory-floor" :style="{ transform: `scale(${scaleFactor})` }">
                         
-                        <!-- Rètols de Rampa -->
                         <div class="absolute left-[10px] top-[140px] w-[120px] bg-slate-800/80 border border-slate-600 text-center py-1 rounded text-slate-400 font-bold tracking-widest text-xs z-10">
                             ◀ SORTIDA ALTES
                         </div>
@@ -290,82 +268,60 @@
                             SORTIDA BAIXES ▶
                         </div>
 
-                        <!-- ===================== CINTES TRANSPORTADORES ===================== -->
-                        <!-- Entry Conveyor (Vertical) -->
                         <div class="absolute w-[100px] h-[250px] left-[350px] top-[350px] conveyor-bg" :class="{'conveyor-active': outputs.o_KM1conveyorentry}">
-                            <!-- Indicador visual de direcció -->
                             <div class="absolute top-[10px] left-[40px] text-slate-600 font-bold opacity-50">▲</div>
                             <div class="absolute top-[100px] left-[40px] text-slate-600 font-bold opacity-50">▲</div>
                         </div>
 
-                        <!-- Left Conveyor (Horizontal) -->
                         <div class="absolute w-[350px] h-[100px] left-[0px] top-[250px] conveyor-bg-h" :class="{'conveyor-active-left': outputs.o_KM6conveyorleft}">
                             <div class="absolute top-[40px] left-[100px] text-slate-600 font-bold opacity-50">◀</div>
                             <div class="absolute top-[40px] left-[250px] text-slate-600 font-bold opacity-50">◀</div>
                         </div>
 
-                        <!-- Right Conveyor (Horizontal) -->
                         <div class="absolute w-[350px] h-[100px] left-[450px] top-[250px] conveyor-bg-h" :class="{'conveyor-active-right': outputs.o_KM7conveyorright}">
                             <div class="absolute top-[40px] left-[100px] text-slate-600 font-bold opacity-50">▶</div>
                             <div class="absolute top-[40px] left-[250px] text-slate-600 font-bold opacity-50">▶</div>
                         </div>
 
-                        <!-- Transfer Mechanism Center -->
                         <div class="absolute w-[100px] h-[100px] left-[350px] top-[250px] bg-slate-800 border-4 border-slate-600 flex flex-col justify-between p-1 z-10 transition-all duration-300" 
                              :class="outputs.o_KM2load ? 'shadow-[0_0_20px_rgba(59,130,246,0.5)] border-blue-500 scale-105 z-20' : ''">
                             
-                            <!-- Rollers base (when down) -->
                             <div class="w-full h-3 bg-slate-700 rounded-sm shadow-inner mt-1"></div>
                             <div class="w-full h-3 bg-slate-700 rounded-sm shadow-inner"></div>
                             <div class="w-full h-3 bg-slate-700 rounded-sm shadow-inner"></div>
                             <div class="w-full h-3 bg-slate-700 rounded-sm shadow-inner mb-1"></div>
                             
-                            <!-- Pop-up Chains (blue when active) -->
                             <div class="absolute top-0 bottom-0 left-2 w-3 bg-slate-900 border-x border-slate-700 transition-colors" :class="outputs.o_KM4transferleft || outputs.o_KM5transferright ? 'bg-blue-600 border-blue-400' : ''"></div>
                             <div class="absolute top-0 bottom-0 right-2 w-3 bg-slate-900 border-x border-slate-700 transition-colors" :class="outputs.o_KM4transferleft || outputs.o_KM5transferright ? 'bg-blue-600 border-blue-400' : ''"></div>
                         </div>
 
-                        <!-- Ramp Zones -->
                         <div class="absolute left-0 top-[250px] w-[20px] h-[100px] bg-red-900/30 border-r-4 border-dashed border-red-500/80 z-10"></div>
                         <div class="absolute left-[780px] top-[250px] w-[20px] h-[100px] bg-green-900/30 border-l-4 border-dashed border-green-500/80 z-10"></div>
 
 
-                        <!-- ===================== MOTORS / ACTUADORS ===================== -->
-                        
-                        <!-- KM1: Entry Conveyor -->
                         <motor-indicator name="KM1" :active="outputs.o_KM1conveyorentry" class="left-[470px] top-[400px]"></motor-indicator>
                         
-                        <!-- Transfer Motors: KM4 (Left), KM2 (Lift Centered), KM5 (Right) -->
                         <motor-indicator name="KM4" :active="outputs.o_KM4transferleft" class="left-[350px] top-[180px]"></motor-indicator>
                         <motor-indicator name="KM2" :active="outputs.o_KM2load" class="left-[385px] top-[180px]"></motor-indicator>
                         <motor-indicator name="KM5" :active="outputs.o_KM5transferright" class="left-[420px] top-[180px]"></motor-indicator>
                         
-                        <!-- KM6 & KM7: Side Conveyors -->
                         <motor-indicator name="KM6" :active="outputs.o_KM6conveyorleft" class="left-[150px] top-[180px]"></motor-indicator>
                         <motor-indicator name="KM7" :active="outputs.o_KM7conveyorright" class="left-[620px] top-[180px]"></motor-indicator>
 
 
-                        <!-- ===================== SENSORS ===================== -->
-                        
-                        <!-- Entry Sensors (B3, B2, B1) al costat esquerre de la cinta -->
                         <sensor-indicator name="B3" :active="inputs.i_B3palletsensor" nc="false" class="left-[310px] top-[440px] z-20"></sensor-indicator>
                         <sensor-indicator name="B2" :active="inputs.i_B2lowsensor" nc="false" class="left-[310px] top-[400px] z-20"></sensor-indicator>
                         <sensor-indicator name="B1" :active="inputs.i_B1highsensor" nc="false" class="left-[310px] top-[360px] z-20"></sensor-indicator>
                         
-                        <!-- B4 (Loaded on Transfer) alineat damunt de KM2 -->
                         <sensor-indicator name="B4" :active="inputs.i_B4loaded" nc="false" class="left-[385px] top-[140px] z-20"></sensor-indicator>
 
-                        <!-- Left Belt Sensors (ncB5, ncB6) -->
                         <sensor-indicator name="ncB5" :active="inputs.i_ncB5atleftentry" nc="true" class="left-[290px] top-[220px] z-20"></sensor-indicator>
                         <sensor-indicator name="ncB6" :active="inputs.i_ncB6atleftexit" nc="true" class="left-[40px] top-[220px] z-20"></sensor-indicator>
                         
-                        <!-- Right Belt Sensors (ncB7, ncB8) -->
                         <sensor-indicator name="ncB7" :active="inputs.i_ncB7atrightentry" nc="true" class="left-[490px] top-[220px] z-20"></sensor-indicator>
                         <sensor-indicator name="ncB8" :active="inputs.i_ncB8atrightexit" nc="true" class="left-[730px] top-[220px] z-20"></sensor-indicator>
 
 
-                        <!-- ===================== PALLETS ===================== -->
-                        <!-- Transformació 3D delegada a la GPU -->
                         <div v-for="pallet in pallets" :key="pallet.id" 
                              class="absolute top-0 left-0 rounded flex items-center justify-center font-bold text-xs z-40 transition-none will-change-transform"
                              :class="pallet.type === 'high' ? 'pallet-high text-amber-900' : 'pallet-low text-amber-200'"
@@ -377,7 +333,6 @@
                 </div>
             </section>
 
-            <!-- Right Panel: I/O Monitor -->
             <aside class="w-full lg:w-72 bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-700 flex flex-col shadow-xl z-10 shrink-0 min-h-[300px] lg:min-h-0">
                 <div class="p-3 border-b border-slate-700 bg-slate-800 flex justify-between items-center">
                     <h2 class="text-slate-200 font-bold text-sm tracking-widest"><span class="text-blue-500 mr-2">▶</span>LIVE I/O MONITOR</h2>
@@ -385,7 +340,6 @@
                 
                 <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-6 font-mono text-xs">
                     
-                    <!-- INPUTS (Always TX) -->
                     <div>
                         <div class="text-slate-500 font-bold mb-2 border-b border-slate-800 pb-1 flex justify-between">
                             <span>ENTRADES (TX/RX)</span>
@@ -399,7 +353,6 @@
                         </div>
                     </div>
 
-                    <!-- OUTPUTS (TX if internal PLC, RX if External PLC) -->
                     <div>
                         <div class="text-slate-500 font-bold mb-2 border-b border-slate-800 pb-1 flex justify-between">
                             <span>SORTIDES ({{ internalPLC ? 'TX' : 'RX' }})</span>
@@ -417,7 +370,6 @@
             </aside>
         </main>
 
-        <!-- MODAL INFO TOPICS MQTT -->
         <div v-if="showTopics" class="fixed inset-0 bg-slate-900/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
             <div class="bg-slate-800 border border-slate-600 rounded-xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.8)]">
                 <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900 rounded-t-xl">
@@ -459,7 +411,6 @@
 
     </div>
 
-    <!-- Vue Component Templates -->
     <script>
         const MotorIndicator = {
             props: ['name', 'active'],
@@ -650,8 +601,9 @@
                                         if (autoSpawnActive.value !== valBool) {
                                             autoSpawnActive.value = valBool;
                                             if (valBool) {
-                                                spawnRandomPallet();
-                                                spawnTimer = 0; // Resetegem el timer en arrancar
+                                                const isClear = !pallets.value.some(p => p.state === 'entry' && p.y > 520);
+                                                if (isClear) spawnRandomPallet();
+                                                spawnTimer = 0; 
                                             }
                                         }
                                     }
@@ -762,8 +714,9 @@
                 const toggleAutoSpawn = () => {
                     autoSpawnActive.value = !autoSpawnActive.value;
                     if (autoSpawnActive.value) {
-                        spawnRandomPallet(); 
-                        spawnTimer = 0; // Inicia el recompte controlat pel gameLoop
+                        const isClear = !pallets.value.some(p => p.state === 'entry' && p.y > 520);
+                        if (isClear) spawnRandomPallet(); 
+                        spawnTimer = 0; // Resetegem el timer en arrancar per evitar temps fantasma
                     }
                 };
 
@@ -895,24 +848,27 @@
                     if (buttonTimers.S2 > 0) { buttonTimers.S2 -= dt; if (buttonTimers.S2 <= 0) inputs.i_S2reset = false; }
                     if (buttonTimers.S3 > 0) { buttonTimers.S3 -= dt; if (buttonTimers.S3 <= 0) inputs.i_ncS3stop = true; }
 
-                    // 3. Generador Automàtic basat en el Delta Time
+                    // 3. Generador Automàtic basat en el Delta Time (Corregit)
                     if (autoSpawnActive.value) {
-                        spawnTimer += dt;
-                        const delay = 500000 / Math.max(10, autoRate.value); 
-                        if (spawnTimer >= delay) {
-                            const isClear = !pallets.value.some(p => p.state === 'entry' && p.y > 520);
-                            if (isClear) {
+                        const isClear = !pallets.value.some(p => p.state === 'entry' && p.y > 520);
+                        
+                        if (isClear) {
+                            spawnTimer += dt;
+                            const delay = 500000 / Math.max(10, autoRate.value); 
+                            if (spawnTimer >= delay) {
                                 spawnRandomPallet();
-                                spawnTimer %= delay; // Ens guardem els ms sobrants per ser precisos
+                                spawnTimer = 0; // Reset complet
                             }
+                        } else {
+                            // Si hi ha una caixa bloquejant l'inici, no permetem acumular "temps fantasma"
+                            spawnTimer = 0;
                         }
                     }
 
                     accumulator += dt;
                     let stateChanged = false;
 
-                    // 4. Fixed Timestep Loop: Si el navegador frena a 1FPS, el simulador calcularà 60 micro-passos de cop
-                    // assegurant que les caixes no es "teleportin" i s'activin tots els sensors pel camí de manera impecable.
+                    // 4. Fixed Timestep Loop
                     while (accumulator >= STEP_MS) {
                         stateChanged = true;
                         const actualSpeed = (BASE_SPEED * Number(simSpeed.value)) / 100;
@@ -980,7 +936,7 @@
                         accumulator -= STEP_MS;
                     }
 
-                    // PUBLICACIÓ MQTT (Només publiquem a la xarxa una vegada per "tick", evitant col·lapsar la connexió)
+                    // PUBLICACIÓ MQTT
                     if (stateChanged || dt > 0) {
                         for (const key in inputs) {
                             if (inputs[key] !== lastPublishedInputs[key]) {
@@ -1024,7 +980,6 @@
                     if (internalPLC.value) etapaGEMMA.value = 'A5';
                     window.addEventListener('resize', updateScale);
                     setTimeout(updateScale, 50);
-                    // Arranquem el motor del Worker (60 FPS segurs i inaturables)
                     tickerWorker.postMessage('start');
                 });
 
