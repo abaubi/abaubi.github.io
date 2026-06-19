@@ -3,16 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simulador de Dipòsit PI - SCADA</title>
+  <title>Simulador de Dipòsit PI / On-Off / Histeresi - SCADA</title>
   
   <!-- Carreguem Tailwind CSS per a la interfície interactiva de la consola -->
   <script src="https://cdn.tailwindcss.com"></script>
   
-  <!-- Carreguem React i ReactDOM (versió 18) des de CDNJS de forma estable -->
+  <!-- Carreguem React i ReactDOM (versió 18) des de CDNJS de forma de producció stabile -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   
-  <!-- Carreguem Babel Standalone des de CDNJS de forma estable per compilar JSX en viu -->
+  <!-- Carreguem Babel Standalone des de CDNJS de forma de producció estable per compilar JSX en viu -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
   <style>
@@ -21,7 +21,7 @@
       -webkit-appearance: slider-vertical;
       width: 8px;
       height: 140px;
-      padding: 0 5px;
+      padding: 0 4px;
     }
     
     /* Animació personalitzada de desplaçament d'aigua per a les canonades i dolls */
@@ -55,14 +55,18 @@
       const [bombaInercia, setBombaInercia] = useState(10); // Divisor de la inèrcia de la bomba
       const [disturbi, setDisturbi] = useState(0); // Cabal extern de pertorbació
 
-      // Interruptor dinàmic per activar/desactivar la protecció d'Anti-Windup en viu
-      const [antiWindupHabilitat, setAntiWindupHabilitat] = useState(true);
+      // Selecció de l'estratègia de control: 'PI', 'ON_OFF' (Tot o Res), 'HYS' (Histeresi)
+      const [modeControl, setModeControl] = useState('PI');
+      const [histeresiVal, setHisteresiVal] = useState(1.5); // Diferencial de commutació (0.1 a 5.0 cm)
+
+      // Interruptor dinàmic per activar/desactivar la protecció d'Anti-Windup en viu - INICIALMENT FALS (Desactivat)
+      const [antiWindupHabilitat, setAntiWindupHabilitat] = useState(false);
 
       // Alarmes configurables pel dipòsit
       const [alarmHigh, setAlarmHigh] = useState(26); // Alarma de nivell alt (mín 15, màx 30)
       const [alarmLow, setAlarmLow] = useState(4);    // Alarma de nivell baix (mín 0, màx 15)
 
-      // Estat del procés de simulació unificat amb suport per a estat de l'Anti-Windup
+      // Estat del procés de simulació unificat
       const [simState, setSimState] = useState({
         nivell: 0,
         errorIntegral: 0,
@@ -71,10 +75,11 @@
         tensioBomba: 0,
         temps: 0,
         windupActiu: false,
-        errorActual: 0
+        errorActual: 0,
+        bombaActiva: false // Estat d'encesa per a controls de tipus On-Off / Histeresi
       });
 
-      const { nivell, errorIntegral, qi, qo, tensioBomba, temps, windupActiu, errorActual } = simState;
+      const { nivell, errorIntegral, qi, qo, tensioBomba, temps, windupActiu, errorActual, bombaActiva } = simState;
 
       const [isRunning, setIsRunning] = useState(false);
       
@@ -86,11 +91,11 @@
       const simInterval = useRef(null);
       const terminalContainerRef = useRef(null);
 
-      // Presets configurats per ajudar a la comprensió
+      // Presets configurats per a l'estratègia PI de control d'aigua amb ajustaments optimitzats de kp i ki
       const presets = {
-        perfecte: { name: "PI Estable (Perfecte)", kp: 150, ki: 40, setpoint: 20, kAixeta: 20, inercia: 10, alH: 26, alL: 4 },
-        proporcional: { name: "Només P (Error permanent)", kp: 150, ki: 0, setpoint: 20, kAixeta: 20, inercia: 10, alH: 26, alL: 4 },
-        oscilatori: { name: "Inestable (Massa Ki)", kp: 350, ki: 120, setpoint: 20, kAixeta: 20, inercia: 10, alH: 26, alL: 4 },
+        perfecte: { name: "PI Estable (Perfecte)", kp: 250, ki: 15, setpoint: 20, kAixeta: 20, inercia: 10, alH: 26, alL: 4 },
+        nomesP: { name: "Només P (Error permanent)", kp: 150, ki: 0, setpoint: 20, kAixeta: 20, inercia: 10, alH: 26, alL: 4 },
+        inestable: { name: "Inestable (Massa Ki)", kp: 50, ki: 100, setpoint: 20, kAixeta: 20, inercia: 10, alH: 26, alL: 4 },
         senseSortida: { name: "Aixeta tancada (K = 0)", kp: 100, ki: 10, setpoint: 20, kAixeta: 0, inercia: 10, alH: 26, alL: 4 }
       };
 
@@ -102,6 +107,10 @@
         setBombaInercia(p.inercia);
         setAlarmHigh(p.alH);
         setAlarmLow(p.alL);
+        
+        // Forcem l'estratègia de control a PI perquè són presets de configuració proporcional/integral
+        setModeControl("PI");
+
         setIsRunning(false);
         setSimState({
           nivell: 0,
@@ -111,59 +120,103 @@
           tensioBomba: 0,
           temps: 0,
           windupActiu: false,
-          errorActual: 0
+          errorActual: 0,
+          bombaActiva: false
         });
         setHistorial([]);
-        setSerialLogs(["--- Preset aplicat ---", "Premeu PLAY per iniciar"]);
+        setSerialLogs(["--- Preset aplicat (Control PI actiu) ---", "Premeu PLAY per iniciar la simulació"]);
+      };
+
+      // Control manual de canvi d'estratègia amb reset d'estat integral
+      const setOptionControl = (mode) => {
+        setModeControl(mode);
+        setSimState(prev => ({
+          ...prev,
+          errorIntegral: 0,
+          tensioBomba: 0,
+          bombaActiva: false
+        }));
+        setSerialLogs(prev => [...prev, `[SISTEMA] Canvi d'estratègia a: ${mode === 'PI' ? 'Control PI' : mode === 'ON_OFF' ? 'Tot o Res' : 'Histeresi'}`]);
       };
 
       // Funció que executa un pas (1 dècima de segon / sample_time)
       const executarPasSimulacio = () => {
         setSimState((prev) => {
           const dt = sampleTime / 1000; // 0.1 segons
-
-          // 1. CONTROLADOR PI AMB ANTI-WINDUP (MÈTODE DE CLAMPING CONDICIONAL)
           const error = setpoint - prev.nivell;
           
-          // Calculem quina seria la sortida si s'apliqués la integral prèvia
-          const pTerm = kp * error;
-          const iTermPrevia = ki * prev.errorIntegral * dt;
-          const uPrevia = pTerm + iTermPrevia;
-
-          // Condicions de saturació del controlador físic (la bomba es clampa a 0 o al màxim teòric de 1500)
-          const estaSaturatSota = uPrevia < 0;
-          const estaSaturatDalt = uPrevia > 1500;
-
-          // El windup s'activa si estem saturats i l'error continua empenyent cap a la saturació
-          const windupSota = estaSaturatSota && error < 0;
-          const windupDalt = estaSaturatDalt && error > 0;
-          const sotaAW = windupSota || windupDalt;
-
-          // Només s'activa el Windup de la integral si l'interruptor de control està HABILITAT
-          const actiuAW = antiWindupHabilitat && sotaAW;
-
-          // Acumulem la integral només si l'Anti-Windup NO està bloquejant el càlcul
+          let u = 0;
+          let actiuAW = false;
           let nouErrorIntegral = prev.errorIntegral;
-          if (!actiuAW) {
-            nouErrorIntegral = prev.errorIntegral + error;
-          }
+          let nouBombaActiva = prev.bombaActiva;
 
-          // Càlcul final de la llei de control amb la integral realment obtinguda
-          const iTerm = ki * nouErrorIntegral * dt;
-          const u = pTerm + iTerm;
+          // APLIQUEM L'ESTRATEGIA DE CONTROL CORRESPONENT
+          if (modeControl === 'PI') {
+            // 1. CONTROLADOR PI AMB ANTI-WINDUP
+            const pTerm = kp * error;
+            const iTermPrevia = ki * prev.errorIntegral * dt;
+            const uPrevia = pTerm + iTermPrevia;
+
+            // Condicions de saturació del controlador físic (0 a 1500)
+            const estaSaturatSota = uPrevia < 0;
+            const estaSaturatDalt = uPrevia > 1500;
+
+            const windupSota = estaSaturatSota && error < 0;
+            const windupDalt = estaSaturatDalt && error > 0;
+            const sotaAW = windupSota || windupDalt;
+
+            actiuAW = antiWindupHabilitat && sotaAW;
+
+            // LÒGICA DE CÀLCUL: Si Ki és 0, no acumulem cap error integral, el forcem a 0!
+            if (ki === 0) {
+              nouErrorIntegral = 0;
+            } else if (!actiuAW) {
+              nouErrorIntegral = prev.errorIntegral + error;
+            }
+
+            const iTerm = ki * nouErrorIntegral * dt;
+            u = pTerm + iTerm;
+            nouBombaActiva = u > 0;
+
+          } else if (modeControl === 'ON_OFF') {
+            // 2. ESTRATEGIA TOT O RES (ON-OFF SENSE MARGE)
+            if (error > 0) {
+              u = 1000;
+              nouBombaActiva = true;
+            } else {
+              u = 0;
+              nouBombaActiva = false;
+            }
+            nouErrorIntegral = 0; // No s'utilitza la part integral
+
+          } else if (modeControl === 'HYS') {
+            // 3. ESTRATEGIA AMB HISTERESI
+            // Límits de commutació
+            const limitInferior = setpoint - histeresiVal;
+            const limitSuperior = setpoint + histeresiVal;
+
+            if (prev.nivell < limitInferior) {
+              u = 1000; // Engeguem bomba al màxim
+              nouBombaActiva = true;
+            } else if (prev.nivell > limitSuperior) {
+              u = 0; // Aturem bomba completament
+              nouBombaActiva = false;
+            } else {
+              // Dins de la banda d'histeresi, es manté l'estat anterior
+              nouBombaActiva = prev.bombaActiva;
+              u = nouBombaActiva ? 1000 : 0;
+            }
+            nouErrorIntegral = 0; // No s'utilitza la part integral
+          }
 
           // Inèrcia de la bomba física: l'aigua d'entrada no canvia a l'instant
           const limitU = Math.max(0, u);
           const nouQi = prev.qi + (limitU - prev.qi) / bombaInercia;
 
           // 2. SIMULACIÓ FÍSICA
-          // Cabal de sortida proporcional al nivell d'aigua
           const nouQo = kAixeta * prev.nivell;
-
-          // Cabal net (+ disturbi opcional que simula pluja/fuita)
           const qNet = nouQi - nouQo + disturbi;
           
-          // Variació de nivell = temps * q_net / àrea
           const variacioNivell = dt * qNet / areaBase;
           let nouNivell = prev.nivell + variacioNivell;
           
@@ -173,17 +226,21 @@
 
           const nouTemps = prev.temps + 1;
 
-          // Determinació d'estat d'alarmes per registrar en el sèrie
+          // Determinació d'estat d'alarmes i logs per registrar en el sèrie
           let alarmStr = "";
           if (nouNivell >= alarmHigh) {
             alarmStr = "\t[ALERTA NIVELL ALT]";
           } else if (nouNivell <= alarmLow) {
             alarmStr = "\t[ALERTA NIVELL BAIX]";
           }
-          if (actiuAW) {
+          
+          // Afegim logs especials d'estat del control
+          if (modeControl === 'PI' && actiuAW) {
             alarmStr += "\t[AW-BLOQUEJAT]";
-          } else if (sotaAW && !antiWindupHabilitat) {
-            alarmStr += "\t[WINDUP-CREIXENT!]";
+          } else if (modeControl === 'ON_OFF') {
+            alarmStr += nouBombaActiva ? "\t[BOMBA-ON]" : "\t[BOMBA-OFF]";
+          } else if (modeControl === 'HYS') {
+            alarmStr += nouBombaActiva ? "\t[HIST-ON]" : "\t[HIST-OFF]";
           }
 
           // Guardem l'historial d'aquest pas
@@ -204,7 +261,7 @@
             return h;
           });
 
-          // Afegir log a la consola sèrie simulada
+          // Afegir log a la consola sèrie
           setSerialLogs((prevL) => {
             const logStr = `${nouRegistre.temps}s\tNivell: ${nouRegistre.nivell.toFixed(2)} cm\tError: ${nouRegistre.error.toFixed(2)}\tQi: ${nouRegistre.qi.toFixed(1)} cm³/s\tQo: ${nouRegistre.qo.toFixed(1)} cm³/s${alarmStr}`;
             const logs = [...prevL, logStr];
@@ -220,7 +277,8 @@
             tensioBomba: u,
             temps: nouTemps,
             windupActiu: actiuAW,
-            errorActual: error
+            errorActual: error,
+            bombaActiva: nouBombaActiva
           };
         });
       };
@@ -237,7 +295,7 @@
         return () => {
           if (simInterval.current) clearInterval(simInterval.current);
         };
-      }, [isRunning, kp, ki, setpoint, kAixeta, areaBase, disturbi, bombaInercia, sampleTime, alarmHigh, alarmLow, antiWindupHabilitat]);
+      }, [isRunning, kp, ki, setpoint, kAixeta, areaBase, disturbi, bombaInercia, sampleTime, alarmHigh, alarmLow, antiWindupHabilitat, modeControl, histeresiVal]);
 
       // Scroll intern suau de la consola
       useEffect(() => {
@@ -257,7 +315,8 @@
           tensioBomba: 0,
           temps: 0,
           windupActiu: false,
-          errorActual: 0
+          errorActual: 0,
+          bombaActiva: false
         });
         setHistorial([]);
         setSerialLogs(["--- Simulador Inicialitzat ---", "Configureu paràmetres i premeu PLAY"]);
@@ -269,6 +328,9 @@
       const actualITerm = (ki * errorIntegral * (sampleTime / 1000)).toFixed(1);
       const actualVariacio = ((sampleTime/1000) * (qi - qo + disturbi) / areaBase).toFixed(4);
 
+      // Càlcul del % de funcionament actiu de la bomba regulada (0-100%)
+      const percentBomba = Math.min(100, Math.max(0, Math.round((tensioBomba / 1000) * 100)));
+
       return (
         <div className="max-w-7xl mx-auto p-4">
           
@@ -276,10 +338,10 @@
           <header className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center border-b border-slate-800 pb-3">
             <div>
               <span className="bg-blue-500/10 text-blue-400 text-xs font-semibold px-2.5 py-1 rounded-full border border-blue-500/20 uppercase tracking-wider">
-                Institut de l'Ebre • Vicent Favà i Agustí Baubí (curs 2025-26) 
+                Consola SCADA • Control Multitòpic de Processos
               </span>
               <h1 className="text-xl md:text-2xl font-black tracking-tight mt-1 bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
-                Mòdul Mesura i Regulació. Tauler de Regulació de Nivell PI
+                Tauler de Regulació de Nivell Multimode
               </h1>
             </div>
             
@@ -324,21 +386,58 @@
           {/* DISSENY GENERAL EN COMPARTIMENTS */}
           <div className="space-y-4">
             
-            {/* MÓDUL DE CONFIGURACIÓ RÀPIDA (PRESETS + SWITCH ANTI-WINDUP) */}
-            <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60 shadow-md flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+            {/* PANEL INDUSTRIAL SUPERIOR: ESTRATÈGIA + PRESETS + ANTI-WINDUP */}
+            <div className="bg-slate-800/80 rounded-xl p-3.5 border border-slate-700/60 shadow-md flex flex-col xl:flex-row items-stretch xl:items-center justify-between gap-4">
               
-              {/* Presets */}
+              {/* SELECTOR D'ESTRATEGIA (TABS INDUSTRIALS) */}
               <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
-                  Escenari:
+                <span className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 bg-blue-500 rounded-full"></span>
+                  Estratègia de Control:
                 </span>
+                <div className="bg-slate-900/80 p-1 rounded-lg border border-slate-700/65 flex gap-1">
+                  <button
+                    onClick={() => setOptionControl('PI')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                      modeControl === 'PI' 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Proporcional Integral (PI)
+                  </button>
+                  <button
+                    onClick={() => setOptionControl('ON_OFF')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                      modeControl === 'ON_OFF' 
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Tot o Res (On-Off)
+                  </button>
+                  <button
+                    onClick={() => setOptionControl('HYS')}
+                    className={`px-3 py-1.5 rounded-md text-xs font-bold transition-all ${
+                      modeControl === 'Histeresi' || modeControl === 'HYS'
+                        ? 'bg-blue-600 text-white shadow-md' 
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    Histeresi
+                  </button>
+                </div>
+              </div>
+
+              {/* Menú de presets de la part superior */}
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Presets de Control PI:</span>
                 <div className="flex flex-wrap gap-1.5">
                   {Object.keys(presets).map((key) => (
                     <button
                       key={key}
                       onClick={() => aplicarPreset(presets[key])}
-                      className="px-2.5 py-1 text-xs bg-slate-900 hover:bg-slate-700 border border-slate-700 rounded-md transition-all font-semibold text-slate-300 hover:text-white"
+                      className="px-2.5 py-1 text-xs bg-slate-900 hover:bg-slate-700 border border-slate-750 rounded-md font-semibold text-slate-300"
                     >
                       {presets[key].name}
                     </button>
@@ -346,29 +445,38 @@
                 </div>
               </div>
 
-              {/* INTERRUPTOR DE SEGURETAT ANTI-WINDUP (Molt visible) */}
-              <div className="flex items-center justify-between lg:justify-end gap-3 bg-slate-900/60 px-4 py-1.5 rounded-lg border border-slate-700/50">
-                <div className="text-left">
-                  <span className="text-xs font-bold text-slate-300 block">SISTEMA ANTI-WINDUP</span>
-                  <span className="text-[10px] text-slate-400 block">Clamping en saturació</span>
+              {/* TOGGLE SWITCH DE L'ANTI-WINDUP (Amb explicació clara agregada) */}
+              <div className={`flex flex-col gap-1.5 bg-slate-900/60 px-4 py-2 rounded-lg border border-slate-700/50 transition-all duration-300 max-w-xs ${
+                modeControl !== 'PI' ? 'opacity-30 pointer-events-none' : 'opacity-100'
+              }`}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-left">
+                    <span className="text-[10px] font-bold text-slate-300 block">SISTEMA ANTI-WINDUP</span>
+                    <span className="text-[9px] text-slate-400 block">Condició de Clamping (PI)</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setAntiWindupHabilitat(!antiWindupHabilitat)}
+                      className={`w-11 h-6 flex items-center rounded-full p-1 transition-all duration-300 ${
+                        antiWindupHabilitat ? 'bg-emerald-600 justify-end' : 'bg-rose-900 justify-start'
+                      }`}
+                      disabled={modeControl !== 'PI'}
+                    >
+                      <span className="bg-white w-4 h-4 rounded-full shadow-md transition-transform duration-300"></span>
+                    </button>
+                    <span className={`text-[10px] font-bold ${antiWindupHabilitat ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      {antiWindupHabilitat ? 'ACTIU' : 'OFF'}
+                    </span>
+                  </div>
                 </div>
-                <button
-                  onClick={() => setAntiWindupHabilitat(!antiWindupHabilitat)}
-                  className={`w-14 h-7 flex items-center rounded-full p-1 transition-all duration-300 ${
-                    antiWindupHabilitat ? 'bg-emerald-600 justify-end' : 'bg-rose-900 justify-start'
-                  }`}
-                  title="Activa/Desactiva el bloqueig de la integral en saturació"
-                >
-                  <span className="bg-white w-5 h-5 rounded-full shadow-md transition-transform duration-300"></span>
-                </button>
-                <span className={`text-xs font-bold tracking-wider ${antiWindupHabilitat ? 'text-emerald-400' : 'text-rose-400'}`}>
-                  {antiWindupHabilitat ? 'ACTIU' : 'DESACTIVAT'}
+                <span className="text-[8.5px] text-slate-400 leading-snug border-t border-slate-800 pt-1">
+                  Evita que la part integral continuï sumant error indefinidament quan la bomba es troba saturada al 0% o al 100%.
                 </span>
               </div>
 
             </div>
 
-            {/* CONTINGUT PRINCIPAL EN DOS GRANS BLOCS (Planta i Control / Càlculs Matemàtics) */}
+            {/* CONTINGUT PRINCIPAL (Planta i Control / Càlculs Matemàtics) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
               
               {/* COLUMNA ESQUERRA: SLIDERS VERTICALS + DIPÒSIT D'AIGUA (Col: 7) */}
@@ -377,14 +485,14 @@
                   <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
                     Estat de la Planta Física i Controladors Verticals
                   </h2>
-                  <span className="text-[10px] text-slate-500 font-mono">SEGURETAT I CONTROL ACTIU</span>
+                  <span className="text-[10px] text-slate-500 font-mono">PANEL DE COMANDAMENT</span>
                 </div>
 
-                {/* INTEGRACIÓ INTERACTIVA: SLIDERS VERTICALS AL COSTAT DEL DIPÒSIT */}
+                {/* SLIDERS VERTICALS AL COSTAT DEL DIPÒSIT */}
                 <div className="grid grid-cols-12 gap-3 items-center">
                   
-                  {/* SLIDERS VERTICALS */}
-                  <div className="col-span-6 bg-slate-900/50 p-2 rounded-xl border border-slate-700/40 flex flex-row justify-around items-stretch h-[240px]">
+                  {/* PANELL DE CONTROLS LLISCADORS VERTICALS (SP, Kp, Ki, Aix, Pert, Inè, AL.H, AL.L, HYS) */}
+                  <div className="col-span-7 bg-slate-900/50 p-2.5 rounded-xl border border-slate-700/40 flex flex-row justify-around items-stretch h-[240px]">
                     
                     {/* Vertical Slider 1: Setpoint */}
                     <div className="flex flex-col items-center justify-between h-full group">
@@ -405,8 +513,8 @@
                       <span className="text-[8px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Consigna</span>
                     </div>
 
-                    {/* Vertical Slider 2: Kp */}
-                    <div className="flex flex-col items-center justify-between h-full group">
+                    {/* Vertical Slider 2: Kp (Omitit o apagat si no es PI) */}
+                    <div className={`flex flex-col items-center justify-between h-full group transition-all ${modeControl !== 'PI' ? 'opacity-20' : ''}`}>
                       <span className="text-[10px] font-bold text-amber-400">Kp</span>
                       <div className="relative flex-grow my-1 flex justify-center">
                         <input
@@ -417,6 +525,7 @@
                           step="10"
                           value={kp}
                           onChange={(e) => setKp(parseInt(e.target.value))}
+                          disabled={modeControl !== 'PI'}
                           className="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-amber-500"
                         />
                       </div>
@@ -424,8 +533,8 @@
                       <span className="text-[8px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Proporc.</span>
                     </div>
 
-                    {/* Vertical Slider 3: Ki */}
-                    <div className="flex flex-col items-center justify-between h-full group">
+                    {/* Vertical Slider 3: Ki (Omitit o apagat si no es PI) */}
+                    <div className={`flex flex-col items-center justify-between h-full group transition-all ${modeControl !== 'PI' ? 'opacity-20' : ''}`}>
                       <span className="text-[10px] font-bold text-teal-400">Ki</span>
                       <div className="relative flex-grow my-1 flex justify-center">
                         <input
@@ -436,6 +545,7 @@
                           step="5"
                           value={ki}
                           onChange={(e) => setKi(parseInt(e.target.value))}
+                          disabled={modeControl !== 'PI'}
                           className="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-teal-500"
                         />
                       </div>
@@ -539,12 +649,34 @@
                       <span className="text-[8px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Alarma Baixa</span>
                     </div>
 
+                    {/* VERTICAL SLIDER 9: HISTERESI (Només actiu si mode és Hysteresi) */}
+                    <div className={`flex flex-col items-center justify-between h-full group border-l border-indigo-500/20 pl-1 transition-all ${
+                      modeControl !== 'Hysteresi' && modeControl !== 'HYS' ? 'opacity-20' : ''
+                    }`}>
+                      <span className="text-[10px] font-bold text-indigo-400">HYS</span>
+                      <div className="relative flex-grow my-1 flex justify-center">
+                        <input
+                          type="range"
+                          orient="vertical"
+                          min="0.1"
+                          max="5.0"
+                          step="0.1"
+                          value={histeresiVal}
+                          onChange={(e) => setHisteresiVal(parseFloat(e.target.value))}
+                          disabled={modeControl !== 'Hysteresi' && modeControl !== 'HYS'}
+                          className="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-indigo-500"
+                        />
+                      </div>
+                      <span className="text-[9px] font-mono text-indigo-300 bg-indigo-950 px-1 py-0.5 rounded font-bold">±{histeresiVal}</span>
+                      <span className="text-[8px] text-indigo-400 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Diferencial</span>
+                    </div>
+
                   </div>
 
                   {/* EL DIPÒSIT SVG ANIMAT */}
-                  <div className="col-span-6 flex flex-col items-center relative">
+                  <div className="col-span-5 flex flex-col items-center relative">
                     
-                    {/* Indicadors ràpids flotants */}
+                    {/* Indicadors de cabals en viu */}
                     <div className="absolute top-0 right-0 flex flex-col items-end gap-1 text-[10px] font-mono z-20">
                       <div className="bg-slate-900/95 px-1.5 py-0.5 rounded border border-slate-700/60 flex items-center gap-1.5">
                         <span className="w-2 h-2 bg-sky-500 rounded-full animate-pulse"></span>
@@ -560,10 +692,10 @@
                     </div>
 
                     {/* SVG principal del Dipòsit */}
-                    <div className="w-full max-w-[260px] h-[240px] mt-2">
+                    <div className="w-full max-w-[240px] h-[240px] mt-2">
                       <svg viewBox="0 0 200 240" className="w-full h-full">
                         
-                        {/* INDICADORS LED D'ALARMES INDUSTRIALS */}
+                        {/* INDICADORS LED D'ALARMES */}
                         <g transform="translate(45, 15)">
                           <circle cx="0" cy="0" r="4.5" fill={nivell >= alarmHigh ? "#ef4444" : "#1e293b"} stroke={nivell >= alarmHigh ? "#fca5a5" : "#475569"} strokeWidth="1" className={nivell >= alarmHigh ? "animate-pulse" : ""} />
                           <text x="8" y="2.5" fill={nivell >= alarmHigh ? "#ef4444" : "#64748b"} fontSize="7" fontWeight="bold">ALM ALT</text>
@@ -578,6 +710,14 @@
                         <path d="M 10 32 L 70 32 L 70 47 L 60 47 L 60 40 L 10 40 Z" fill="#475569" />
                         <rect x="5" y="22" width="15" height="25" rx="2" fill="#1e293b" stroke="#64748b" strokeWidth="2" />
                         <text x="12" y="38" fontSize="8" fill="#38bdf8" textAnchor="middle" fontWeight="bold">M</text>
+
+                        {/* Indicador de % de funcionament digital d'entrada, acoblat dinàmicament a la bomba */}
+                        <g transform="translate(10, 14)">
+                          <rect x="15" y="10" width="34" height="12" rx="2" fill="#0f172a" stroke="#475569" strokeWidth="0.5" />
+                          <text x="32" y="19" fontSize="7.5" fill="#a855f7" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
+                            {percentBomba}%
+                          </text>
+                        </g>
 
                         {/* Doll d'aigua d'entrada */}
                         {qi > 0.5 && (
@@ -614,7 +754,39 @@
                         <rect x="40" y="50" width="130" height="170" fill="none" stroke="#94a3b8" strokeWidth="4" rx="2" />
                         <line x1="35" y1="60" x2="175" y2="60" stroke="#b91c1c" strokeWidth="1" strokeDasharray="2 2" opacity="0.6" />
                         
-                        {/* Límits d'Alarme Dinàmics */}
+                        {/* Línies de l'Histeresi dinàmiques (Només si mode és Histeresi) */}
+                        {(modeControl === 'Histeresi' || modeControl === 'HYS') && (
+                          <g>
+                            <line 
+                              x1="40" 
+                              y1={220 - ((setpoint + histeresiVal) / 30 * 160)} 
+                              x2="170" 
+                              y2={220 - ((setpoint + histeresiVal) / 30 * 160)} 
+                              stroke="#818cf8" 
+                              strokeWidth="1" 
+                              strokeDasharray="3 3" 
+                            />
+                            <line 
+                              x1="40" 
+                              y1={220 - ((setpoint - histeresiVal) / 30 * 160)} 
+                              x2="170" 
+                              y2={220 - ((setpoint - histeresiVal) / 30 * 160)} 
+                              stroke="#818cf8" 
+                              strokeWidth="1" 
+                              strokeDasharray="3 3" 
+                            />
+                            <rect
+                              x="42"
+                              y={220 - ((setpoint + histeresiVal) / 30 * 160)}
+                              width="126"
+                              height={(histeresiVal * 2 / 30 * 160)}
+                              fill="#818cf8"
+                              fillOpacity="0.08"
+                            />
+                          </g>
+                        )}
+
+                        {/* Límits d'Alarma Dinàmics */}
                         {(() => {
                           const yAlarmHigh = 220 - (alarmHigh / 30 * 160);
                           return (
@@ -635,7 +807,7 @@
                           );
                         })()}
 
-                        {/* Setpoint */}
+                        {/* Setpoint (Consigna) */}
                         {(() => {
                           const ySetpoint = 220 - (setpoint / 30 * 160);
                           return (
@@ -689,110 +861,176 @@
                 </div>
               </div>
 
-              {/* COLUMNA DRETA: EL PANELL COMPLET DE CÀLCULS EN TEMPS REAL RESTAURAT (Col: 5) */}
+              {/* COLUMNA DRETA: EL PANELL COMPLET DE CÀLCULS EN TEMPS REAL DINÀMIC (Col: 5) */}
               <div className="lg:col-span-5 bg-slate-800/80 rounded-xl p-4 border border-slate-700/60 shadow-lg flex flex-col justify-between">
                 <div>
                   <div className="border-b border-slate-700/60 pb-2 mb-3 flex items-center gap-2">
                     <span className="w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse"></span>
                     <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
-                      Càlculs Interns (Temps Real)
+                      Càlculs Interns ({modeControl === 'PI' ? 'Mode PI' : modeControl === 'ON_OFF' ? 'Mode Tot o Res' : 'Mode Histeresi'})
                     </h2>
                   </div>
                   
+                  {/* CÀLCULS ADAPTATIUS SEGONS L'ESTRATÈGIA ACTIVA */}
                   <div className="space-y-3 text-xs font-mono">
-                    {/* Pas 1 */}
+                    
+                    {/* PAS 1: ERROR / LLINDARS AMB PRESENTACIÓ DE FÓRMULA */}
                     <div className="bg-slate-900/60 p-2.5 rounded border border-slate-755">
-                      <span className="text-slate-400 font-bold text-[10px] block uppercase tracking-wide">1. Error (e) = Setpoint - Nivell</span>
+                      <span className="text-slate-400 font-bold text-[10px] block uppercase tracking-wide">1. Error i Referència (Fórmula: e = SP - Nivell)</span>
                       <div className="text-blue-400 text-sm mt-1 font-bold">
-                        {setpoint} - {nivell.toFixed(2)} = <span className="text-emerald-400">{actualError} cm</span>
+                        e = {setpoint} - {nivell.toFixed(2)} = <span className="text-emerald-400">{actualError} cm</span>
                       </div>
+                      {(modeControl === 'Hysteresi' || modeControl === 'HYS') && (
+                        <div className="text-[10px] text-indigo-400 mt-1">
+                          Banda d'Histeresi (±{histeresiVal}cm): Marges { (setpoint - histeresiVal).toFixed(1) } cm a { (setpoint + histeresiVal).toFixed(1) } cm
+                        </div>
+                      )}
                     </div>
 
-                    {/* Pas 2 (Actualitzat amb la lògica de canvi del Windup dinàmic pas a pas) */}
-                    <div className="bg-slate-900/60 p-2.5 rounded border border-slate-755">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-slate-400 font-bold text-[10px] block uppercase tracking-wide">2. Part Integral acumulant (error_integral)</span>
-                        <span className={`text-[9px] px-1.5 py-0.5 rounded border font-sans font-bold ${
-                          !antiWindupHabilitat 
-                            ? 'bg-slate-800 text-slate-400 border-slate-700' 
-                            : windupActiu 
-                              ? 'bg-red-500/10 text-red-400 border-red-500/25 animate-pulse' 
-                              : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
-                        }`}>
-                          {!antiWindupHabilitat ? 'Anti-Windup: OFF' : windupActiu ? '⚠️ AW Actiu (Bloquejat)' : 'AW OK (Integrant)'}
-                        </span>
-                      </div>
-                      
-                      <div className="text-teal-400 text-xs font-bold mt-1.5 space-y-1">
-                        <div>
-                          Suma acumulada = <span className="text-teal-300">{errorIntegral.toFixed(1)}</span>
+                    {/* PAS 2: INTEGRAL (PI) O CONDICIÓ D'ESTAT (ON-OFF / HISTERESI) AMB PRESENTACIÓ DE FÓRMULA */}
+                    {modeControl === 'PI' ? (
+                      <div className="bg-slate-900/60 p-2.5 rounded border border-slate-755">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="text-slate-400 font-bold text-[10px] block uppercase tracking-wide">
+                            2. Part Integral (Fórmula: e_int = e_int_ant + e)
+                          </span>
+                          <span className={`text-[9px] px-1.5 py-0.5 rounded border font-sans font-bold ${
+                            ki === 0
+                              ? 'bg-slate-800 text-slate-400 border-slate-700'
+                              : !antiWindupHabilitat 
+                                ? 'bg-slate-800 text-slate-400 border-slate-700' 
+                                : windupActiu 
+                                  ? 'bg-red-500/10 text-red-400 border-red-500/25 animate-pulse' 
+                                  : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
+                          }`}>
+                            {ki === 0 ? 'Ki deshabilitada' : !antiWindupHabilitat ? 'Anti-Windup: OFF' : windupActiu ? '⚠️ AW Actiu (Bloquejat)' : 'AW OK (Integrant)'}
+                          </span>
                         </div>
                         
-                        {/* Fórmula dinàmica pas a pas molt visible */}
-                        <div className="text-[11px] text-slate-300 font-normal border-t border-slate-700/40 pt-1 mt-1">
-                          {windupActiu ? (
-                            <span className="text-red-400">
-                              Equació: {errorIntegral.toFixed(1)} + <span className="underline font-bold">0</span> (Anti-Windup Actiu!) = <span className="font-bold">{errorIntegral.toFixed(1)}</span>
+                        <div className="text-teal-400 text-xs font-bold mt-1.5 space-y-1">
+                          <div>
+                            Suma acumulada (e_integral) = <span className="text-teal-300">{errorIntegral.toFixed(1)}</span>
+                          </div>
+                          
+                          {/* Fórmula dinàmica pas a pas de la integració condicional */}
+                          <div className="text-[11px] text-slate-300 font-normal border-t border-slate-700/40 pt-1 mt-1">
+                            {ki === 0 ? (
+                              <span className="text-slate-400">
+                                Lògica: Ki = 0 (Només P) &rarr; error_integral = <span className="font-bold underline">0</span> (Sense integració)
+                              </span>
+                            ) : windupActiu ? (
+                              <span className="text-red-400">
+                                Lògica: Clamping actiu &rarr; {errorIntegral.toFixed(1)} + <span className="underline font-bold">0</span> = <span className="font-bold">{errorIntegral.toFixed(1)}</span>
+                              </span>
+                            ) : (
+                              <span className="text-slate-200">
+                                Lògica: {errorIntegral.toFixed(1)} + ({actualError}) = <span className="font-bold">{(errorIntegral + parseFloat(actualError)).toFixed(1)}</span>
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Explicació dinàmica de seguretat */}
+                        <div className="text-[10px] text-slate-400 mt-2 font-sans italic leading-normal">
+                          {ki === 0 ? (
+                            <span>• Mode Proporcional pur (P): Com que la constant Ki està a zero, no hi ha acumulació d'error del passat i l'error integral roman clamat a 0.</span>
+                          ) : windupActiu ? (
+                            <span className="text-red-400 font-semibold block">
+                              • Anti-Windup en Clamping: Bloquejat per evitar l'acumulació innecessària d'error de saturació mentre la bomba física està clavada a 0.
+                            </span>
+                          ) : !antiWindupHabilitat && (nivell > setpoint) && (qi <= 0.01) ? (
+                            <span className="text-rose-400 font-semibold block">
+                              • Alerta de Saturació (Windup): L'Anti-Windup està apagat. L'error s'acumula negativament sense límit i farà que la bomba tardi a respondre en demanar aigua!
                             </span>
                           ) : (
-                            <span className="text-slate-200">
-                              Equació: {errorIntegral.toFixed(1)} + ({actualError}) = <span className="font-bold">{(errorIntegral + parseFloat(actualError)).toFixed(1)}</span>
-                            </span>
+                            <span>• Integració activa: El controlador està operant dins de la finestra física de treball.</span>
                           )}
                         </div>
                       </div>
-
-                      {/* Caixa d'explicació de l'estat actual */}
-                      <div className="text-[10px] text-slate-400 mt-2 font-sans italic leading-normal">
-                        {windupActiu ? (
-                          <span className="text-red-400 font-semibold block">
-                            • Clamping condicional actiu: Com que la bomba s'ha saturat a 0 i l'error demana buidar encara més, s'ignora l'error d'aquest cicle per evitar que l'acumulador baixi indefinidament.
-                          </span>
-                        ) : !antiWindupHabilitat && (nivell > setpoint) && (qi <= 0.01) ? (
-                          <span className="text-rose-400 font-semibold block">
-                            • Alerta de saturació (Windup): L'Anti-Windup està desactivat. L'acumulador continua restant valor de forma il·limitada tot i que la bomba estigui parada. Això retardarà la reacció posterior!
-                          </span>
-                        ) : (
-                          <span>
-                            • Integració regular: El controlador està dins dels marges d'operació física de la bomba i l'error s'acumula amb normalitat.
-                          </span>
-                        )}
+                    ) : modeControl === 'ON_OFF' ? (
+                      <div className="bg-slate-900/60 p-2.5 rounded border border-slate-755">
+                        <span className="text-slate-400 font-bold text-[10px] block uppercase tracking-wide">2. Condició d'Estat (Tot o Res)</span>
+                        <div className="text-sm mt-1 font-bold">
+                          Nivell ({nivell.toFixed(2)} cm) &lt; Setpoint ({setpoint} cm)?{' '}
+                          {errorActual > 0 ? (
+                            <span className="text-emerald-400">SÍ (Demanda d'aigua)</span>
+                          ) : (
+                            <span className="text-rose-400">NO (Dipòsit ple)</span>
+                          )}
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1 font-sans italic leading-tight">
+                          El sistema commuta de forma immediata i directa al revés de l'error sense cap filtre ni marge.
+                        </p>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="bg-slate-900/60 p-2.5 rounded border border-slate-755">
+                        <span className="text-slate-400 font-bold text-[10px] block uppercase tracking-wide">2. Banda i Lògica de Commutació (Histeresi)</span>
+                        <div className="text-[11px] mt-1.5 space-y-1">
+                          <div className="flex justify-between">
+                            <span>Estat de la Bomba:</span>
+                            <span className={`font-bold ${bombaActiva ? 'text-emerald-400' : 'text-slate-400'}`}>
+                              {bombaActiva ? 'ON (Funcionant)' : 'OFF (Aturada)'}
+                            </span>
+                          </div>
+                          <div className="border-t border-slate-700/40 pt-1 mt-1">
+                            {nivell < (setpoint - histeresiVal) ? (
+                              <span className="text-emerald-400 font-bold">• Nivell sota llindar ({ (setpoint - histeresiVal).toFixed(1) }cm) -> Bomba s'encén.</span>
+                            ) : nivell > (setpoint + histeresiVal) ? (
+                              <span className="text-rose-400 font-bold">• Nivell sobre llindar ({ (setpoint + histeresiVal).toFixed(1) }cm) -> Bomba s'atura.</span>
+                            ) : (
+                              <span className="text-indigo-300">• Dins de la banda ({ (setpoint - histeresiVal).toFixed(1) } a { (setpoint + histeresiVal).toFixed(1) }cm) -> Manté estat.</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
-                    {/* Pas 3 */}
+                    {/* PAS 3: LLEI DE CONTROL (u) */}
                     <div className="bg-slate-900/60 p-2.5 rounded border border-slate-755">
-                      <span className="text-slate-400 font-bold text-[10px] block uppercase tracking-wide">3. Equació del Controlador (u)</span>
-                      <div className="text-slate-200 text-[11px] mt-1.5 leading-relaxed whitespace-pre-line">
-                        u = (Kp · e) + (Ki · e_integral · dt)
-                        u = (<span className="text-amber-400">{kp}</span> · <span className="text-emerald-400">{actualError}</span>) + (<span className="text-teal-400">{ki}</span> · <span className="text-teal-300">{errorIntegral.toFixed(1)}</span> · 0.1)
-                        u = <span className="text-amber-300">{actualPTerm}</span> + <span className="text-teal-300">{actualITerm}</span> = <span className="text-purple-400 font-bold text-sm">{tensioBomba.toFixed(1)}</span>
-                      </div>
+                      <span className="text-slate-400 font-bold text-[10px] block uppercase tracking-wide">3. Equació i Senyal del Controlador (u)</span>
+                      {modeControl === 'PI' ? (
+                        <div className="text-slate-200 text-[11px] mt-1 leading-relaxed whitespace-pre-line">
+                          u = (Kp · e) + (Ki · e_integral · dt) <br />
+                          u = (<span className="text-amber-400">{kp}</span> · <span className="text-emerald-400">{actualError}</span>) + (<span className="text-teal-400">{ki}</span> · <span className="text-teal-300">{errorIntegral.toFixed(1)}</span> · 0.1) <br />
+                          u = <span className="text-amber-300">{actualPTerm}</span> + <span className="text-teal-300">{actualITerm}</span> = <span className="text-purple-400 font-bold text-sm">{tensioBomba.toFixed(1)}</span>
+                        </div>
+                      ) : modeControl === 'ON_OFF' ? (
+                        <div className="text-slate-200 text-[11px] mt-1 leading-relaxed">
+                          u = (Error &gt; 0) ? 1000 : 0 <br />
+                          u = ({actualError} &gt; 0) ? <span className="text-purple-400 font-bold">{tensioBomba} (100% de potència)</span> : <span className="text-slate-400 font-bold">0 (Bomba OFF)</span>
+                        </div>
+                      ) : (
+                        <div className="text-slate-200 text-[11px] mt-1 leading-relaxed">
+                          u = (Bomba Activa)? 1000 : 0 <br />
+                          Bomba actual: <span className={bombaActiva ? 'text-emerald-400 font-bold' : 'text-slate-400 font-bold'}>{bombaActiva ? 'ACTIVA' : 'INACTIVA'}</span> -> u = <span className="text-purple-400 font-bold text-sm">{tensioBomba}</span>
+                        </div>
+                      )}
                     </div>
 
-                    {/* Pas 4 */}
+                    {/* PAS 4: FÍSICA */}
                     <div className="bg-slate-900/60 p-2.5 rounded border border-slate-755">
                       <span className="text-slate-400 font-bold text-[10px] block uppercase tracking-wide">4. Física del dipòsit (q_net / Area)</span>
-                      <div className="text-slate-200 text-[11px] mt-1.5 leading-relaxed">
-                        ΔNivell = dt · (qi - qo + pertorbació) / Àrea
-                        ΔNivell = 0.1 · ({qi.toFixed(1)} - {qo.toFixed(1)} + {disturbi}) / {areaBase}
+                      <div className="text-slate-200 text-[11px] mt-1 leading-relaxed">
+                        ΔNivell = dt · (qi - qo + pertorbació) / Àrea <br />
+                        ΔNivell = 0.1 · ({qi.toFixed(1)} - {qo.toFixed(1)} + {disturbi}) / {areaBase} <br />
                         ΔNivell = <span className="text-amber-500 font-bold">{actualVariacio > 0 ? `+${actualVariacio}` : actualVariacio} cm/pas</span>
                       </div>
                     </div>
+
                   </div>
                 </div>
 
                 <div className="mt-3 text-[10px] text-slate-400 bg-slate-900/35 p-2 rounded border border-slate-700/20">
-                  <span className="font-bold text-amber-500">Mètode:</span> Cada dècima de segon, el bucle resol aquestes equacions recursives per ajustar la bomba en temps real.
+                  <span className="font-bold text-blue-400">Comparativa:</span> Prova d'utilitzar el mode <span className="text-emerald-400">Tot o Res</span> per veure chattering frenètic, i després canvia a <span className="text-indigo-400">Histeresi</span> per reduir les commutacions.
                 </div>
               </div>
 
             </div>
 
-            {/* COMPARTIMENT INFERIOR: GRÀFIC DE RESPOSTA I TERMINAL */}
+            {/* COMPARTIMENT INFERIOR: GRÀFIC DE RESPOSTA I TERMINAL ARDUINO */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               
-              {/* Gràfic simplificat de nivell i Límits d'Alarma */}
+              {/* Gràfic de nivell i Límits d'Alarma */}
               <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60 shadow-md flex flex-col h-[240px]">
                 <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
                   Gràfic Temporal de Nivell i Llindars d'Alarma
@@ -886,7 +1124,7 @@
                 </div>
               </div>
 
-              {/* Consola Terminal */}
+              {/* Consola Terminal de l'IDE d'Arduino */}
               <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60 shadow-md flex flex-col h-[240px]">
                 <div className="flex justify-between items-center border-b border-slate-700/80 pb-2 mb-2">
                   <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
