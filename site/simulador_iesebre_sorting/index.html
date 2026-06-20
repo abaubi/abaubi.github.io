@@ -1,1077 +1,1276 @@
 <!DOCTYPE html>
 <html lang="ca">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Factory I/O Sorting Simulator - Digital Twin</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
-    <style>
-        /* Estils Industrials */
-        @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap');
-        
-        body { background-color: #0f172a; color: #e2e8f0; font-family: 'Rajdhani', sans-serif; overflow-x: hidden; }
-        .font-mono { font-family: 'Share Tech Mono', monospace; }
-        
-        /* Cintes transportadores millorades */
-        .conveyor-bg {
-            background: repeating-linear-gradient( 0deg, #334155, #334155 12px, #0f172a 12px, #0f172a 16px );
-            border-left: 4px solid #64748b;
-            border-right: 4px solid #64748b;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
-        }
-        .conveyor-bg-h {
-            background: repeating-linear-gradient( 90deg, #334155, #334155 12px, #0f172a 12px, #0f172a 16px );
-            border-top: 4px solid #64748b;
-            border-bottom: 4px solid #64748b;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
-        }
-        .conveyor-active { animation: moveBelt 1s linear infinite; }
-        .conveyor-active-left { animation: moveBeltLeft 1s linear infinite; }
-        .conveyor-active-right { animation: moveBeltRight 1s linear infinite; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulador de Dipòsit PI / On-Off / Histeresi - SCADA</title>
+  
+  <!-- Carreguem Tailwind CSS per a la interfície interactiva de la consola -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Carreguem React i ReactDOM (versió 18) des de CDNJS de forma de producció stabile -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  
+  <!-- Carreguem Babel Standalone des de CDNJS de forma de producció estable per compilar JSX en viu -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
-        @keyframes moveBelt { from { background-position: 0 0; } to { background-position: 0 -32px; } }
-        @keyframes moveBeltLeft { from { background-position: 0 0; } to { background-position: -32px 0; } }
-        @keyframes moveBeltRight { from { background-position: 0 0; } to { background-position: 32px 0; } }
-
-        /* Fons industrial per a la planta */
-        .floor-pattern {
-            background-color: #1e293b;
-            background-image: 
-                linear-gradient(rgba(255, 255, 255, 0.03) 2px, transparent 2px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.03) 2px, transparent 2px),
-                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-            background-size: 100px 100px, 100px 100px, 20px 20px, 20px 20px;
-            background-position: -2px -2px, -2px -2px, -1px -1px, -1px -1px;
-        }
-
-        /* Components UI */
-        .btn-industrial {
-            box-shadow: 0 4px 6px rgba(0,0,0,0.5), inset 0 2px 4px rgba(255,255,255,0.2);
-            transition: all 0.1s;
-        }
-        .btn-industrial:active:not(:disabled) {
-            transform: translateY(2px);
-            box-shadow: 0 1px 2px rgba(0,0,0,0.5), inset 0 1px 2px rgba(0,0,0,0.4);
-        }
-        .indicator { box-shadow: inset 0 2px 4px rgba(0,0,0,0.6); }
-        .indicator-on { box-shadow: 0 0 10px currentColor, inset 0 2px 4px rgba(255,255,255,0.4); }
-        
-        /* Ceta Emergència */
-        .btn-emer {
-            background: radial-gradient(circle, #ef4444 40%, #991b1b 100%);
-            border: 4px solid #fca5a5;
-        }
-        .btn-emer.pressed {
-            transform: scale(0.95);
-            background: radial-gradient(circle, #991b1b 40%, #7f1d1d 100%);
-            border-color: #b91c1c;
-        }
-        
-        /* Palets */
-        .pallet-low { background-color: #8B4513; border: 2px solid #5c2c0a; box-shadow: 3px 3px 5px rgba(0,0,0,0.5); }
-        .pallet-high { background-color: #D2B48C; border: 2px solid #8B4513; box-shadow: 5px 5px 10px rgba(0,0,0,0.6); }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #0f172a; }
-        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #475569; }
-    </style>
+  <style>
+    /* Estil personalitzat per als sliders verticals en navegadors basats en Webkit/Blink */
+    input[type="range"][orient="vertical"] {
+      -webkit-appearance: slider-vertical;
+      width: 8px;
+      height: 140px;
+      padding: 0 4px;
+    }
+    
+    /* Animació personalitzada de desplaçament d'aigua per a les canonades i dolls */
+    @keyframes dash {
+      to {
+        stroke-dashoffset: 20;
+      }
+    }
+    .animate-dash {
+      animation: dash 1s linear infinite;
+    }
+  </style>
 </head>
-<body>
-    <div id="app" class="min-h-screen flex flex-col relative">
-        <!-- Top Bar -->
-        <header class="bg-slate-800 border-b border-slate-700 p-3 flex flex-col md:flex-row justify-between items-center gap-4 shadow-lg z-10 shrink-0">
-            <div class="flex items-center gap-3 w-full md:w-auto justify-center md:justify-start">
-                <svg class="w-8 h-8 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-                <h1 class="text-2xl font-bold tracking-wider text-slate-100">SORTING SIMULATOR <span class="text-xs text-blue-400 ml-2">v3.3</span></h1>
-            </div>
-            
-            <div class="flex flex-col gap-2 bg-slate-900 p-2 rounded-lg border border-slate-700 w-full md:w-auto">
-                <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <input v-model="brokerUrl" class="bg-slate-800 text-sm text-slate-300 px-3 py-1 rounded border border-slate-600 focus:outline-none focus:border-blue-500 w-full sm:w-[300px] font-mono" placeholder="wss://broker.hivemq.com:8884/mqtt">
-                    <div class="flex gap-2">
-                        <!-- NOU BOTÓ DE MODE ECO / RENDER TOGGLE -->
-                        <button @click="showUI = !showUI" class="px-3 py-1 rounded font-bold text-xs btn-industrial flex items-center shadow-lg transition-colors border" :class="showUI ? 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-700' : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-500'">
-                            <span class="mr-1">{{ showUI ? '🖥️' : '🔋' }}</span> UI {{ showUI ? 'ON' : 'ECO' }}
-                        </button>
-
-                        <button @click="showTopics = true" class="px-3 py-1 rounded font-bold text-xs btn-industrial bg-blue-700 hover:bg-blue-600 text-white flex items-center shadow-lg">
-                            <span class="mr-1">ℹ️</span> INFO TOPICS MQTT
-                        </button>
-                        <button @click="toggleConnection" class="px-4 py-1 rounded font-bold text-sm btn-industrial w-full sm:w-auto" :class="connected ? 'bg-red-600 hover:bg-red-500 text-white' : 'bg-emerald-600 hover:bg-emerald-500 text-white'">
-                            {{ connected ? 'DISCONNECT' : 'CONNECT' }}
-                        </button>
-                    </div>
-                </div>
-                <!-- Autenticació MQTT -->
-                <div class="flex flex-col sm:flex-row items-center gap-2 border-t border-slate-800 pt-2">
-                    <input v-model="mqttUser" type="text" class="bg-slate-800 text-xs text-slate-300 px-2 py-1 rounded border border-slate-600 focus:outline-none focus:border-blue-500 w-full sm:flex-1 font-mono placeholder-slate-500" placeholder="Usuari MQTT (Opcional)">
-                    <input v-model="mqttPassword" type="password" class="bg-slate-800 text-xs text-slate-300 px-2 py-1 rounded border border-slate-600 focus:outline-none focus:border-blue-500 w-full sm:flex-1 font-mono placeholder-slate-500" placeholder="Contrasenya (Opcional)">
-                </div>
-                <!-- Topic i Estat -->
-                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-slate-800 pt-2">
-                    <div class="flex items-center w-full sm:w-[300px]">
-                        <span class="text-xs text-slate-500 font-bold mr-2 w-12">TOPIC:</span>
-                        <input v-model="baseTopic" class="bg-slate-800 text-xs text-slate-400 px-2 py-1 rounded border border-slate-600 focus:outline-none focus:border-blue-500 flex-1 font-mono" placeholder="iesebre/sorting/">
-                    </div>
-                    <div class="flex items-center gap-2 w-full sm:w-[100px] justify-center">
-                        <div class="w-3 h-3 rounded-full indicator" :class="connected ? 'bg-green-500 indicator-on text-green-500' : 'bg-slate-600'"></div>
-                        <span class="text-xs font-mono uppercase" :class="connected ? 'text-green-400' : 'text-slate-500'">{{ connected ? 'Online' : 'Offline' }}</span>
-                    </div>
-                </div>
-                <!-- Missatge d'error de connexió -->
-                <div v-if="connectionError" class="text-xs text-red-400 font-bold mt-2 bg-red-950/50 p-2 rounded border border-red-800">
-                    ⚠️ {{ connectionError }}
-                </div>
-            </div>
-        </header>
-
-        <!-- FRONTEND COMPLET (Actiu si showUI == true) -->
-        <main v-if="showUI" class="flex-1 flex flex-col lg:flex-row overflow-y-auto lg:overflow-hidden">
-            <!-- Left Panel: Control Panel -->
-            <aside class="w-full lg:w-80 bg-slate-800 border-b lg:border-b-0 lg:border-r border-slate-700 p-4 flex flex-col gap-5 lg:overflow-y-auto shrink-0">
-                <div class="bg-slate-700 rounded-xl p-4 border-2 border-slate-600 shadow-inner">
-                    <h2 class="text-slate-300 font-bold mb-4 text-center border-b border-slate-600 pb-2">PUPITRE DE CONTROL</h2>
-                    
-                    <div class="grid grid-cols-2 gap-4">
-                        <!-- START -->
-                        <div class="flex flex-col items-center gap-2">
-                            <div class="w-6 h-6 rounded-full indicator mb-1" :class="outputs.o_H1startlight ? 'bg-green-400 indicator-on text-green-400' : 'bg-slate-800'"></div>
-                            <button @mousedown="setButton('i_S1start', true)" @touchstart.prevent="setButton('i_S1start', true)" @mouseup="setButton('i_S1start', false)" @mouseleave="setButton('i_S1start', false)" @touchend.prevent="setButton('i_S1start', false)" @touchcancel.prevent="setButton('i_S1start', false)" class="w-16 h-16 rounded-full border-4 btn-industrial flex items-center justify-center transition-colors" :class="inputs.i_S1start ? 'bg-green-500 border-green-400' : 'bg-green-600 border-green-800'">
-                                <span class="text-xs font-bold text-green-900">START</span>
-                            </button>
-                            <span class="text-xs text-slate-400 font-mono">i_S1start (NO)</span>
-                        </div>
-                        
-                        <!-- RESET -->
-                        <div class="flex flex-col items-center gap-2">
-                            <div class="w-6 h-6 rounded-full indicator mb-1" :class="outputs.o_H2resetlight ? 'bg-blue-400 indicator-on text-blue-400' : 'bg-slate-800'"></div>
-                            <button @mousedown="setButton('i_S2reset', true)" @touchstart.prevent="setButton('i_S2reset', true)" @mouseup="setButton('i_S2reset', false)" @mouseleave="setButton('i_S2reset', false)" @touchend.prevent="setButton('i_S2reset', false)" @touchcancel.prevent="setButton('i_S2reset', false)" class="w-16 h-16 rounded-full border-4 btn-industrial flex items-center justify-center transition-colors" :class="inputs.i_S2reset ? 'bg-blue-400 border-blue-300' : 'bg-blue-500 border-blue-700'">
-                                <span class="text-xs font-bold text-blue-900">RESET</span>
-                            </button>
-                            <span class="text-xs text-slate-400 font-mono">i_S2reset (NO)</span>
-                        </div>
-
-                        <!-- STOP (NC) -->
-                        <div class="flex flex-col items-center gap-2 mt-4">
-                            <div class="w-6 h-6 rounded-full indicator mb-1" :class="outputs.o_H3stoplight ? 'bg-red-500 indicator-on text-red-500' : 'bg-slate-800'"></div>
-                            <button @mousedown="setButton('i_ncS3stop', false)" @touchstart.prevent="setButton('i_ncS3stop', false)" @mouseup="setButton('i_ncS3stop', true)" @mouseleave="setButton('i_ncS3stop', true)" @touchend.prevent="setButton('i_ncS3stop', true)" @touchcancel.prevent="setButton('i_ncS3stop', true)" class="w-16 h-16 rounded-full border-4 btn-industrial flex items-center justify-center transition-colors" :class="!inputs.i_ncS3stop ? 'bg-red-500 border-red-400' : 'bg-red-600 border-red-800'">
-                                <span class="text-xs font-bold text-red-900">STOP</span>
-                            </button>
-                            <span class="text-xs text-slate-400 font-mono">i_ncS3stop (NC)</span>
-                        </div>
-
-                        <!-- EMERGENCY (NC Toggle) -->
-                        <div class="flex flex-col items-center gap-2 mt-4">
-                            <div class="w-4 h-4 mb-2"></div> <!-- Spacer -->
-                            <button @click="toggleEmergency" class="w-20 h-20 rounded-full btn-emer flex items-center justify-center shadow-xl" :class="{'pressed': !inputs.i_ncS4emer}">
-                                <span class="text-xs font-bold text-white text-center leading-tight">EMERG<br>STOP</span>
-                            </button>
-                            <span class="text-xs text-slate-400 font-mono">i_ncS4emer (NC)</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-slate-700 rounded-xl p-4 border border-slate-600">
-                    <h2 class="text-slate-300 font-bold mb-4 text-sm border-b border-slate-600 pb-2">PARÀMETRES DE SIMULACIÓ</h2>
-                    
-                    <div class="flex items-center justify-between mb-3">
-                        <span class="text-xs text-slate-400 font-bold">PECES ALTES</span>
-                        <div class="flex items-center gap-1">
-                            <input v-model="highPercentage" type="number" min="0" max="100" class="w-14 bg-slate-800 text-slate-200 border border-slate-600 rounded text-center text-xs p-1 font-mono focus:border-blue-500 outline-none">
-                            <span class="text-[10px] text-slate-400 font-bold">%</span>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center justify-between mb-4">
-                        <span class="text-xs text-slate-400 font-bold">VELOCITAT GLOBAL</span>
-                        <div class="flex items-center gap-1">
-                            <input v-model="simSpeed" type="number" min="0" max="400" step="10" class="w-14 bg-slate-800 text-slate-200 border border-slate-600 rounded text-center text-xs p-1 font-mono focus:border-blue-500 outline-none">
-                            <span class="text-[10px] text-slate-400 font-bold">%</span>
-                        </div>
-                    </div>
-
-                    <!-- RITME AUTOMÀTIC -->
-                    <div class="flex items-center justify-between mb-4 border-t border-slate-600 pt-3">
-                        <span class="text-xs text-slate-400 font-bold" title="100% = 1 caixa cada 5 segons">RITME AUTOMÀTIC</span>
-                        <div class="flex items-center gap-1">
-                            <input v-model="autoRate" type="number" min="10" max="500" step="10" class="w-14 bg-slate-800 text-slate-200 border border-slate-600 rounded text-center text-xs p-1 font-mono focus:border-blue-500 outline-none">
-                            <span class="text-[10px] text-slate-400 font-bold">%</span>
-                        </div>
-                    </div>
-
-                    <!-- TOGGLE PLC INTERN -->
-                    <div class="flex items-center justify-between mb-4 border-t border-slate-600 pt-3">
-                        <span class="text-[11px] text-slate-300 font-bold" title="Si està actiu, el simulador processa el GRAFCET i envia les sortides.">PLC INTERN (STANDALONE)</span>
-                        <button @click="internalPLC = !internalPLC" class="w-10 h-5 rounded-full relative transition-colors shadow-inner shrink-0" :class="internalPLC ? 'bg-blue-500' : 'bg-slate-600'">
-                            <div class="w-4 h-4 bg-white rounded-full absolute top-0.5 transition-transform shadow" :class="internalPLC ? 'translate-x-5.5 left-[18px]' : 'translate-x-0.5 left-0'"></div>
-                        </button>
-                    </div>
-
-                    <div class="flex flex-col gap-2">
-                        <!-- Botons individuals (Alta / Baixa) -->
-                        <div class="flex gap-2">
-                            <button @click="spawnPallet('high')" class="flex-1 bg-amber-200 hover:bg-amber-100 text-amber-900 py-1.5 rounded text-xs btn-industrial font-bold border border-amber-400">
-                                + PEÇA ALTA
-                            </button>
-                            <button @click="spawnPallet('low')" class="flex-1 bg-amber-800 hover:bg-amber-700 text-white py-1.5 rounded text-xs btn-industrial font-bold border border-amber-900">
-                                + PEÇA BAIXA
-                            </button>
-                        </div>
-                        <!-- Botó automàtic basat en percentatge -->
-                        <button @click="toggleAutoSpawn" class="w-full text-white py-2 rounded text-sm btn-industrial font-bold border transition-colors"
-                                :class="autoSpawnActive ? 'bg-red-600 hover:bg-red-500 border-red-800' : 'bg-indigo-600 hover:bg-indigo-500 border-indigo-800'">
-                            {{ autoSpawnActive ? '⏹ ATURAR AUTOMÀTIC' : '▶ INICIAR AUTOMÀTIC (%)' }}
-                        </button>
-                        <!-- Botó netejar màquina -->
-                        <button @click="clearPallets" class="w-full bg-slate-900 hover:bg-red-900 text-slate-300 hover:text-white py-2 mt-2 rounded text-sm btn-industrial font-bold border border-slate-700 transition-colors">
-                            🗑️ NETEJAR MÀQUINA
-                        </button>
-                    </div>
-                </div>
-
-                <!-- ESTRUCTURA GEMMA + GRAFCETS -->
-                <div class="bg-slate-900 rounded p-3 border border-slate-700 flex flex-col gap-3 shrink-0">
-                    <div class="flex flex-row items-center justify-between">
-                        <div class="flex-1">
-                            <h2 class="text-slate-400 font-bold mb-1 text-xs uppercase tracking-wider">ESTAT GEMMA</h2>
-                            <div class="text-4xl font-mono text-center text-blue-400 font-bold leading-none">{{ etapaGEMMA || '--' }}</div>
-                        </div>
-                        
-                        <!-- BALISSA -->
-                        <div class="flex flex-col items-center ml-2">
-                            <div class="w-10 bg-slate-800 border-2 border-slate-600 rounded flex flex-col items-center p-1.5 gap-1.5 shadow-xl">
-                                <div class="w-6 h-6 rounded-full border border-slate-500 indicator transition-colors duration-100" :class="outputs.o_H3stoplight ? 'bg-red-500 indicator-on shadow-[0_0_15px_4px_#ef4444]' : 'bg-red-950'"></div>
-                                <div class="w-6 h-6 rounded-full border border-slate-500 indicator transition-colors duration-100" :class="outputs.o_H2resetlight ? 'bg-blue-400 indicator-on shadow-[0_0_15px_4px_#60a5fa]' : 'bg-blue-950'"></div>
-                                <div class="w-6 h-6 rounded-full border border-slate-500 indicator transition-colors duration-100" :class="outputs.o_H1startlight ? 'bg-green-500 indicator-on shadow-[0_0_15px_4px_#22c55e]' : 'bg-green-950'"></div>
-                            </div>
-                            <div class="w-3 h-6 bg-slate-600 border-x border-slate-500"></div>
-                            <div class="text-[9px] text-slate-400 font-bold mt-1 text-center leading-tight">BALISSA</div>
-                        </div>
-                    </div>
-
-                    <!-- ESTATS DELS GRAFCETS -->
-                    <div class="border-t border-slate-700 pt-3 mt-1">
-                        <h2 class="text-slate-400 font-bold mb-2 text-xs uppercase tracking-wider text-center">ETAPES GRAFCET</h2>
-                        <div class="flex justify-around items-center bg-slate-800 rounded p-2 border border-slate-700 shadow-inner">
-                            <div class="text-center w-10">
-                                <div class="text-[10px] text-slate-500 font-bold">G1</div>
-                                <div class="text-xl font-mono text-white font-bold leading-none">{{ grafcet.G1 }}</div>
-                            </div>
-                            <div class="text-center w-10">
-                                <div class="text-[10px] text-slate-500 font-bold">G2</div>
-                                <div class="text-xl font-mono text-white font-bold leading-none">{{ grafcet.G2 }}</div>
-                            </div>
-                            <div class="text-center w-10">
-                                <div class="text-[10px] text-slate-500 font-bold">G3</div>
-                                <div class="text-xl font-mono text-white font-bold leading-none">{{ grafcet.G3 }}</div>
-                            </div>
-                            <div class="text-center w-10">
-                                <div class="text-[10px] text-slate-500 font-bold">G4</div>
-                                <div class="text-xl font-mono text-white font-bold leading-none">{{ grafcet.G4 }}</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-            </aside>
-
-            <!-- Center: 2D Plant Simulation -->
-            <section ref="simContainer" class="flex-1 bg-[#1a1a1a] relative overflow-hidden min-h-[450px] lg:min-h-0 w-full">
-                <!-- Centrat absolut per evitar desplaçaments de flexbox amb elements escalats -->
-                <div class="absolute left-1/2 top-1/2 flex items-center justify-center w-0 h-0">
-                    
-                    <!-- Synoptic Container -->
-                    <div class="relative w-[800px] h-[600px] floor-pattern rounded-xl border-4 border-slate-600 shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden shrink-0 origin-center" id="factory-floor" :style="{ transform: `scale(${scaleFactor})` }">
-                        
-                        <!-- Rètols de Rampa -->
-                        <div class="absolute left-[10px] top-[140px] w-[120px] bg-slate-800/80 border border-slate-600 text-center py-1 rounded text-slate-400 font-bold tracking-widest text-xs z-10">
-                            ◀ SORTIDA ALTES
-                        </div>
-                        <div class="absolute right-[10px] top-[140px] w-[120px] bg-slate-800/80 border border-slate-600 text-center py-1 rounded text-slate-400 font-bold tracking-widest text-xs z-10">
-                            SORTIDA BAIXES ▶
-                        </div>
-
-                        <!-- ===================== CINTES TRANSPORTADORES ===================== -->
-                        <!-- Entry Conveyor (Vertical) -->
-                        <div class="absolute w-[100px] h-[250px] left-[350px] top-[350px] conveyor-bg" :class="{'conveyor-active': outputs.o_KM1conveyorentry}">
-                            <!-- Indicador visual de direcció -->
-                            <div class="absolute top-[10px] left-[40px] text-slate-600 font-bold opacity-50">▲</div>
-                            <div class="absolute top-[100px] left-[40px] text-slate-600 font-bold opacity-50">▲</div>
-                        </div>
-
-                        <!-- Left Conveyor (Horizontal) -->
-                        <div class="absolute w-[350px] h-[100px] left-[0px] top-[250px] conveyor-bg-h" :class="{'conveyor-active-left': outputs.o_KM6conveyorleft}">
-                            <div class="absolute top-[40px] left-[100px] text-slate-600 font-bold opacity-50">◀</div>
-                            <div class="absolute top-[40px] left-[250px] text-slate-600 font-bold opacity-50">◀</div>
-                        </div>
-
-                        <!-- Right Conveyor (Horizontal) -->
-                        <div class="absolute w-[350px] h-[100px] left-[450px] top-[250px] conveyor-bg-h" :class="{'conveyor-active-right': outputs.o_KM7conveyorright}">
-                            <div class="absolute top-[40px] left-[100px] text-slate-600 font-bold opacity-50">▶</div>
-                            <div class="absolute top-[40px] left-[250px] text-slate-600 font-bold opacity-50">▶</div>
-                        </div>
-
-                        <!-- Transfer Mechanism Center -->
-                        <div class="absolute w-[100px] h-[100px] left-[350px] top-[250px] bg-slate-800 border-4 border-slate-600 flex flex-col justify-between p-1 z-10 transition-all duration-300" 
-                             :class="outputs.o_KM2load ? 'shadow-[0_0_20px_rgba(59,130,246,0.5)] border-blue-500 scale-105 z-20' : ''">
-                            
-                            <!-- Rollers base (when down) -->
-                            <div class="w-full h-3 bg-slate-700 rounded-sm shadow-inner mt-1"></div>
-                            <div class="w-full h-3 bg-slate-700 rounded-sm shadow-inner"></div>
-                            <div class="w-full h-3 bg-slate-700 rounded-sm shadow-inner"></div>
-                            <div class="w-full h-3 bg-slate-700 rounded-sm shadow-inner mb-1"></div>
-                            
-                            <!-- Pop-up Chains (blue when active) -->
-                            <div class="absolute top-0 bottom-0 left-2 w-3 bg-slate-900 border-x border-slate-700 transition-colors" :class="outputs.o_KM4transferleft || outputs.o_KM5transferright ? 'bg-blue-600 border-blue-400' : ''"></div>
-                            <div class="absolute top-0 bottom-0 right-2 w-3 bg-slate-900 border-x border-slate-700 transition-colors" :class="outputs.o_KM4transferleft || outputs.o_KM5transferright ? 'bg-blue-600 border-blue-400' : ''"></div>
-                        </div>
-
-                        <!-- Ramp Zones -->
-                        <div class="absolute left-0 top-[250px] w-[20px] h-[100px] bg-red-900/30 border-r-4 border-dashed border-red-500/80 z-10"></div>
-                        <div class="absolute left-[780px] top-[250px] w-[20px] h-[100px] bg-green-900/30 border-l-4 border-dashed border-green-500/80 z-10"></div>
-
-
-                        <!-- ===================== MOTORS / ACTUADORS ===================== -->
-                        
-                        <!-- KM1: Entry Conveyor -->
-                        <motor-indicator name="KM1" :active="outputs.o_KM1conveyorentry" class="left-[470px] top-[400px]"></motor-indicator>
-                        
-                        <!-- Transfer Motors: KM4 (Left), KM2 (Lift Centered), KM5 (Right) -->
-                        <motor-indicator name="KM4" :active="outputs.o_KM4transferleft" class="left-[350px] top-[180px]"></motor-indicator>
-                        <motor-indicator name="KM2" :active="outputs.o_KM2load" class="left-[385px] top-[180px]"></motor-indicator>
-                        <motor-indicator name="KM5" :active="outputs.o_KM5transferright" class="left-[420px] top-[180px]"></motor-indicator>
-                        
-                        <!-- KM6 & KM7: Side Conveyors -->
-                        <motor-indicator name="KM6" :active="outputs.o_KM6conveyorleft" class="left-[150px] top-[180px]"></motor-indicator>
-                        <motor-indicator name="KM7" :active="outputs.o_KM7conveyorright" class="left-[620px] top-[180px]"></motor-indicator>
-
-
-                        <!-- ===================== SENSORS ===================== -->
-                        
-                        <!-- Entry Sensors (B3, B2, B1) al costat esquerre de la cinta -->
-                        <sensor-indicator name="B3" :active="inputs.i_B3palletsensor" nc="false" class="left-[310px] top-[440px] z-20"></sensor-indicator>
-                        <sensor-indicator name="B2" :active="inputs.i_B2lowsensor" nc="false" class="left-[310px] top-[400px] z-20"></sensor-indicator>
-                        <sensor-indicator name="B1" :active="inputs.i_B1highsensor" nc="false" class="left-[310px] top-[360px] z-20"></sensor-indicator>
-                        
-                        <!-- B4 (Loaded on Transfer) alineat damunt de KM2 -->
-                        <sensor-indicator name="B4" :active="inputs.i_B4loaded" nc="false" class="left-[385px] top-[140px] z-20"></sensor-indicator>
-
-                        <!-- Left Belt Sensors (ncB5, ncB6) -->
-                        <sensor-indicator name="ncB5" :active="inputs.i_ncB5atleftentry" nc="true" class="left-[290px] top-[220px] z-20"></sensor-indicator>
-                        <sensor-indicator name="ncB6" :active="inputs.i_ncB6atleftexit" nc="true" class="left-[40px] top-[220px] z-20"></sensor-indicator>
-                        
-                        <!-- Right Belt Sensors (ncB7, ncB8) -->
-                        <sensor-indicator name="ncB7" :active="inputs.i_ncB7atrightentry" nc="true" class="left-[490px] top-[220px] z-20"></sensor-indicator>
-                        <sensor-indicator name="ncB8" :active="inputs.i_ncB8atrightexit" nc="true" class="left-[730px] top-[220px] z-20"></sensor-indicator>
-
-
-                        <!-- ===================== PALLETS ===================== -->
-                        <!-- Transformació 3D delegada a la GPU -->
-                        <div v-for="pallet in pallets" :key="pallet.id" 
-                             class="absolute top-0 left-0 rounded flex items-center justify-center font-bold text-xs z-40 transition-none will-change-transform"
-                             :class="pallet.type === 'high' ? 'pallet-high text-amber-900' : 'pallet-low text-amber-200'"
-                             :style="{ width: '60px', height: '60px', transform: `translate3d(${pallet.x}px, ${pallet.y}px, 0)` }">
-                            {{ pallet.type === 'high' ? 'ALT' : 'BAIX' }}
-                        </div>
-
-                    </div>
-                </div>
-            </section>
-
-            <!-- Right Panel: I/O Monitor -->
-            <aside class="w-full lg:w-72 bg-slate-900 border-t lg:border-t-0 lg:border-l border-slate-700 flex flex-col shadow-xl z-10 shrink-0 min-h-[300px] lg:min-h-0">
-                <div class="p-3 border-b border-slate-700 bg-slate-800 flex justify-between items-center">
-                    <h2 class="text-slate-200 font-bold text-sm tracking-widest"><span class="text-blue-500 mr-2">▶</span>LIVE I/O MONITOR</h2>
-                </div>
-                
-                <div class="flex-1 overflow-y-auto p-4 flex flex-col gap-6 font-mono text-xs">
-                    
-                    <!-- INPUTS (Always TX) -->
-                    <div>
-                        <div class="text-slate-500 font-bold mb-2 border-b border-slate-800 pb-1 flex justify-between">
-                            <span>ENTRADES (TX/RX)</span>
-                            <span class="text-[10px]">HTML &harr; MQTT</span>
-                        </div>
-                        <div class="flex flex-col gap-1">
-                            <div v-for="(val, key) in inputs" :key="key" class="flex justify-between items-center p-1 rounded" :class="val ? 'bg-blue-900/20' : ''">
-                                <span class="text-slate-400">{{ key }}</span>
-                                <span class="px-2 py-0.5 rounded font-bold" :class="val ? 'bg-blue-600 text-white' : 'bg-slate-700 text-slate-500'">{{ val ? 'TRUE' : 'FALSE' }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- OUTPUTS (TX if internal PLC, RX if External PLC) -->
-                    <div>
-                        <div class="text-slate-500 font-bold mb-2 border-b border-slate-800 pb-1 flex justify-between">
-                            <span>SORTIDES ({{ internalPLC ? 'TX' : 'RX' }})</span>
-                            <span class="text-[10px] text-right" v-html="internalPLC ? 'HTML -> MQTT<br>(PLC INTERN)' : 'MQTT -> HTML<br>(PLC EXTERN)'"></span>
-                        </div>
-                        <div class="flex flex-col gap-1">
-                            <div v-for="(val, key) in outputs" :key="key" class="flex justify-between items-center p-1 rounded" :class="val ? 'bg-green-900/20' : ''">
-                                <span class="text-slate-400">{{ key }}</span>
-                                <span class="px-2 py-0.5 rounded font-bold" :class="val ? 'bg-green-600 text-white' : 'bg-slate-700 text-slate-500'">{{ val ? 'TRUE' : 'FALSE' }}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </aside>
-        </main>
-
-        <!-- HEADLESS MODE INDICATOR (Es mostra quan la UI està apagada) -->
-        <main v-else class="flex-1 flex flex-col items-center justify-center bg-slate-900 p-6">
-            <div class="text-center bg-slate-800 p-10 rounded-2xl border border-slate-700 shadow-2xl max-w-lg">
-                <div class="text-6xl mb-6 animate-pulse select-none">🙈</div>
-                <h2 class="text-2xl font-bold text-slate-300 tracking-widest mb-4">MODE ECO / HEADLESS ACTIU</h2>
-                <div class="space-y-2">
-                    <p class="text-slate-400 text-sm font-sans">El simulador, la física i la comunicació MQTT s'estan executant completament en segon pla mitjançant el Web Worker.</p>
-                    <p class="text-emerald-400 font-mono text-xs bg-slate-900 p-2 rounded">✓ Estalviant recursos del sistema (CPU/RAM).</p>
-                </div>
-            </div>
-        </main>
-
-        <!-- MODAL INFO TOPICS MQTT -->
-        <div v-if="showTopics" class="fixed inset-0 bg-slate-900/90 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
-            <div class="bg-slate-800 border border-slate-600 rounded-xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-[0_0_50px_rgba(0,0,0,0.8)]">
-                <div class="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-900 rounded-t-xl">
-                    <h3 class="text-blue-400 font-bold text-lg tracking-wider"><span class="mr-2">ℹ️</span> LLISTA DE TOPICS MQTT (RX/TX)</h3>
-                    <button @click="showTopics = false" class="text-slate-400 hover:text-white font-bold text-2xl transition-colors">&times;</button>
-                </div>
-                <div class="p-6 overflow-y-auto font-mono text-sm text-slate-300 flex flex-col gap-6">
-                    <p class="text-slate-400 font-sans text-base">Aquests són els topics als que el simulador està subscrit per poder ser controlat remotament des de Node-RED o qualsevol client MQTT. <br>⚠️ Recorda que has de prefixar-los amb el teu <b>TOPIC BASE</b> actual: <code class="bg-slate-900 px-2 py-1 rounded text-emerald-400">{{ baseTopic }}</code></p>
-                    
-                    <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                        <h4 class="text-emerald-400 font-bold mb-3 border-b border-slate-700 pb-2 flex items-center gap-2">
-                            <span class="text-xl">🎛️</span> CONTROL DEL PUPITRE (Botons Físics)
-                        </h4>
-                        <ul class="list-disc pl-6 space-y-2 font-sans">
-                            <li><code class="text-blue-300 font-mono">i_S1start</code> <span class="text-xs bg-slate-800 px-2 py-0.5 rounded ml-2">true / false</span> <span class="text-xs text-slate-400 italic">(Polsador)</span></li>
-                            <li><code class="text-blue-300 font-mono">i_S2reset</code> <span class="text-xs bg-slate-800 px-2 py-0.5 rounded ml-2">true / false</span> <span class="text-xs text-slate-400 italic">(Polsador)</span></li>
-                            <li><code class="text-blue-300 font-mono">i_ncS3stop</code> <span class="text-xs bg-slate-800 px-2 py-0.5 rounded ml-2">true / false</span> <span class="text-xs text-red-400 font-bold">(Lògica NC, Polsador)</span></li>
-                            <li><code class="text-blue-300 font-mono">i_ncS4emer</code> <span class="text-slate-400 text-xs">(Llegir)</span> | <code class="text-blue-300 font-mono">i_ncS4emer/set</code> <span class="text-slate-400 text-xs">(Escriure true/false)</span> <span class="text-xs text-red-400 font-bold">(Enclavament NC)</span></li>
-                        </ul>
-                    </div>
-
-                    <div class="bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                        <h4 class="text-purple-400 font-bold mb-3 border-b border-slate-700 pb-2 flex items-center gap-2">
-                            <span class="text-xl">⚙️</span> PARÀMETRES I COMANDES (Simulació)
-                        </h4>
-                        <ul class="list-disc pl-6 space-y-3 font-sans">
-                            <li><code class="text-fuchsia-300 font-mono">cmd/highPercentage</code> <span class="text-slate-400 text-xs">(Llegir)</span> | <code class="text-fuchsia-300 font-mono">cmd/highPercentage/set</code> <span class="text-slate-400 text-xs">(Escriure 0-100)</span></li>
-                            <li><code class="text-fuchsia-300 font-mono">cmd/simSpeed</code> <span class="text-slate-400 text-xs">(Llegir)</span> | <code class="text-fuchsia-300 font-mono">cmd/simSpeed/set</code> <span class="text-slate-400 text-xs">(Escriure 0-400)</span></li>
-                            <li><code class="text-fuchsia-300 font-mono">cmd/autoRate</code> <span class="text-slate-400 text-xs">(Llegir)</span> | <code class="text-fuchsia-300 font-mono">cmd/autoRate/set</code> <span class="text-slate-400 text-xs">(Escriure 10-500)</span></li>
-                            <li><code class="text-fuchsia-300 font-mono">cmd/internalPLC</code> <span class="text-slate-400 text-xs">(Llegir)</span> | <code class="text-fuchsia-300 font-mono">cmd/internalPLC/set</code> <span class="text-slate-400 text-xs">(Escriure true/false)</span></li>
-                            <li><code class="text-fuchsia-300 font-mono">cmd/autoSpawnActive</code> <span class="text-slate-400 text-xs">(Llegir)</span> | <code class="text-fuchsia-300 font-mono">cmd/autoSpawnActive/set</code> <span class="text-slate-400 text-xs">(Escriure true/false)</span></li>
-                            <li><code class="text-fuchsia-300 font-mono">cmd/spawnPallet</code> <span class="text-xs bg-slate-800 px-2 py-0.5 rounded ml-2">"high" / "low"</span> <span class="text-xs text-slate-400 italic">(Polsador / Acció immediata)</span></li>
-                            <li><code class="text-fuchsia-300 font-mono">cmd/clearPallets</code> <span class="text-xs bg-slate-800 px-2 py-0.5 rounded ml-2">true</span> <span class="text-xs text-slate-400 italic">(Polsador / Acció immediata)</span></li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <!-- Vue Component Templates -->
-    <script>
-        const MotorIndicator = {
-            props: ['name', 'active'],
-            template: `
-                <div class="absolute flex flex-col items-center z-20 pointer-events-none">
-                    <div class="w-8 h-8 rounded border-2 flex items-center justify-center bg-slate-800 transition-all duration-100"
-                         :class="active ? 'border-green-400 text-green-400 shadow-[0_0_15px_3px_#4ade80]' : 'border-slate-600 text-slate-500'">
-                        <span class="font-bold text-xs">M</span>
-                    </div>
-                    <span class="text-[10px] font-mono mt-1 px-1.5 py-0.5 bg-slate-900 border border-slate-700 rounded shadow" 
-                          :class="active ? 'text-green-300 border-green-800' : 'text-slate-400'">{{name}}</span>
-                </div>
-            `
-        };
-
-        const SensorIndicator = {
-            props: ['name', 'active', 'nc'],
-            template: `
-                <div class="absolute flex flex-col items-center gap-1 z-20 pointer-events-none">
-                    <div class="w-4 h-4 rounded-full border-2 transition-all duration-100"
-                         :class="[
-                            nc 
-                                ? (active ? 'bg-green-400 border-white shadow-[0_0_15px_4px_#4ade80]' : 'bg-slate-800 border-slate-600') 
-                                : (active ? 'bg-blue-400 border-white shadow-[0_0_15px_4px_#60a5fa]' : 'bg-slate-800 border-slate-600')
-                         ]">
-                    </div>
-                    <span class="text-[10px] font-mono bg-slate-900/95 border border-slate-700 px-1.5 rounded text-white shadow">{{name}}</span>
-                </div>
-            `
-        };
-
-        const { createApp, ref, reactive, onMounted, onUnmounted, watch } = Vue;
-
-        createApp({
-            components: {
-                'motor-indicator': MotorIndicator,
-                'sensor-indicator': SensorIndicator
-            },
-            setup() {
-                const simContainer = ref(null);
-                const scaleFactor = ref(1);
-                const showTopics = ref(false);
-                const showUI = ref(true); // NOU: Controla l'estat del Render Toggling
-
-                const brokerUrl = ref('wss://test.mosquitto.org:8081/mqtt');
-                const mqttUser = ref('');
-                const mqttPassword = ref('');
-                const baseTopic = ref('iesebre/sorting/');
-                const connected = ref(false);
-                const connectionError = ref('');
-                let client = null;
-
-                const internalPLC = ref(true); 
-                const etapaGEMMA = ref('');
-                const highPercentage = ref(50); 
-                const simSpeed = ref(100); 
-                const autoRate = ref(100); 
-                const autoSpawnActive = ref(false);
-
-                // Web Worker Metronome per evitar que el navegador aturi el simulador en segon pla
-                const workerBlob = new Blob([`
-                    let timer = null;
-                    self.onmessage = function(e) {
-                        if (e.data === 'start') {
-                            timer = setInterval(() => self.postMessage('tick'), 16); // ~60 FPS constant
-                        } else if (e.data === 'stop') {
-                            clearInterval(timer);
-                        }
-                    };
-                `], { type: 'application/javascript' });
-                const tickerWorker = new Worker(URL.createObjectURL(workerBlob));
-
-                // Estat intern PLC
-                const grafcet = reactive({ G1: 0, G2: 0, G3: 0, G4: 0 });
-                let t1_start = null;
-                let t2_start = null;
-
-                // Estat dels polsadors accionats per MQTT
-                const buttonTimers = reactive({ S1: 0, S2: 0, S3: 0 });
-
-                // INPUTS (Sempre HTML -> MQTT)
-                const inputs = reactive({
-                    i_B1highsensor: false,
-                    i_B2lowsensor: false,
-                    i_B3palletsensor: false,
-                    i_B4loaded: false,
-                    i_ncB5atleftentry: true,   
-                    i_ncB6atleftexit: true,    
-                    i_ncB7atrightentry: true,  
-                    i_ncB8atrightexit: true,   
-                    i_S1start: false,
-                    i_S2reset: false,
-                    i_ncS3stop: true,          
-                    i_ncS4emer: true,          
-                    i_clk_1s: false            
-                });
-
-                const prevEdgeInputs = { ...inputs };
-                const lastPublishedInputs = {};
-
-                // OUTPUTS
-                const outputs = reactive({
-                    o_KM1conveyorentry: false,
-                    o_KM2load: false,
-                    o_KM4transferleft: false,
-                    o_KM5transferright: false,
-                    o_KM6conveyorleft: false,
-                    o_KM7conveyorright: false,
-                    o_H1startlight: false,
-                    o_H2resetlight: false,
-                    o_H3stoplight: false
-                });
-
-                const lastPublishedOutputs = {};
-                let lastPublishedGemma = '';
-
-                const pallets = ref([]);
-                let palletIdCounter = 0;
-
-                // --- UTILS MQTT RUTES ---
-                const getFullTopic = (key) => {
-                    let t = baseTopic.value;
-                    if (!t.endsWith('/')) t += '/';
-                    return t + key;
-                };
-
-                const extractKeyFromTopic = (topic) => {
-                    let t = baseTopic.value;
-                    if (!t.endsWith('/')) t += '/';
-                    if (topic.startsWith(t)) {
-                        return topic.substring(t.length);
-                    }
-                    return topic; // Fallback
-                };
-
-                // --- MQTT LOGIC ---
-                const toggleConnection = () => {
-                    if (connected.value && client) {
-                        client.end();
-                        connected.value = false;
-                        client = null;
-                    } else {
-                        connectMQTT();
-                    }
-                };
-
-                const connectMQTT = () => {
-                    try {
-                        connectionError.value = '';
-                        const options = {};
-                        
-                        if (mqttUser.value.trim() !== '') options.username = mqttUser.value.trim();
-                        if (mqttPassword.value !== '') options.password = mqttPassword.value;
-
-                        client = mqtt.connect(brokerUrl.value, options);
-                        
-                        client.on('connect', () => {
-                            connected.value = true;
-                            connectionError.value = '';
-                            
-                            Object.keys(outputs).forEach(key => client.subscribe(getFullTopic(key)));
-                            client.subscribe(getFullTopic('etapaGEMMA'));
-                            client.subscribe(getFullTopic('cmd/#'));
-                            ['i_S1start', 'i_S2reset', 'i_ncS3stop', 'i_ncS4emer/set'].forEach(k => client.subscribe(getFullTopic(k)));
-                            
-                            for (let k in lastPublishedInputs) delete lastPublishedInputs[k];
-                            for (let k in lastPublishedOutputs) delete lastPublishedOutputs[k];
-                            lastPublishedGemma = null;
-
-                            forcePublishAll();
-                        });
-
-                        client.on('message', (topic, message) => {
-                            if (internalPLC.value && !topic.includes('cmd/') && !topic.includes('i_S') && !topic.includes('i_ncS')) return; 
-
-                            const valStr = message.toString();
-                            const valBool = valStr.toLowerCase() === 'true';
-                            const valNum = Number(valStr);
-                            const key = extractKeyFromTopic(topic);
-                            
-                            if (key.startsWith('cmd/')) {
-                                if (key.endsWith('/set')) {
-                                    const cmd = key.replace('cmd/', '').replace('/set', '');
-                                    if (cmd === 'highPercentage' && !isNaN(valNum)) highPercentage.value = valNum;
-                                    else if (cmd === 'simSpeed' && !isNaN(valNum)) simSpeed.value = valNum;
-                                    else if (cmd === 'autoRate' && !isNaN(valNum)) autoRate.value = valNum;
-                                    else if (cmd === 'internalPLC') internalPLC.value = valBool;
-                                    else if (cmd === 'autoSpawnActive') {
-                                        if (autoSpawnActive.value !== valBool) {
-                                            autoSpawnActive.value = valBool;
-                                            if (valBool) {
-                                                const isClear = !pallets.value.some(p => p.state === 'entry' && p.y > 520);
-                                                if (isClear) spawnRandomPallet();
-                                                spawnTimer = 0; 
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    const cmd = key.replace('cmd/', '');
-                                    if (cmd === 'clearPallets' && valBool === true) clearPallets();
-                                    else if (cmd === 'spawnPallet' && (valStr === 'high' || valStr === 'low')) spawnPallet(valStr);
-                                }
-                                return;
-                            }
-
-                            if (key === 'i_ncS4emer/set') {
-                                if (inputs.i_ncS4emer !== valBool) inputs.i_ncS4emer = valBool;
-                            } else if (inputs.hasOwnProperty(key) && (key.startsWith('i_S') || key.startsWith('i_ncS'))) {
-                                if (inputs[key] !== valBool) {
-                                    inputs[key] = valBool;
-                                    
-                                    // Assignació de l'auto-reset a la gestió del bucle de temps intern
-                                    if (key === 'i_S1start' && valBool === true) buttonTimers.S1 = 1000;
-                                    else if (key === 'i_S2reset' && valBool === true) buttonTimers.S2 = 1000;
-                                    else if (key === 'i_ncS3stop' && valBool === false) buttonTimers.S3 = 1000;
-                                }
-                            }
-
-                            if (!internalPLC.value) {
-                                if (key === 'etapaGEMMA') etapaGEMMA.value = valStr;
-                                else if (outputs.hasOwnProperty(key)) outputs[key] = valBool;
-                            }
-                        });
-
-                        client.on('error', (err) => {
-                            console.error('MQTT Error:', err);
-                            connectionError.value = "Connexió denegada. Si estàs a l'entorn Canvas, descarrega l'HTML i obre'l en una pestanya nova per permetre WebSockets.";
-                            connected.value = false;
-                            client.end();
-                        });
-
-                        client.on('close', () => { connected.value = false; });
-
-                    } catch (err) {
-                        console.error('Connection failed', err);
-                        connectionError.value = "S'ha denegat la connexió al Broker des d'aquest entorn restringit.";
-                    }
-                };
-
-                const publishInput = (key, val) => {
-                    if (connected.value && client) client.publish(getFullTopic(key), val ? 'true' : 'false', { retain: true });
-                };
-                
-                const publishOutput = (key, val) => {
-                    if (connected.value && client) client.publish(getFullTopic(key), val ? 'true' : 'false', { retain: true });
-                };
-
-                const publishGemma = (val) => {
-                    if (connected.value && client && val) client.publish(getFullTopic('etapaGEMMA'), val.toString(), { retain: true });
-                };
-
-                const publishCmd = (cmd, val) => {
-                    if (connected.value && client) client.publish(getFullTopic('cmd/' + cmd), val.toString(), { retain: true });
-                };
-
-                const forcePublishAll = () => {
-                    for (const key in inputs) {
-                        publishInput(key, inputs[key]);
-                        lastPublishedInputs[key] = inputs[key];
-                    }
-                    if (internalPLC.value) {
-                        for (const key in outputs) {
-                            publishOutput(key, outputs[key]);
-                            lastPublishedOutputs[key] = outputs[key];
-                        }
-                        publishGemma(etapaGEMMA.value);
-                        lastPublishedGemma = etapaGEMMA.value;
-                    }
-                    
-                    publishCmd('highPercentage', highPercentage.value);
-                    publishCmd('simSpeed', simSpeed.value);
-                    publishCmd('autoRate', autoRate.value);
-                    publishCmd('internalPLC', internalPLC.value ? 'true' : 'false');
-                    publishCmd('autoSpawnActive', autoSpawnActive.value ? 'true' : 'false');
-                };
-
-                // --- WATCHERS PER MANTENIR ELS PARÀMETRES SINCRONITZATS ---
-                watch(highPercentage, (v) => publishCmd('highPercentage', v));
-                watch(simSpeed, (v) => publishCmd('simSpeed', v));
-                watch(autoRate, (v) => publishCmd('autoRate', v));
-                watch(internalPLC, (v) => {
-                    publishCmd('internalPLC', v ? 'true' : 'false');
-                    for (let k in lastPublishedOutputs) delete lastPublishedOutputs[k];
-                    lastPublishedGemma = null;
-                    forcePublishAll();
-                });
-                watch(autoSpawnActive, (v) => publishCmd('autoSpawnActive', v ? 'true' : 'false'));
-
-                // Reactivem l'escala gràfica quan l'usuari torna a encendre la UI des del mode ECO
-                watch(showUI, async (newValue) => {
-                    if (newValue) {
-                        await Vue.nextTick(); // Espera a que el DOM existeixi de nou
-                        updateScale();
-                    }
-                });
-
-                // --- UI INTERACTION ---
-                const setButton = (key, val) => { inputs[key] = val; };
-                const toggleEmergency = () => { inputs.i_ncS4emer = !inputs.i_ncS4emer; };
-
-                const spawnPallet = (type) => {
-                    pallets.value.push({ id: palletIdCounter++, type: type, x: 370, y: 580, state: 'entry' });
-                };
-
-                const spawnRandomPallet = () => {
-                    const type = (Math.random() * 100) <= highPercentage.value ? 'high' : 'low';
-                    spawnPallet(type);
-                };
-
-                const toggleAutoSpawn = () => {
-                    autoSpawnActive.value = !autoSpawnActive.value;
-                    if (autoSpawnActive.value) {
-                        const isClear = !pallets.value.some(p => p.state === 'entry' && p.y > 520);
-                        if (isClear) spawnRandomPallet(); 
-                        spawnTimer = 0; // Resetegem el timer en arrancar per evitar temps fantasma
-                    }
-                };
-
-                const clearPallets = () => { pallets.value = []; };
-
-                // --- LÒGICA DEL GRAFCET INTERN (PLC STANDALONE) ---
-                const runPLC = (now) => {
-                    const B5_FE = !prevEdgeInputs.i_ncB5atleftentry && inputs.i_ncB5atleftentry;
-                    const B7_FE = !prevEdgeInputs.i_ncB7atrightentry && inputs.i_ncB7atrightentry;
-                    const B6_FE = !prevEdgeInputs.i_ncB6atleftexit && inputs.i_ncB6atleftexit;
-                    const B8_FE = !prevEdgeInputs.i_ncB8atrightexit && inputs.i_ncB8atrightexit;
-
-                    prevEdgeInputs.i_ncB5atleftentry = inputs.i_ncB5atleftentry;
-                    prevEdgeInputs.i_ncB7atrightentry = inputs.i_ncB7atrightentry;
-                    prevEdgeInputs.i_ncB6atleftexit = inputs.i_ncB6atleftexit;
-                    prevEdgeInputs.i_ncB8atrightexit = inputs.i_ncB8atrightexit;
-
-                    let nextGemma = etapaGEMMA.value || "A5";
-
-                    if (!inputs.i_ncS4emer) {
-                        nextGemma = "D1"; 
-                    } else {
-                        switch(nextGemma) {
-                            case "A5": if (inputs.i_S2reset) nextGemma = "A1"; break;
-                            case "A1": if (inputs.i_S1start) nextGemma = "F1"; break;
-                            case "F1": if (!inputs.i_ncS3stop) nextGemma = "A1"; break;
-                            case "D1": if (inputs.i_ncS4emer) nextGemma = "A5"; break;
-                        }
-                    }
-
-                    if (etapaGEMMA.value !== nextGemma) etapaGEMMA.value = nextGemma;
-
-                    let nextG1 = grafcet.G1, nextG2 = grafcet.G2, nextG3 = grafcet.G3, nextG4 = grafcet.G4;
-
-                    if (etapaGEMMA.value === "A1" || etapaGEMMA.value === "D1") {
-                        nextG1 = 0; nextG2 = 0; nextG3 = 0; nextG4 = 0;
-                    }
-
-                    if (nextG1 === 0) { if (!t1_start) t1_start = now; } else { t1_start = null; }
-                    const t1_done = t1_start && (now - t1_start >= 5000);
-
-                    if (etapaGEMMA.value === "F1" && inputs.i_S2reset) { if (!t2_start) t2_start = now; } else { t2_start = null; }
-                    const t2_done = t2_start && (now - t2_start >= 5000);
-
-                    switch(nextG1) {
-                        case 0: if (etapaGEMMA.value === "F1" && t1_done) nextG1 = 1; break;
-                        case 1: if (inputs.i_B3palletsensor) nextG1 = 2; break;
-                        case 2: if (!inputs.i_B3palletsensor) nextG1 = 3; break;
-                        case 3: if (inputs.i_B4loaded) nextG1 = 4; break;
-                        case 4: if (nextG2 === 0) nextG1 = 1; break;
-                    }
-
-                    switch(nextG2) {
-                        case 0: if (inputs.i_B3palletsensor && etapaGEMMA.value === "F1") nextG2 = 1; break;
-                        case 1: 
-                            if (inputs.i_B1highsensor && inputs.i_B2lowsensor) nextG2 = 2; 
-                            else if (inputs.i_B2lowsensor && !inputs.i_B1highsensor) nextG2 = 5;
-                            break;
-                        case 2: if (inputs.i_B4loaded) nextG2 = 3; break;
-                        case 3: if (!inputs.i_B4loaded) nextG2 = 4; break;
-                        case 4: if (B5_FE) nextG2 = 0; break; 
-                        case 5: if (inputs.i_B4loaded) nextG2 = 6; break;
-                        case 6: if (!inputs.i_B4loaded) nextG2 = 7; break;
-                        case 7: if (B7_FE) nextG2 = 0; break; 
-                    }
-
-                    switch(nextG3) {
-                        case 0: if (B7_FE && etapaGEMMA.value === "F1") nextG3 = 1; break;
-                        case 1: if (B8_FE) nextG3 = 0; break;
-                    }
-
-                    switch(nextG4) {
-                        case 0: if (B5_FE && etapaGEMMA.value === "F1") nextG4 = 1; break;
-                        case 1: if (B6_FE) nextG4 = 0; break;
-                    }
-
-                    if (grafcet.G1 !== nextG1) grafcet.G1 = nextG1;
-                    if (grafcet.G2 !== nextG2) grafcet.G2 = nextG2;
-                    if (grafcet.G3 !== nextG3) grafcet.G3 = nextG3;
-                    if (grafcet.G4 !== nextG4) grafcet.G4 = nextG4;
-
-                    const km1 = (grafcet.G1===1 || grafcet.G1===2) || (grafcet.G2===1 || grafcet.G2===2 || grafcet.G2===5);
-                    const km2 = (grafcet.G1===1 || grafcet.G1===2 || grafcet.G1===3) || (grafcet.G2===1 || grafcet.G2===2 || grafcet.G2===5);
-                    const km4 = (grafcet.G2===3 || grafcet.G2===4);
-                    const km5 = (grafcet.G2===6 || grafcet.G2===7);
-                    const km6 = (grafcet.G2===3 || grafcet.G2===4) || (grafcet.G4===1);
-                    const km7 = (grafcet.G2===6 || grafcet.G2===7) || (grafcet.G3===1);
-
-                    if (outputs.o_KM1conveyorentry !== km1) outputs.o_KM1conveyorentry = km1;
-                    if (outputs.o_KM2load !== km2) outputs.o_KM2load = km2;
-                    if (outputs.o_KM4transferleft !== km4) outputs.o_KM4transferleft = km4;
-                    if (outputs.o_KM5transferright !== km5) outputs.o_KM5transferright = km5;
-                    if (outputs.o_KM6conveyorleft !== km6) outputs.o_KM6conveyorleft = km6;
-                    if (outputs.o_KM7conveyorright !== km7) outputs.o_KM7conveyorright = km7;
-
-                    const h1 = (etapaGEMMA.value === "F1");
-                    const h2 = (etapaGEMMA.value === "A5" && inputs.i_clk_1s) || (etapaGEMMA.value === "F1" && inputs.i_S2reset && t2_done);
-                    const h3 = (etapaGEMMA.value === "A1") || (etapaGEMMA.value === "D1" && inputs.i_clk_1s);
-
-                    if (outputs.o_H1startlight !== h1) outputs.o_H1startlight = h1;
-                    if (outputs.o_H2resetlight !== h2) outputs.o_H2resetlight = h2;
-                    if (outputs.o_H3stoplight !== h3) outputs.o_H3stoplight = h3;
-                };
-
-                // --- PHYSICS ENGINE (FIXED TIMESTEP) ---
-                const BASE_SPEED = 2;
-                const STEP_MS = 16.666; // 60 FPS
-                let lastTime = performance.now();
-                let lastClockTime = performance.now();
-                let accumulator = 0;
-                let spawnTimer = 0;
-
-                const gameLoop = () => {
-                    const currentTime = performance.now();
-                    let dt = currentTime - lastTime;
-                    lastTime = currentTime;
-
-                    // Limitem el delta time a 1000ms per evitar un "Death Spiral" si suspens el PC molta estona
-                    if (dt > 1000) dt = 1000;
-
-                    // 1. Gestió del rellotge d'1Hz independent del throttling
-                    if (currentTime - lastClockTime >= 500) {
-                        inputs.i_clk_1s = !inputs.i_clk_1s;
-                        lastClockTime = currentTime;
-                    }
-
-                    // 2. Temporitzadors dels botons MQTT
-                    if (buttonTimers.S1 > 0) { buttonTimers.S1 -= dt; if (buttonTimers.S1 <= 0) inputs.i_S1start = false; }
-                    if (buttonTimers.S2 > 0) { buttonTimers.S2 -= dt; if (buttonTimers.S2 <= 0) inputs.i_S2reset = false; }
-                    if (buttonTimers.S3 > 0) { buttonTimers.S3 -= dt; if (buttonTimers.S3 <= 0) inputs.i_ncS3stop = true; }
-
-                    // 3. Generador Automàtic basat en el Delta Time (Corregit)
-                    if (autoSpawnActive.value) {
-                        const isClear = !pallets.value.some(p => p.state === 'entry' && p.y > 520);
-                        
-                        if (isClear) {
-                            spawnTimer += dt;
-                            const delay = 500000 / Math.max(10, autoRate.value); 
-                            if (spawnTimer >= delay) {
-                                spawnRandomPallet();
-                                spawnTimer = 0; // Reset complet
-                            }
-                        } else {
-                            // Si hi ha una caixa bloquejant l'inici, no permetem acumular "temps fantasma"
-                            spawnTimer = 0;
-                        }
-                    }
-
-                    accumulator += dt;
-                    let stateChanged = false;
-
-                    // 4. Fixed Timestep Loop
-                    while (accumulator >= STEP_MS) {
-                        stateChanged = true;
-                        const actualSpeed = (BASE_SPEED * Number(simSpeed.value)) / 100;
-
-                        // MOVIMENT I FÍSICA
-                        for (let i = pallets.value.length - 1; i >= 0; i--) {
-                            let p = pallets.value[i];
-                            if (p.state === 'entry') {
-                                if (outputs.o_KM1conveyorentry) p.y -= actualSpeed;
-                                if (p.y <= 275) { p.y = 270; p.state = 'transfer'; }
-                            } 
-                            else if (p.state === 'transfer') {
-                                if (outputs.o_KM4transferleft && !outputs.o_KM5transferright) {
-                                    p.x -= actualSpeed;
-                                    if (p.x <= 350) p.state = 'left';
-                                } else if (outputs.o_KM5transferright && !outputs.o_KM4transferleft) {
-                                    p.x += actualSpeed;
-                                    if (p.x >= 390) p.state = 'right';
-                                }
-                            }
-                            else if (p.state === 'left') {
-                                if (outputs.o_KM6conveyorleft || outputs.o_KM4transferleft) p.x -= actualSpeed;
-                                if (p.x < -25) { pallets.value.splice(i, 1); continue; } 
-                            }
-                            else if (p.state === 'right') {
-                                if (outputs.o_KM7conveyorright || outputs.o_KM5transferright) p.x += actualSpeed;
-                                if (p.x > 765) { pallets.value.splice(i, 1); continue; } 
-                            }
-                        }
-
-                        // SENSORS PER A CADA SUB-PÀS
-                        let B1 = false, B2 = false, B3 = false, B4 = false;
-                        let B5 = true, B6 = true, B7 = true, B8 = true; 
-                        
-                        for (let i = 0; i < pallets.value.length; i++) {
-                            let cx = pallets.value[i].x + 30;
-                            let cy = pallets.value[i].y + 30;
-
-                            if (cx > 350 && cx < 450 && cy > 350 && cy < 460) B3 = true;
-                            if (cx > 350 && cx < 450 && cy > 350 && cy < 460) B2 = true;
-                            if (cx > 350 && cx < 450 && cy > 350 && cy < 460 && pallets.value[i].type === 'high') B1 = true;
-                            
-                            if (cx > 380 && cx < 420 && cy > 298 && cy < 302) B4 = true;
-
-                            if (cx > 310 && cx < 360 && cy > 250 && cy < 350) B5 = false;
-                            if (cx > 0 && cx < 60 && cy > 250 && cy < 350) B6 = false;
-
-                            if (cx > 440 && cx < 490 && cy > 250 && cy < 350) B7 = false;
-                            if (cx > 740 && cx < 800 && cy > 250 && cy < 350) B8 = false;
-                        }
-
-                        if (inputs.i_B1highsensor !== B1) inputs.i_B1highsensor = B1;
-                        if (inputs.i_B2lowsensor !== B2) inputs.i_B2lowsensor = B2;
-                        if (inputs.i_B3palletsensor !== B3) inputs.i_B3palletsensor = B3;
-                        if (inputs.i_B4loaded !== B4) inputs.i_B4loaded = B4;
-                        if (inputs.i_ncB5atleftentry !== B5) inputs.i_ncB5atleftentry = B5;
-                        if (inputs.i_ncB6atleftexit !== B6) inputs.i_ncB6atleftexit = B6;
-                        if (inputs.i_ncB7atrightentry !== B7) inputs.i_ncB7atrightentry = B7;
-                        if (inputs.i_ncB8atrightexit !== B8) inputs.i_ncB8atrightexit = B8;
-
-                        if (internalPLC.value) {
-                            runPLC(Date.now());
-                        }
-
-                        accumulator -= STEP_MS;
-                    }
-
-                    // PUBLICACIÓ MQTT
-                    if (stateChanged || dt > 0) {
-                        for (const key in inputs) {
-                            if (inputs[key] !== lastPublishedInputs[key]) {
-                                publishInput(key, inputs[key]);
-                                lastPublishedInputs[key] = inputs[key];
-                            }
-                        }
-
-                        if (internalPLC.value) {
-                            for (const key in outputs) {
-                                if (outputs[key] !== lastPublishedOutputs[key]) {
-                                    publishOutput(key, outputs[key]);
-                                    lastPublishedOutputs[key] = outputs[key];
-                                }
-                            }
-                            if (etapaGEMMA.value !== lastPublishedGemma) {
-                                publishGemma(etapaGEMMA.value);
-                                lastPublishedGemma = etapaGEMMA.value;
-                            }
-                        }
-                    }
-                };
-
-                tickerWorker.onmessage = (e) => {
-                    if (e.data === 'tick') {
-                        gameLoop();
-                    }
-                };
-
-                const updateScale = () => {
-                    if (simContainer.value && showUI.value) {
-                        const rect = simContainer.value.getBoundingClientRect();
-                        const padding = 32;
-                        const scaleW = (rect.width - padding) / 800;
-                        const scaleH = (rect.height - padding) / 600;
-                        scaleFactor.value = Math.max(0.2, Math.min(scaleW, scaleH, 1)); 
-                    }
-                };
-
-                onMounted(() => {
-                    if (internalPLC.value) etapaGEMMA.value = 'A5';
-                    window.addEventListener('resize', updateScale);
-                    setTimeout(updateScale, 50);
-                    tickerWorker.postMessage('start');
-                });
-
-                onUnmounted(() => {
-                    window.removeEventListener('resize', updateScale);
-                    tickerWorker.postMessage('stop');
-                    tickerWorker.terminate();
-                });
-
-                return {
-                    simContainer, scaleFactor, internalPLC, autoSpawnActive, showTopics, connectionError, showUI,
-                    brokerUrl, mqttUser, mqttPassword, baseTopic, connected, inputs, outputs, etapaGEMMA, grafcet, pallets, highPercentage, simSpeed, autoRate,
-                    toggleConnection, setButton, toggleEmergency, spawnPallet, spawnRandomPallet, toggleAutoSpawn, clearPallets
-                };
+<body class="bg-slate-900 text-slate-100 min-h-screen">
+
+  <!-- Punt d'ancoratge de React -->
+  <div id="root"></div>
+
+  <!-- Codi React compilat amb Babel per a l'execució directa -->
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    function App() {
+      // Paràmetres del sistema (estat editable)
+      const [kp, setKp] = useState(200);
+      const [ki, setKi] = useState(50);
+      const [setpoint, setSetpoint] = useState(20);
+      const [areaBase, setAreaBase] = useState(600);
+      
+      // kAixeta representa el percentatge d'obertura de l'aixeta (0% a 100%)
+      const [kAixeta, setKAixeta] = useState(50); // Inicialment al 50% d'obertura
+      
+      const [sampleTime, setSampleTime] = useState(100); // ms
+      const [bombaInercia, setBombaInercia] = useState(10); // Divisor de la inèrcia de la bomba
+      const [disturbi, setDisturbi] = useState(0); // Cabal extern de pertorbació
+
+      // Selecció de l'estratègia de control: 'PI', 'ON_OFF' (Tot o Res), 'HYS' (Histeresi)
+      const [modeControl, setModeControl] = useState('PI');
+      const [histeresiVal, setHisteresiVal] = useState(1.5); // Diferencial de commutació (0.1 a 5.0 cm)
+
+      // Interruptor dinàmic per activar/desactivar la protecció d'Anti-Windup en viu - INICIALMENT FALS (Desactivat)
+      const [antiWindupHabilitat, setAntiWindupHabilitat] = useState(false);
+
+      // Alarmes configurables pel dipòsit
+      const [alarmHigh, setAlarmHigh] = useState(26); // Alarma de nivell alt (mín 15, màx 30)
+      const [alarmLow, setAlarmLow] = useState(4);    // Alarma de nivell baix (mín 0, màx 15)
+
+      // Finestra de visualització temporal ajustable per a la gràfica (en segons: 10s, 20s, 30s, 40s, 50s, 60s)
+      const [tempsFinestra, setTempsFinestra] = useState(10);
+
+      // Estat per emmagatzemar l'element del gràfic sobre el qual es passa el cursor (hover)
+      const [punterHistorial, setPunterHistorial] = useState(null);
+
+      // Estat del procés de simulació unificat
+      const [simState, setSimState] = useState({
+        nivell: 0,
+        errorIntegral: 0,
+        qi: 0,
+        qo: 0,
+        tensioBomba: 0,
+        temps: 0,
+        windupActiu: false,
+        errorActual: 0,
+        bombaActiva: false // Estat d'encesa per a controls de tipus On-Off / Histeresi
+      });
+
+      const { nivell, errorIntegral, qi, qo, tensioBomba, temps, windupActiu, errorActual, bombaActiva } = simState;
+
+      const [isRunning, setIsRunning] = useState(false);
+      
+      // Historial per gràfics i descàrrega
+      const [historial, setHistorial] = useState([]);
+      const [serialLogs, setSerialLogs] = useState([]);
+
+      // Referències pel bucle de simulació i l'scroll del terminal
+      const simInterval = useRef(null);
+      const terminalContainerRef = useRef(null);
+
+      // Presets configurats per a l'estratègia PI amb l'aixeta adaptada al rang 0-100% (50% obertura equival al antic coeficient 20)
+      const presets = {
+        perfecte: { name: "PI Estable (Perfecte)", kp: 250, ki: 15, setpoint: 20, kAixeta: 50, inercia: 10, alH: 26, alL: 4 },
+        nomesP: { name: "Només P (Error permanent)", kp: 150, ki: 0, setpoint: 20, kAixeta: 50, inercia: 10, alH: 26, alL: 4 },
+        inestable: { name: "Inestable (Massa Ki)", kp: 50, ki: 100, setpoint: 20, kAixeta: 50, inercia: 10, alH: 26, alL: 4 },
+        senseSortida: { name: "Aixeta tancada (K = 0)", kp: 100, ki: 10, setpoint: 20, kAixeta: 0, inercia: 10, alH: 26, alL: 4 }
+      };
+
+      // Canviar presets sense reiniciar la simulació, mantenint l'estat d'execució actual
+      const aplicarPreset = (p) => {
+        setKp(p.kp);
+        setKi(p.ki);
+        setSetpoint(p.setpoint);
+        setKAixeta(p.kAixeta);
+        setBombaInercia(p.inercia);
+        setAlarmHigh(p.alH);
+        setAlarmLow(p.alL);
+        
+        // Forcem l'estratègia de control a PI perquè són presets de configuració proporcional/integral
+        setModeControl("PI");
+
+        setSerialLogs(prev => [
+          ...prev, 
+          `[PRESET] Aplicat: ${p.name} (Kp: ${p.kp}, Ki: ${p.ki}, SP: ${p.setpoint}cm, Aixeta: ${p.kAixeta}%) sense reiniciar la simulació`
+        ]);
+      };
+
+      // Control manual de canvi d'estratègia sense reiniciar la simulació
+      const setOptionControl = (mode) => {
+        setModeControl(mode);
+        // Reiniciem només els acumuladors de control si escau, però conservem temps i nivell
+        setSimState(prev => ({
+          ...prev,
+          errorIntegral: 0,
+          tensioBomba: 0,
+          bombaActiva: false
+        }));
+        setSerialLogs(prev => [...prev, `[SISTEMA] Canvi d'estratègia a: ${mode === 'PI' ? 'Control PI' : mode === 'ON_OFF' ? 'Tot o Res' : 'Histeresi'}`]);
+      };
+
+      // Funció de descàrrega de dades en format compatible amb XLS (CSV amb codificació UTF-8 i separadors ;)
+      const descarregarDadesXLS = () => {
+        if (historial.length === 0) {
+          setSerialLogs(prev => [...prev, "[SISTEMA ERRO] No hi ha dades per exportar encara."]);
+          return;
+        }
+
+        // Afegim BOM de UTF-8 per garantir que Excel obri correctament els caràcters especials
+        let contingutCSV = "\uFEFF";
+        contingutCSV += "Temps (s);Nivell (cm);Consigna (cm);Cabal Entrada (cm3/s);Cabal Sortida (cm3/s);Aixeta (%);Alarma Alta (cm);Alarma Baixa (cm);Area Base (cm2);Diametre Base (cm);Volum (L)\n";
+        
+        historial.forEach(row => {
+          const diametre = (2 * Math.sqrt(areaBase / Math.PI)).toFixed(1);
+          const volumL = (areaBase * row.nivell / 1000).toFixed(2);
+          
+          contingutCSV += `${row.temps.replace('.', ',')};${row.nivell.toString().replace('.', ',')};${row.setpoint.toString().replace('.', ',')};${row.qi.toString().replace('.', ',')};${row.qo.toString().replace('.', ',')};${row.aixetaPct};${row.alarmHigh};${row.alarmLow};${areaBase};${diametre.replace('.', ',')};${volumL.replace('.', ',')}\n`;
+        });
+        
+        const blob = new Blob([contingutCSV], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `SCADA_Dades_Diposit_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        setSerialLogs(prev => [...prev, `[SISTEMA] Descarregats correctament ${historial.length} registres en format compatible amb Excel.`]);
+      };
+
+      // Funció que executa un pas (1 dècima de segon / sample_time)
+      const executarPasSimulacio = () => {
+        setSimState((prev) => {
+          const dt = sampleTime / 1000; // 0.1 segons
+          const error = setpoint - prev.nivell;
+          
+          let u = 0;
+          let actiuAW = false;
+          let nouErrorIntegral = prev.errorIntegral;
+          let nouBombaActiva = prev.bombaActiva;
+
+          // APLIQUEM L'ESTRATEGIA DE CONTROL CORRESPONENT
+          if (modeControl === 'PI') {
+            // 1. CONTROLADOR PI AMB ANTI-WINDUP
+            const pTerm = kp * error;
+            const iTermPrevia = ki * prev.errorIntegral * dt;
+            const uPrevia = pTerm + iTermPrevia;
+
+            // Condicions de saturació del controlador físic (0 a 1500)
+            const estaSaturatSota = uPrevia < 0;
+            const estaSaturatDalt = uPrevia > 1500;
+
+            const windupSota = estaSaturatSota && error < 0;
+            const windupDalt = estaSaturatDalt && error > 0;
+            const sotaAW = windupSota || windupDalt;
+
+            actiuAW = antiWindupHabilitat && sotaAW;
+
+            // LÒGICA DE CÀLCUL: Si Ki és 0, no acumulem cap error integral, el forcem a 0!
+            if (ki === 0) {
+              nouErrorIntegral = 0;
+            } else if (!actiuAW) {
+              nouErrorIntegral = prev.errorIntegral + error;
             }
-        }).mount('#app');
-    </script>
+
+            const iTerm = ki * nouErrorIntegral * dt;
+            u = pTerm + iTerm;
+            nouBombaActiva = u > 0;
+
+          } else if (modeControl === 'ON_OFF') {
+            // 2. ESTRATEGIA TOT O RES (ON-OFF SENSE MARGE)
+            if (error > 0) {
+              u = 1000;
+              nouBombaActiva = true;
+            } else {
+              u = 0;
+              nouBombaActiva = false;
+            }
+            nouErrorIntegral = 0; // No s'utilitza la part integral
+
+          } else if (modeControl === 'HYS') {
+            // 3. ESTRATEGIA AMB HISTERESI
+            // Límits de commutació
+            const limitInferior = setpoint - histeresiVal;
+            const limitSuperior = setpoint + histeresiVal;
+
+            if (prev.nivell < limitInferior) {
+              u = 1000; // Engeguem bomba al màxim
+              nouBombaActiva = true;
+            } else if (prev.nivell > limitSuperior) {
+              u = 0; // Aturem bomba completament
+              nouBombaActiva = false;
+            } else {
+              // Dins de la banda d'histeresi, es manté l'estat anterior
+              nouBombaActiva = prev.bombaActiva;
+              u = nouBombaActiva ? 1000 : 0;
+            }
+            nouErrorIntegral = 0; // No s'utilitza la part integral
+          }
+
+          // Inèrcia de la bomba física: l'aigua d'entrada no canvia a l'instant
+          const limitU = Math.max(0, u);
+          const nouQi = prev.qi + (limitU - prev.qi) / bombaInercia;
+
+          // 2. SIMULACIÓ FÍSICA
+          const coefAixetaFisic = kAixeta * 0.4;
+          const nouQo = coefAixetaFisic * prev.nivell;
+          const qNet = nouQi - nouQo + disturbi;
+          
+          const variacioNivell = dt * qNet / areaBase;
+          let nouNivell = prev.nivell + variacioNivell;
+          
+          // Restriccions físiques
+          if (nouNivell > 30) nouNivell = 30;
+          if (nouNivell < 0) nouNivell = 0;
+
+          const nouTemps = prev.temps + 1;
+
+          // Determinació d'estat d'alarmes i logs per registrar en el sèrie
+          let alarmStr = "";
+          if (nouNivell >= alarmHigh) {
+            alarmStr = "\t[ALERTA NIVELL ALT]";
+          } else if (nouNivell <= alarmLow) {
+            alarmStr = "\t[ALERTA NIVELL BAIX]";
+          }
+          
+          // Afegim logs especials d'estat del control
+          if (modeControl === 'PI' && actiuAW) {
+            alarmStr += "\t[AW-BLOQUEJAT]";
+          } else if (modeControl === 'ON_OFF') {
+            alarmStr += nouBombaActiva ? "\t[BOMBA-ON]" : "\t[BOMBA-OFF]";
+          } else if (modeControl === 'HYS') {
+            alarmStr += nouBombaActiva ? "\t[HIST-ON]" : "\t[HIST-OFF]";
+          }
+
+          // Guardem l'historial d'aquest pas (amb el percentatge de l'aixeta integrat)
+          const nouRegistre = {
+            temps: (nouTemps * dt).toFixed(1),
+            nivell: parseFloat(nouNivell.toFixed(2)),
+            setpoint: setpoint,
+            qi: parseFloat(nouQi.toFixed(1)),
+            qo: parseFloat(nouQo.toFixed(1)),
+            error: parseFloat(error.toFixed(2)),
+            alarmHigh: alarmHigh,
+            alarmLow: alarmLow,
+            aixetaPct: kAixeta
+          };
+
+          setHistorial((prevH) => {
+            const h = [...prevH, nouRegistre];
+            // GUARDIA CRITICA ANTI-MEMÒRIA: Culem les dades a un límit segur de 3000 punts (300 segons)
+            // Així evitem qualsevol error de memòria del navegador si es deixa hores engegat
+            if (h.length > 3000) h.shift();
+            return h;
+          });
+
+          // Afegir log a la consola sèrie
+          setSerialLogs((prevL) => {
+            const logStr = `${nouRegistre.temps}s\tNivell: ${nouRegistre.nivell.toFixed(2)} cm\tError: ${nouRegistre.error.toFixed(2)}\tQi: ${nouRegistre.qi.toFixed(1)} cm³/s\tQo: ${nouRegistre.qo.toFixed(1)} cm³/s\tAixeta: ${kAixeta}%${alarmStr}`;
+            const logs = [...prevL, logStr];
+            if (logs.length > 150) logs.shift();
+            return logs;
+          });
+
+          return {
+            nivell: nouNivell,
+            errorIntegral: nouErrorIntegral,
+            qi: nouQi,
+            qo: nouQo,
+            tensioBomba: u,
+            temps: nouTemps,
+            windupActiu: actiuAW,
+            errorActual: error,
+            bombaActiva: nouBombaActiva
+          };
+        });
+      };
+
+      // Control de reproducció automàtica
+      useEffect(() => {
+        if (isRunning) {
+          simInterval.current = setInterval(() => {
+            executarPasSimulacio();
+          }, sampleTime);
+        } else {
+          if (simInterval.current) clearInterval(simInterval.current);
+        }
+        return () => {
+          if (simInterval.current) clearInterval(simInterval.current);
+        };
+      }, [isRunning, kp, ki, setpoint, kAixeta, areaBase, disturbi, bombaInercia, sampleTime, alarmHigh, alarmLow, antiWindupHabilitat, modeControl, histeresiVal]);
+
+      // Scroll intern suau de la consola
+      useEffect(() => {
+        if (terminalContainerRef.current) {
+          const container = terminalContainerRef.current;
+          container.scrollTop = container.scrollHeight;
+        }
+      }, [serialLogs]);
+
+      const reiniciarSimulacio = () => {
+        setIsRunning(false);
+        setSimState({
+          nivell: 0,
+          errorIntegral: 0,
+          qi: 0,
+          qo: 0,
+          tensioBomba: 0,
+          temps: 0,
+          windupActiu: false,
+          errorActual: 0,
+          bombaActiva: false
+        });
+        setHistorial([]);
+        setSerialLogs(["--- Simulador Inicialitzat ---", "Configureu paràmetres i premeu PLAY"]);
+      };
+
+      // Càlculs de referència
+      const actualError = (setpoint - nivell).toFixed(2);
+      const actualPTerm = (kp * (setpoint - nivell)).toFixed(1);
+      const actualITerm = (ki * errorIntegral * (sampleTime / 1000)).toFixed(1);
+      const actualVariacio = ((sampleTime/1000) * (qi - qo + disturbi) / areaBase).toFixed(4);
+
+      // Càlcul del % de funcionament actiu de la bomba regulada (0-100%)
+      const percentBomba = Math.min(100, Math.max(0, Math.round((tensioBomba / 1000) * 100)));
+
+      // Càlculs físics de diàmetre i volum a demanar
+      const diametreBase = (2 * Math.sqrt(areaBase / Math.PI)).toFixed(1);
+      const volumActualCm3 = (areaBase * nivell).toFixed(0);
+      const volumActualL = (areaBase * nivell / 1000).toFixed(2);
+
+      // Historial filtrat en base a la finestra de visualització triada (tempsFinestra en segons -> mostres = tempsFinestra * 10)
+      const historialVisualitzat = historial.slice(-tempsFinestra * 10);
+
+      return (
+        <div className="max-w-7xl mx-auto p-4 font-sans">
+          
+          {/* HEADER PRINCIPAL DE DISSENY ULTRA-COMPACTAT EN UNA SOLA LÍNIA */}
+          <header className="mb-4 bg-slate-800/90 rounded-xl p-2.5 border border-slate-700/60 shadow-md flex flex-wrap md:flex-nowrap items-center justify-between gap-3">
+            
+            {/* Títol / Logo de la Consola SCADA */}
+            <div className="flex items-center gap-2 shrink-0">
+              <div className="bg-blue-600/20 p-1.5 rounded-lg border border-blue-500/35">
+                <svg className="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              </div>
+              <div className="leading-tight">
+                <h1 className="text-sm font-black tracking-tight bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">
+                  SCADA • Dipòsit
+                </h1>
+                <span className="text-[9px] text-slate-400 block -mt-0.5">Tauler de Control</span>
+              </div>
+            </div>
+
+            {/* FILA ÚNICA DE CONTROLS COMPACTADA */}
+            <div className="flex flex-wrap md:flex-nowrap items-center gap-3 bg-slate-900/40 p-1.5 rounded-lg border border-slate-700/30 grow justify-between md:justify-end">
+              
+              {/* 1. Selector d'Estratègies */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-wider">Estratègia:</span>
+                <div className="bg-slate-950 p-0.5 rounded border border-slate-800 flex gap-0.5">
+                  {['PI', 'ON_OFF', 'HYS'].map(mode => (
+                    <button
+                      key={mode}
+                      onClick={() => setOptionControl(mode)}
+                      className={`px-2 py-0.5 rounded text-[9px] font-bold transition-all ${
+                        modeControl === mode 
+                          ? 'bg-blue-600 text-white shadow shadow-blue-500/20' 
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {mode === 'PI' ? 'PI' : mode === 'ON_OFF' ? 'On-Off' : 'Histeresi'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Separador vertical de panell */}
+              <div className="hidden md:block w-px h-5 bg-slate-800"></div>
+
+              {/* 2. Selector de Presets */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-[9.5px] font-black text-slate-400 uppercase tracking-wider">Presets PI:</span>
+                <div className="flex gap-0.5">
+                  {Object.keys(presets).map(key => (
+                    <button
+                      key={key}
+                      onClick={() => aplicarPreset(presets[key])}
+                      className="px-1.5 py-0.5 bg-slate-950 hover:bg-slate-700 border border-slate-800 rounded text-[9px] font-bold text-slate-300 transition-colors"
+                      title={presets[key].name}
+                    >
+                      {presets[key].name.split(' (')[0].replace('PI ', '')}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Separador vertical de panell */}
+              <div className="hidden md:block w-px h-5 bg-slate-800"></div>
+
+              {/* 3. Interruptor Anti-Windup */}
+              <div className={`flex items-center gap-2 transition-all shrink-0 ${
+                modeControl !== 'PI' ? 'opacity-25 pointer-events-none' : 'opacity-100'
+              }`}>
+                <div className="text-left leading-none">
+                  <span className="text-[9px] font-bold text-slate-300 block">ANTI-WINDUP</span>
+                  <span className="text-[8px] text-slate-500 block">Bloqueig Clamping</span>
+                </div>
+                <button
+                  onClick={() => setAntiWindupHabilitat(!antiWindupHabilitat)}
+                  className={`w-8 h-4.5 flex items-center rounded-full p-0.5 transition-all duration-300 ${
+                    antiWindupHabilitat ? 'bg-emerald-600 justify-end' : 'bg-rose-950 border border-rose-800/40 justify-start'
+                  }`}
+                  disabled={modeControl !== 'PI'}
+                >
+                  <span className="bg-white w-3.5 h-3.5 rounded-full shadow transition-transform"></span>
+                </button>
+                <span className={`text-[9px] font-bold ${antiWindupHabilitat ? 'text-emerald-400' : 'text-rose-400'}`}>
+                  {antiWindupHabilitat ? 'ON' : 'OFF'}
+                </span>
+              </div>
+
+            </div>
+          </header>
+
+          {/* GRID CENTRAL PRINCIPAL */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+            
+            {/* COLUMNA ESQUERRA: SLIDERS VERTICALS + DIPÒSIT D'AIGUA + BOTONERA + GRÀFIC TEMPORAL INTEGRAT */}
+            <div className="lg:col-span-7 bg-slate-800/80 rounded-xl p-4 border border-slate-700/60 shadow-lg flex flex-col justify-between">
+              <div>
+                <div className="border-b border-slate-700/60 pb-2 mb-4 flex justify-between items-center">
+                  <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
+                    Estat de la Planta Física i Controladors Verticals
+                  </h2>
+                  <span className="text-[10px] text-slate-500 font-mono">PLANT_CONTROL_UNIT</span>
+                </div>
+
+                {/* INDICADORS DE FLUXOS EN VIU (Moguts a dalt del tanc per estalviar espai i evitar qualsevol superposició) */}
+                <div className="w-full flex flex-wrap justify-end gap-1.5 mb-2 text-[10px] font-mono shrink-0">
+                  <div className="bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700/60 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-pulse"></span>
+                    <span>Entrada (Qi): <strong className="text-sky-400">{qi.toFixed(1)}</strong> cm³/s</span>
+                  </div>
+                  <div className="bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700/60 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
+                    <span>Sortida (Qo): <strong className="text-rose-400">{qo.toFixed(1)}</strong> cm³/s</span>
+                  </div>
+                  <div className="bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700/60 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                    <span>Nivell: <strong className="text-emerald-400">{nivell.toFixed(2)} cm</strong></span>
+                  </div>
+                </div>
+
+                {/* GRID DE DISPOSICIÓ: SLIDERS A L'ESQUERRA (COL-7) I TANQUE A LA DRETA SENSE ESPAIS (COL-5) */}
+                <div className="grid grid-cols-12 gap-1 items-center">
+                  
+                  {/* PANELL DE CONTROLS LLISCADORS VERTICALS (SP, Kp, Ki, Aix%, Pert, Inè, AL.H, AL.L, HYS) */}
+                  <div className="col-span-7 bg-slate-900/50 p-2.5 rounded-xl border border-slate-700/40 flex flex-row justify-around items-stretch h-[240px]">
+                    
+                    {/* Vertical Slider 1: Setpoint */}
+                    <div className="flex flex-col items-center justify-between h-full group">
+                      <span className="text-[10px] font-bold text-blue-400">SP</span>
+                      <div className="relative flex-grow my-1 flex justify-center">
+                        <input
+                          type="range"
+                          orient="vertical"
+                          min="0"
+                          max="30"
+                          step="1"
+                          value={setpoint}
+                          onChange={(e) => setSetpoint(parseInt(e.target.value))}
+                          className="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-blue-500"
+                        />
+                      </div>
+                      <span className="text-[9px] font-mono text-blue-300 bg-blue-950/80 px-1 py-0.5 rounded font-bold">{setpoint}</span>
+                      <span className="text-[8px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Consigna</span>
+                    </div>
+
+                    {/* Vertical Slider 2: Kp */}
+                    <div className={`flex flex-col items-center justify-between h-full group transition-all ${modeControl !== 'PI' ? 'opacity-20' : ''}`}>
+                      <span className="text-[10px] font-bold text-amber-400">Kp</span>
+                      <div className="relative flex-grow my-1 flex justify-center">
+                        <input
+                          type="range"
+                          orient="vertical"
+                          min="0"
+                          max="500"
+                          step="10"
+                          value={kp}
+                          onChange={(e) => setKp(parseInt(e.target.value))}
+                          disabled={modeControl !== 'PI'}
+                          className="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-amber-500"
+                        />
+                      </div>
+                      <span className="text-[9px] font-mono text-amber-300 bg-amber-950/80 px-1 py-0.5 rounded font-bold">{kp}</span>
+                      <span className="text-[8px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Proporc.</span>
+                    </div>
+
+                    {/* Vertical Slider 3: Ki */}
+                    <div className={`flex flex-col items-center justify-between h-full group transition-all ${modeControl !== 'PI' ? 'opacity-20' : ''}`}>
+                      <span className="text-[10px] font-bold text-teal-400">Ki</span>
+                      <div className="relative flex-grow my-1 flex justify-center">
+                        <input
+                          type="range"
+                          orient="vertical"
+                          min="0"
+                          max="200"
+                          step="5"
+                          value={ki}
+                          onChange={(e) => setKi(parseInt(e.target.value))}
+                          disabled={modeControl !== 'PI'}
+                          className="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-teal-500"
+                        />
+                      </div>
+                      <span className="text-[9px] font-mono text-teal-300 bg-teal-950/80 px-1 py-0.5 rounded font-bold">{ki}</span>
+                      <span className="text-[8px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Integral</span>
+                    </div>
+
+                    {/* Vertical Slider 4: kAixeta (Obertura de 0 a 100%) */}
+                    <div className="flex flex-col items-center justify-between h-full group">
+                      <span className="text-[10px] font-bold text-rose-400">Aix.</span>
+                      <div className="relative flex-grow my-1 flex justify-center">
+                        <input
+                          type="range"
+                          orient="vertical"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={kAixeta}
+                          onChange={(e) => setKAixeta(parseInt(e.target.value))}
+                          className="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-rose-500"
+                        />
+                      </div>
+                      <span className="text-[9px] font-mono text-rose-300 bg-rose-950/80 px-1 py-0.5 rounded font-bold">{kAixeta}%</span>
+                      <span className="text-[8px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Obertura</span>
+                    </div>
+
+                    {/* Vertical Slider 5: Pertorbació */}
+                    <div className="flex flex-col items-center justify-between h-full group">
+                      <span className="text-[10px] font-bold text-violet-400">Pert</span>
+                      <div className="relative flex-grow my-1 flex justify-center">
+                        <input
+                          type="range"
+                          orient="vertical"
+                          min="-150"
+                          max="150"
+                          step="10"
+                          value={disturbi}
+                          onChange={(e) => setDisturbi(parseInt(e.target.value))}
+                          className="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-violet-500"
+                        />
+                      </div>
+                      <span className={`text-[9px] font-mono px-0.5 py-0.5 rounded font-bold ${disturbi > 0 ? 'bg-indigo-950 text-indigo-300' : 'bg-slate-950 text-slate-400'}`}>{disturbi}</span>
+                      <span className="text-[8px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Pluja</span>
+                    </div>
+
+                    {/* Vertical Slider 6: Inèrcia Bomba */}
+                    <div className="flex flex-col items-center justify-between h-full group">
+                      <span className="text-[10px] font-bold text-slate-400">Inè.</span>
+                      <div className="relative flex-grow my-1 flex justify-center">
+                        <input
+                          type="range"
+                          orient="vertical"
+                          min="1"
+                          max="50"
+                          step="1"
+                          value={bombaInercia}
+                          onChange={(e) => setBombaInercia(parseInt(e.target.value))}
+                          className="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-slate-300"
+                        />
+                      </div>
+                      <span className="text-[9px] font-mono text-slate-300 bg-slate-850 px-1 py-0.5 rounded font-bold">{bombaInercia}</span>
+                      <span className="text-[8px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Inèrcia</span>
+                    </div>
+
+                    {/* Límits d'Alarmes */}
+                    {/* Vertical Slider 7: Alarma Alta (alarmHigh) */}
+                    <div className="flex flex-col items-center justify-between h-full group border-l border-red-500/15 pl-1">
+                      <span className="text-[10px] font-bold text-red-500">AL.H</span>
+                      <div className="relative flex-grow my-1 flex justify-center">
+                        <input
+                          type="range"
+                          orient="vertical"
+                          min="15"
+                          max="30"
+                          step="1"
+                          value={alarmHigh}
+                          onChange={(e) => setAlarmHigh(parseInt(e.target.value))}
+                          className="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-red-600"
+                        />
+                      </div>
+                      <span className="text-[9px] font-mono text-red-400 bg-red-950/80 px-1 py-0.5 rounded font-bold">{alarmHigh}</span>
+                      <span className="text-[8px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Alarma Alta</span>
+                    </div>
+
+                    {/* Vertical Slider 8: Alarma Baixa (alarmLow) */}
+                    <div className="flex flex-col items-center justify-between h-full group">
+                      <span className="text-[10px] font-bold text-amber-500">AL.L</span>
+                      <div className="relative flex-grow my-1 flex justify-center">
+                        <input
+                          type="range"
+                          orient="vertical"
+                          min="0"
+                          max="14"
+                          step="1"
+                          value={alarmLow}
+                          onChange={(e) => setAlarmLow(parseInt(e.target.value))}
+                          className="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-amber-500"
+                        />
+                      </div>
+                      <span className="text-[9px] font-mono text-amber-400 bg-amber-950/80 px-1 py-0.5 rounded font-bold">{alarmLow}</span>
+                      <span className="text-[8px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Alarma Baixa</span>
+                    </div>
+
+                    {/* VERTICAL SLIDER 9: HISTERESI (Només actiu si mode és Hysteresi) */}
+                    <div className={`flex flex-col items-center justify-between h-full group border-l border-indigo-500/20 pl-1 transition-all ${
+                      modeControl !== 'Hysteresi' && modeControl !== 'HYS' ? 'opacity-20' : ''
+                    }`}>
+                      <span className="text-[10px] font-bold text-indigo-400">HYS</span>
+                      <div className="relative flex-grow my-1 flex justify-center">
+                        <input
+                          type="range"
+                          orient="vertical"
+                          min="0.1"
+                          max="5.0"
+                          step="0.1"
+                          value={histeresiVal}
+                          onChange={(e) => setHisteresiVal(parseFloat(e.target.value))}
+                          disabled={modeControl !== 'Hysteresi' && modeControl !== 'HYS'}
+                          className="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-indigo-500"
+                        />
+                      </div>
+                      <span className="text-[9px] font-mono text-indigo-300 bg-indigo-950 px-1 py-0.5 rounded font-bold">±{histeresiVal}</span>
+                      <span className="text-[8px] text-indigo-400 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Diferencial</span>
+                    </div>
+
+                  </div>
+
+                  {/* EL DIPÒSIT SVG ANIMAT (Ubicat el més a prop possible dels sliders, col-span-5) */}
+                  <div className="col-span-5 flex flex-col items-center justify-center p-0 m-0 ml-0 pl-0 relative">
+                    
+                    {/* SVG principal del Dipòsit */}
+                    <div className="w-full max-w-[210px] h-[240px]">
+                      <svg viewBox="0 0 200 240" className="w-full h-full">
+                        
+                        {/* INDICADORS LED D'ALARMES */}
+                        <g transform="translate(45, 15)">
+                          <circle cx="0" cy="0" r="4.5" fill={nivell >= alarmHigh ? "#ef4444" : "#1e293b"} stroke={nivell >= alarmHigh ? "#fca5a5" : "#475569"} strokeWidth="1" className={nivell >= alarmHigh ? "animate-pulse" : ""} />
+                          <text x="8" y="2.5" fill={nivell >= alarmHigh ? "#ef4444" : "#64748b"} fontSize="7" fontWeight="bold">ALM ALT</text>
+                        </g>
+
+                        <g transform="translate(110, 15)">
+                          <circle cx="0" cy="0" r="4.5" fill={nivell <= alarmLow ? "#f59e0b" : "#1e293b"} stroke={nivell <= alarmLow ? "#fef08a" : "#475569"} strokeWidth="1" className={nivell <= alarmLow ? "animate-pulse" : ""} />
+                          <text x="8" y="2.5" fill={nivell <= alarmLow ? "#f59e0b" : "#64748b"} fontSize="7" fontWeight="bold">ALM BAIX</text>
+                        </g>
+
+                        {/* Bomba motoritzada */}
+                        <path d="M 10 32 L 70 32 L 70 47 L 60 47 L 60 40 L 10 40 Z" fill="#475569" />
+                        <rect x="5" y="22" width="15" height="25" rx="2" fill="#1e293b" stroke="#64748b" strokeWidth="2" />
+                        <text x="12" y="38" fontSize="8" fill="#38bdf8" textAnchor="middle" fontWeight="bold">M</text>
+
+                        {/* Indicador de % de funcionament digital de la bomba d'entrada */}
+                        <g transform="translate(10, 14)">
+                          <rect x="15" y="10" width="34" height="12" rx="2" fill="#0f172a" stroke="#475569" strokeWidth="0.5" />
+                          <text x="32" y="19" fontSize="7.5" fill="#a855f7" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
+                            {percentBomba}%
+                          </text>
+                        </g>
+
+                        {/* Doll d'aigua d'entrada */}
+                        {qi > 0.5 && (
+                          <path 
+                            d={`M 65 47 Q 65 ${80 + (30 - nivell) * 2} ${65 + Math.min(qi/10, 15)} ${220 - (nivell / 30 * 160)}`}
+                            fill="none" 
+                            stroke="#38bdf8" 
+                            strokeWidth={Math.min(2 + qi/40, 7)} 
+                            strokeDasharray="4 2"
+                            className="animate-dash"
+                            style={{ strokeDashoffset: -temps * 5 }}
+                          />
+                        )}
+
+                        {/* Tub d'escapament de l'aixeta */}
+                        <path d="M 170 210 L 200 210 L 200 220 L 170 220 Z" fill="#475569" />
+                        <circle cx="185" cy="215" r="7" fill="#dc2626" />
+                        <line x1="185" y1="205" x2="185" y2="225" stroke="#fca5a5" strokeWidth="2" />
+
+                        {/* Indicador de % d'obertura digital de l'aixeta, desplaçat correctament a sobre de la vàlvula */}
+                        <g transform="translate(165, 195)">
+                          <rect x="0" y="0" width="34" height="12" rx="2" fill="#0f172a" stroke="#475569" strokeWidth="0.5" />
+                          <text x="17" y="9" fontSize="7.5" fill="#f43f5e" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
+                            {kAixeta}%
+                          </text>
+                        </g>
+
+                        {/* Doll de sortida de l'aixeta */}
+                        {qo > 0.5 && kAixeta > 0 && (
+                          <path 
+                            d={`M 195 215 Q 220 220 225 240`} 
+                            fill="none" 
+                            stroke="#0284c7" 
+                            strokeWidth={Math.min(1 + qo/40, 6)} 
+                            strokeDasharray="3 2"
+                            className="animate-dash"
+                            style={{ strokeDashoffset: temps * 4 }}
+                          />
+                        )}
+
+                        {/* Cos del Dipòsit */}
+                        <rect x="40" y="50" width="130" height="170" fill="none" stroke="#94a3b8" strokeWidth="4" rx="2" />
+                        <line x1="35" y1="60" x2="175" y2="60" stroke="#b91c1c" strokeWidth="1" strokeDasharray="2 2" opacity="0.6" />
+                        
+                        {/* Línies de l'Histeresi dinàmiques (Només si mode és Histeresi) */}
+                        {(modeControl === 'Histeresi' || modeControl === 'HYS') && (
+                          <g>
+                            <line 
+                              x1="40" 
+                              y1={220 - ((setpoint + histeresiVal) / 30 * 160)} 
+                              x2="170" 
+                              y2={220 - ((setpoint + histeresiVal) / 30 * 160)} 
+                              stroke="#818cf8" 
+                              strokeWidth="1" 
+                              strokeDasharray="3 3" 
+                            />
+                            <line 
+                              x1="40" 
+                              y1={220 - ((setpoint - histeresiVal) / 30 * 160)} 
+                              x2="170" 
+                              y2={220 - ((setpoint - histeresiVal) / 30 * 160)} 
+                              stroke="#818cf8" 
+                              strokeWidth="1" 
+                              strokeDasharray="3 3" 
+                            />
+                            <rect
+                              x="42"
+                              y={220 - ((setpoint + histeresiVal) / 30 * 160)}
+                              width="126"
+                              height={(histeresiVal * 2 / 30 * 160)}
+                              fill="#818cf8"
+                              fillOpacity="0.08"
+                            />
+                          </g>
+                        )}
+
+                        {/* Límits d'Alarma Dinàmics */}
+                        {(() => {
+                          const yAlarmHigh = 220 - (alarmHigh / 30 * 160);
+                          return (
+                            <g>
+                              <line x1="38" y1={yAlarmHigh} x2="172" y2={yAlarmHigh} stroke="#ef4444" strokeWidth="1.5" strokeDasharray="4 3" opacity="0.9" />
+                              <text x="165" y={yAlarmHigh - 3} fill="#f87171" fontSize="7" textAnchor="end" fontWeight="bold">LIM ALT: {alarmHigh}cm</text>
+                            </g>
+                          );
+                        })()}
+
+                        {(() => {
+                          const yAlarmLow = 220 - (alarmLow / 30 * 160);
+                          return (
+                            <g>
+                              <line x1="38" y1={yAlarmLow} x2="172" y2={yAlarmLow} stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="4 3" opacity="0.9" />
+                              <text x="165" y={yAlarmLow + 8} fill="#fbbf24" fontSize="7" textAnchor="end" fontWeight="bold">LIM BAIX: {alarmLow}cm</text>
+                            </g>
+                          );
+                        })()}
+
+                        {/* Setpoint (Consigna) */}
+                        {(() => {
+                          const ySetpoint = 220 - (setpoint / 30 * 160);
+                          return (
+                            <g>
+                              <line x1="38" y1={ySetpoint} x2="172" y2={ySetpoint} stroke="#3b82f6" strokeWidth="2" strokeDasharray="5 3" />
+                              <text x="45" y={ySetpoint - 4} fill="#60a5fa" fontSize="9" fontWeight="bold">Consigna: {setpoint}cm</text>
+                            </g>
+                          );
+                        })()}
+
+                        {/* Massa d'aigua de fons */}
+                        {nivell > 0 && (
+                          <rect 
+                            x="42" 
+                            y={220 - (nivell / 30 * 160)} 
+                            width="126" 
+                            height={(nivell / 30 * 160)} 
+                            fill="#38bdf8" 
+                            fillOpacity="0.45" 
+                            rx="1"
+                          />
+                        )}
+
+                        {/* INDICADOR DE NIVELL AMB EL VOLUM ACTUAL DE SOTA (Fórmula del volum en el mateix format) */}
+                        <g transform={`translate(100, ${220 - (nivell / 30 * 160) + 12})`}>
+                          {nivell > 2 && (
+                            <g>
+                              {/* Quadre de fons fosc, ara més alt per encabir les dues línies perfectament */}
+                              <rect x="-35" y="-10" width="70" height="25" rx="3.5" fill="#0f172a" fillOpacity="0.85" stroke="#475569" strokeWidth="0.75" />
+                              {/* Línia 1: Nivell */}
+                              <text x="0" y="0" fill="#38bdf8" fontSize="8.5" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
+                                {nivell.toFixed(1)} cm
+                              </text>
+                              {/* Línia 2: Volum actual */}
+                              <text x="0" y="10" fill="#34d399" fontSize="7.5" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
+                                {volumActualL} L
+                              </text>
+                            </g>
+                          )}
+                        </g>
+
+                        {/* Regle de mesura */}
+                        {[0, 10, 20, 30].map((val) => {
+                          const yPos = 220 - (val / 30 * 160);
+                          return (
+                            <g key={val}>
+                              <line x1="170" y1={yPos} x2="175" y2={yPos} stroke="#94a3b8" strokeWidth="1.5" />
+                              <text x="181" y={yPos + 3} fill="#94a3b8" fontSize="8" fontFamily="monospace">{val}cm</text>
+                            </g>
+                          );
+                        })}
+
+                        {/* INFORMACIÓ DEL DIÀMETRE DE LA BASE I L'ÀREA (Ubicat fora del dipòsit, just a sota de la base) */}
+                        <text x="105" y="234" fill="#94a3b8" fontSize="7.5" textAnchor="middle" fontFamily="monospace" fontWeight="bold">
+                          Ø Base: {diametreBase} cm | Àrea: {areaBase} cm²
+                        </text>
+
+                      </svg>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* BOTONERA D'ACCIONS DE SIMULACIÓ */}
+              <div className="mt-3 bg-slate-900/60 p-2.5 rounded-xl border border-slate-700/30 flex justify-center items-center gap-3">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-auto pl-2">Accions del procés:</span>
+                <button
+                  onClick={() => setIsRunning(!isRunning)}
+                  className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md ${
+                    isRunning 
+                      ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-900/20' 
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/20'
+                  }`}
+                >
+                  {isRunning ? (
+                    <>
+                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+                      Pausa
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                      Iniciar (Play)
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => { executarPasSimulacio(); setIsRunning(false); }}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 rounded-lg text-xs font-semibold transition-colors border border-slate-700"
+                  title="Avança només 100 ms"
+                >
+                  Pas a Pas
+                </button>
+                <button
+                  onClick={reiniciarSimulacio}
+                  className="px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/50 text-rose-300 rounded-lg text-xs font-semibold transition-colors border border-rose-500/20"
+                >
+                  Reset
+                </button>
+              </div>
+
+              {/* GRÀFIC TEMPORAL DE NIVELL I LLINDARS D'ALARMA TOTALMENT RE-ESCALAT MATEMÀTICAMENT (0-30 cm) */}
+              <div className="mt-4 pt-4 border-t border-slate-700/60 flex flex-col h-[230px]">
+                
+                {/* Capçalera del gràfic amb selector de finestra ajustable i botó de descàrrega compatible amb XLS */}
+                <div className="flex justify-between items-center mb-2">
+                  <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider">
+                    Gràfic Temporal de Nivell i Llindars
+                  </h3>
+                  
+                  <div className="flex items-center gap-2">
+                    {/* Botó d'exportació de dades compatible amb Excel (XLS/CSV) */}
+                    <button 
+                      onClick={descarregarDadesXLS}
+                      className="bg-emerald-600/95 hover:bg-emerald-500 active:scale-95 text-white text-[10px] font-bold px-2 py-1 rounded transition-all flex items-center gap-1 shadow shadow-emerald-500/10 shrink-0"
+                      title="Descarrega les dades en format compatible amb Microsoft Excel (separat per punts i comes)"
+                    >
+                      <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                      Descarregar XLS
+                    </button>
+
+                    {/* Selector de finestra temporal que ara suporta 10,20,30,40,50 i 60 segons */}
+                    <div className="flex items-center gap-1 bg-slate-900 px-2 py-1 rounded border border-slate-800">
+                      <span className="text-[9px] text-slate-400 font-bold uppercase tracking-wide">Finestra:</span>
+                      <select 
+                        value={tempsFinestra} 
+                        onChange={(e) => setTempsFinestra(parseInt(e.target.value))}
+                        className="bg-slate-950 text-slate-200 text-[10px] font-bold outline-none cursor-pointer border-none py-0.5"
+                      >
+                        <option value={10}>10s</option>
+                        <option value={20}>20s</option>
+                        <option value={30}>30s</option>
+                        <option value={40}>40s</option>
+                        <option value={50}>50s</option>
+                        <option value={60}>60s</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Àrea real de traçat del Gràfic amb escala de 0 a 30 unificada */}
+                <div className="relative flex-grow bg-slate-950 rounded-lg p-2 border border-slate-700/70 overflow-hidden flex">
+                  
+                  {/* Valors de referència de l'Eix Y (0 a 30 ajustats perfectament de dalt a baix) */}
+                  <div className="w-8 h-full flex flex-col justify-between text-[8px] font-mono text-slate-500 text-right pr-2 pb-1 pt-1 border-r border-slate-800/80 pointer-events-none z-20 shrink-0">
+                    <span>30</span>
+                    <span>20</span>
+                    <span>10</span>
+                    <span>0</span>
+                  </div>
+
+                  {/* ÀREA ACTIVA DE PLOT (Al costat de l'eix Y, d'alçada 100% neta sense paddings asimètrics) */}
+                  <div className="relative flex-grow h-full pb-1 pt-1 pr-1">
+                    <div className="relative w-full h-full">
+                      {/* Línies de fons de l'escala Y (10 i 20 cm) */}
+                      <div className="absolute inset-0 pointer-events-none z-0">
+                        <div className="absolute w-full border-t border-slate-900" style={{ bottom: '33.33%' }} />
+                        <div className="absolute w-full border-t border-slate-900" style={{ bottom: '66.66%' }} />
+                      </div>
+
+                      {/* Línia dinàmica d'Alarma de Nivell Alt (AL.H) */}
+                      <div 
+                        className="absolute left-0 right-0 border-t border-red-500/50 border-dotted z-10 pointer-events-none"
+                        style={{ bottom: `${(alarmHigh / 30) * 100}%` }}
+                      >
+                        <span className="absolute left-1 -top-1.5 text-[6.5px] text-red-400 bg-slate-950/80 px-1 rounded font-bold">AL.H ({alarmHigh}cm)</span>
+                      </div>
+
+                      {/* Línia de Setpoint (SP) */}
+                      <div 
+                        className="absolute left-0 right-0 border-t border-blue-500/60 border-dashed z-10 pointer-events-none"
+                        style={{ bottom: `${(setpoint / 30) * 100}%` }}
+                      >
+                        <span className="absolute left-1/3 -top-2 text-[7.5px] text-blue-400 bg-slate-950/80 px-1 rounded font-bold">SP ({setpoint}cm)</span>
+                      </div>
+
+                      {/* Línia d'Alarma de Nivell Baix (AL.L) */}
+                      <div 
+                        className="absolute left-0 right-0 border-t border-amber-500/50 border-dotted z-10 pointer-events-none"
+                        style={{ bottom: `${(alarmLow / 30) * 100}%` }}
+                      >
+                        <span className="absolute left-1 -top-1.5 text-[6.5px] text-amber-400 bg-slate-950/80 px-1 rounded font-bold">AL.L ({alarmLow}cm)</span>
+                      </div>
+
+                      {/* Columnes reals d'historial (Re-escalades proporcionalment a escala [0, 30]) */}
+                      <div className="w-full h-full flex items-end justify-between gap-[1px] relative z-10">
+                        {historialVisualitzat.map((pt, idx) => {
+                          const hPercent = (pt.nivell / 30) * 100;
+                          
+                          // Càlcul del % d'error respecte al setpoint per canviar a verd (tolerància del 10% prop del setpoint)
+                          const errorPct = pt.setpoint > 0 ? Math.abs(pt.nivell - pt.setpoint) / pt.setpoint : (pt.nivell === 0 ? 0 : 999);
+                          const propDelSetpoint = errorPct <= 0.10; // Nivell prop del SP més o menys un 10% (ex: entre 18 cm i 22 cm si SP = 20 cm)
+
+                          // Color dinàmic de la barra
+                          let barColor = "bg-sky-500/70 hover:bg-sky-400";
+                          if (pt.nivell >= pt.alarmHigh) {
+                            barColor = "bg-red-600/85 hover:bg-red-500";
+                          } else if (pt.nivell <= pt.alarmLow) {
+                            barColor = "bg-amber-500/85 hover:bg-amber-400";
+                          } else if (propDelSetpoint) {
+                            barColor = "bg-emerald-500/80 hover:bg-emerald-400"; // Canvia a verd prop de consigna (±10%)
+                          }
+
+                          return (
+                            <div 
+                              key={idx} 
+                              className="flex-grow h-full relative group cursor-pointer"
+                              onMouseEnter={() => setPunterHistorial(pt)}
+                              onMouseLeave={() => setPunterHistorial(null)}
+                            >
+                              <div 
+                                className={`absolute bottom-0 left-0 right-0 rounded-t-sm transition-all ${barColor}`}
+                                style={{ height: `${hPercent}%` }}
+                              ></div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+                
+                {/* LLEGENDA DELS GRAPH O PANNELL D'INFORMACIÓ DINÀMIC D'HOVER */}
+                <div className="mt-2 min-h-[22px] flex items-center">
+                  {punterHistorial ? (
+                    <div className="text-[10px] bg-slate-950 text-slate-200 px-3 py-1 rounded border border-slate-800 flex justify-between items-center w-full font-mono">
+                      <span>Temps: <strong className="text-blue-400">{punterHistorial.temps}s</strong></span>
+                      <span>Nivell: <strong className="text-emerald-400">{punterHistorial.nivell} cm</strong></span>
+                      <span>Bomba (Qi): <strong className="text-purple-400">{punterHistorial.qi} cm³/s</strong></span>
+                      <span>Sortida (Qo): <strong className="text-rose-400">{punterHistorial.qo} cm³/s</strong></span>
+                      <span>Obertura Aix.: <strong className="text-amber-400">{punterHistorial.aixetaPct}%</strong></span>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between items-center text-[9px] text-slate-400 w-full">
+                      <div className="flex flex-wrap gap-x-2 gap-y-1">
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-sky-500 rounded-full inline-block"></span> Estàndard
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-emerald-500 rounded-full inline-block"></span> Prop del SP (±10%)
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-red-500 rounded-full inline-block"></span> Alarma Alta
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <span className="w-2 h-2 bg-amber-500 rounded-full inline-block"></span> Alarma Baixa
+                        </span>
+                      </div>
+                      <span className="font-mono text-[8px] text-slate-500">Posa el cursor sobre les columnes per analitzar dades</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            {/* COLUMNA DRETA: EL PANELL COMPLET DE CÀLCULS EN TEMPS REAL DINÀMIC (Col: 5) */}
+            <div className="lg:col-span-5 bg-slate-800/80 rounded-xl p-4 border border-slate-700/60 shadow-lg flex flex-col justify-between">
+              <div>
+                <div className="border-b border-slate-700/60 pb-2 mb-3 flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse"></span>
+                  <h2 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
+                    Càlculs Interns ({modeControl === 'PI' ? 'Mode PI' : modeControl === 'ON_OFF' ? 'Mode Tot o Res' : 'Mode Histeresi'})
+                  </h2>
+                </div>
+                
+                {/* CÀLCULS ADAPTATIUS SEGONS L'ESTRATÈGIA ACTIVA */}
+                <div className="space-y-3 text-xs font-mono">
+                  
+                  {/* PAS 1: ERROR / LLINDARS AMB PRESENTACIÓ DE FÓRMULA */}
+                  <div className="bg-slate-900/60 p-2.5 rounded border border-slate-755">
+                    <span className="text-slate-400 font-bold text-[10px] block uppercase tracking-wide">1. Error i Referència (Fórmula: e = SP - Nivell)</span>
+                    <div className="text-blue-400 text-sm mt-1 font-bold">
+                      e = {setpoint} - {nivell.toFixed(2)} = <span className="text-emerald-400">{actualError} cm</span>
+                    </div>
+                    {(modeControl === 'Hysteresi' || modeControl === 'HYS') && (
+                      <div className="text-[10px] text-indigo-400 mt-1">
+                        Banda d'Histeresi (±{histeresiVal}cm): Marges { (setpoint - histeresiVal).toFixed(1) } cm a { (setpoint + histeresiVal).toFixed(1) } cm
+                      </div>
+                    )}
+                  </div>
+
+                  {/* PAS 2: INTEGRAL (PI) O CONDICIÓ D'ESTAT (ON-OFF / HISTERESI) AMB PRESENTACIÓ DE FÓRMULA */}
+                  {modeControl === 'PI' ? (
+                    <div className="bg-slate-900/60 p-2.5 rounded border border-slate-755">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-slate-400 font-bold text-[10px] block uppercase tracking-wide">
+                          2. Part Integral (Fórmula: e_int = e_int_ant + e)
+                        </span>
+                        <span className={`text-[9px] px-1.5 py-0.5 rounded border font-sans font-bold ${
+                          ki === 0
+                            ? 'bg-slate-800 text-slate-400 border-slate-700'
+                            : !antiWindupHabilitat 
+                              ? 'bg-slate-800 text-slate-400 border-slate-700' 
+                              : windupActiu 
+                                ? 'bg-red-500/10 text-red-400 border-red-500/25 animate-pulse' 
+                                : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'
+                        }`}>
+                          {ki === 0 ? 'Ki deshabilitada' : !antiWindupHabilitat ? 'Anti-Windup: OFF' : windupActiu ? '⚠️ AW Actiu (Bloquejat)' : 'AW OK (Integrant)'}
+                        </span>
+                      </div>
+                      
+                      <div className="text-teal-400 text-xs font-bold mt-1.5 space-y-1">
+                        <div>
+                          Suma acumulada (e_integral) = <span className="text-teal-300">{errorIntegral.toFixed(1)}</span>
+                        </div>
+                        
+                        {/* Fórmula dinàmica pas a pas de la integració condicional */}
+                        <div className="text-[11px] text-slate-300 font-normal border-t border-slate-700/40 pt-1 mt-1">
+                          {ki === 0 ? (
+                            <span className="text-slate-400">
+                              Lògica: Ki = 0 (Només P) &rarr; error_integral = <span className="font-bold underline">0</span> (Sense integració)
+                            </span>
+                          ) : windupActiu ? (
+                            <span className="text-red-400">
+                              Lògica: Clamping actiu &rarr; {errorIntegral.toFixed(1)} + <span className="underline font-bold">0</span> = <span className="font-bold">{errorIntegral.toFixed(1)}</span>
+                            </span>
+                          ) : (
+                            <span className="text-slate-200">
+                              Lògica: {errorIntegral.toFixed(1)} + ({actualError}) = <span className="font-bold">{(errorIntegral + parseFloat(actualError)).toFixed(1)}</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Explicació dinàmica de seguretat */}
+                      <div className="text-[10px] text-slate-400 mt-2 font-sans italic leading-normal">
+                        {ki === 0 ? (
+                          <span>• Mode Proporcional pur (P): Com que la constant Ki està a zero, no hi ha acumulació d'error del passat i l'error integral roman clamat a 0.</span>
+                        ) : windupActiu ? (
+                          <span className="text-red-400 font-semibold block">
+                            • Anti-Windup en Clamping: Bloquejat per evitar l'acumulació innecessària d'error de saturació mentre la bomba física està clavada a 0.
+                          </span>
+                        ) : !antiWindupHabilitat && (nivell > setpoint) && (qi <= 0.01) ? (
+                          <span className="text-rose-400 font-semibold block">
+                            • Alerta de Saturació (Windup): L'Anti-Windup està apagat. L'error s'acumula negativament sense límit i farà que la bomba tardi a respondre en demanar aigua!
+                          </span>
+                        ) : (
+                          <span>• Integració activa: El controlador està operant dins de la finestra física de treball.</span>
+                        )}
+                      </div>
+                    </div>
+                  ) : modeControl === 'ON_OFF' ? (
+                    <div className="bg-slate-900/60 p-2.5 rounded border border-slate-755">
+                      <span className="text-slate-400 font-bold text-[10px] block uppercase tracking-wide">2. Condició d'Estat (Tot o Res)</span>
+                      <div className="text-sm mt-1 font-bold">
+                        Nivell ({nivell.toFixed(2)} cm) &lt; Setpoint ({setpoint} cm)?{' '}
+                        {errorActual > 0 ? (
+                          <span className="text-emerald-400">SÍ (Demanda d'aigua)</span>
+                        ) : (
+                          <span className="text-rose-400">NO (Dipòsit ple)</span>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-slate-400 mt-1 font-sans italic leading-tight">
+                        El sistema commuta de forma immediata i directa al revés de l'error sense cap filtre ni marge.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="bg-slate-900/60 p-2.5 rounded border border-slate-755">
+                      <span className="text-slate-400 font-bold text-[10px] block uppercase tracking-wide">2. Banda i Lògica de Commutació (Histeresi)</span>
+                      <div className="text-[11px] mt-1.5 space-y-1">
+                        <div className="flex justify-between">
+                          <span>Estat de la Bomba:</span>
+                          <span className={`font-bold ${bombaActiva ? 'text-emerald-400' : 'text-slate-400'}`}>
+                            {bombaActiva ? 'ON (Funcionant)' : 'OFF (Aturada)'}
+                          </span>
+                        </div>
+                        <div className="border-t border-slate-700/40 pt-1 mt-1">
+                          {nivell < (setpoint - histeresiVal) ? (
+                            <span className="text-emerald-400 font-bold">• Nivell sota llindar ({ (setpoint - histeresiVal).toFixed(1) }cm) -> Bomba s'encén.</span>
+                          ) : nivell > (setpoint + histeresiVal) ? (
+                            <span className="text-rose-400 font-bold">• Nivell sobre llindar ({ (setpoint + histeresiVal).toFixed(1) }cm) -> Bomba s'atura.</span>
+                          ) : (
+                            <span className="text-indigo-300">• Dins de la banda ({ (setpoint - histeresiVal).toFixed(1) } a { (setpoint + histeresiVal).toFixed(1) }cm) -> Manté estat.</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PAS 3: LLEI DE CONTROL (u) */}
+                  <div className="bg-slate-900/60 p-2.5 rounded border border-slate-755">
+                    <span className="text-slate-400 font-bold text-[10px] block uppercase tracking-wide">3. Equació i Senyal del Controlador (u)</span>
+                    {modeControl === 'PI' ? (
+                      <div className="text-slate-200 text-[11px] mt-1 leading-relaxed whitespace-pre-line">
+                        u = (Kp · e) + (Ki · e_integral · dt) <br />
+                        u = (<span className="text-amber-400">{kp}</span> · <span className="text-emerald-400">{actualError}</span>) + (<span className="text-teal-400">{ki}</span> · <span className="text-teal-300">{errorIntegral.toFixed(1)}</span> · 0.1) <br />
+                        u = <span className="text-amber-300">{actualPTerm}</span> + <span className="text-teal-300">{actualITerm}</span> = <span className="text-purple-400 font-bold text-sm">{tensioBomba.toFixed(1)}</span>
+                      </div>
+                    ) : modeControl === 'ON_OFF' ? (
+                      <div className="text-slate-200 text-[11px] mt-1 leading-relaxed">
+                        u = (Error &gt; 0) ? 1000 : 0 <br />
+                        u = ({actualError} &gt; 0) ? <span className="text-purple-400 font-bold">{tensioBomba} (100% de potència)</span> : <span className="text-slate-400 font-bold">0 (Bomba OFF)</span>
+                      </div>
+                    ) : (
+                      <div className="text-slate-200 text-[11px] mt-1 leading-relaxed">
+                        u = (Bomba Activa)? 1000 : 0 <br />
+                        Bomba actual: <span className={bombaActiva ? 'text-emerald-400 font-bold' : 'text-slate-400 font-bold'}>{bombaActiva ? 'ACTIVA' : 'INACTIVA'}</span> -> u = <span className="text-purple-400 font-bold text-sm">{tensioBomba}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* PAS 4: FÍSICA (Actualitzat per reflectir la nova obertura de l'aixeta de 0-100% factor de 0.4) */}
+                  <div className="bg-slate-900/60 p-2.5 rounded border border-slate-755">
+                    <span className="text-slate-400 font-bold text-[10px] block uppercase tracking-wide">4. Física del dipòsit (q_net / Area)</span>
+                    <div className="text-slate-200 text-[11px] mt-1 leading-relaxed">
+                      qo = (Aixeta% · 0.4) · Nivell = ({kAixeta}% · 0.4) · {nivell.toFixed(2)} = <span className="text-rose-400 font-bold">{qo.toFixed(1)} cm³/s</span> <br />
+                      ΔNivell = dt · (qi - qo + pertorbació) / Àrea <br />
+                      ΔNivell = 0.1 · ({qi.toFixed(1)} - {qo.toFixed(1)} + {disturbi}) / {areaBase} <br />
+                      ΔNivell = <span className="text-amber-500 font-bold">{actualVariacio > 0 ? `+${actualVariacio}` : actualVariacio} cm/pas</span>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <div className="mt-3 text-[10px] text-slate-400 bg-slate-900/35 p-2 rounded border border-slate-700/20">
+                <span className="font-bold text-blue-400">Comparativa:</span> Prova d'utilitzar el mode <span className="text-emerald-400">Tot o Res</span> per verure chattering frenètic, i després canvia a <span className="text-indigo-400">Histeresi</span> per reduir les commutacions.
+              </div>
+            </div>
+
+          </div>
+
+          {/* COMPARTIMENT INFERIOR: CONSOLA TERMINAL ARDUINO (Panoràmica a tota l'amplada) */}
+          <div className="grid grid-cols-1 gap-4 mt-4">
+            <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60 shadow-md flex flex-col h-[240px]">
+              <div className="flex justify-between items-center border-b border-slate-700/80 pb-2 mb-2">
+                <h3 className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span>
+                  Consola Monitor Sèrie (9600 bps)
+                </h3>
+                <button 
+                  onClick={() => setSerialLogs(["--- Consola Netejada ---"])}
+                  className="text-[10px] text-slate-400 hover:text-slate-200 bg-slate-900 px-2 py-0.5 rounded border border-slate-700"
+                >
+                  Esborrar
+                </button>
+              </div>
+
+              <div 
+                ref={terminalContainerRef}
+                className="flex-grow bg-slate-950 rounded-lg p-2.5 font-mono text-emerald-400 overflow-y-auto space-y-1 border border-slate-900 h-0"
+              >
+                {serialLogs.map((log, i) => (
+                  <div key={i} className="whitespace-pre-wrap leading-tight text-[11px] opacity-90 border-b border-slate-900/30 pb-0.5">
+                    {log}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+        </div>
+      );
+    }
+
+    // Renderitzem l'aplicació dins del root principal de la web
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
 </body>
 </html>
