@@ -490,11 +490,11 @@
 
                 {/* Indicadors integrats a sota/dins del mateix dipòsit i cabals a l'esquemàtic SVG */}
 
-                {/* GRID DE DISPOSICIÓ: SLIDERS A L'ESQUERRA (COL-7) I TANQUE A LA DRETA SENSE ESPAIS (COL-5) */}
-                <div className="grid grid-cols-12 gap-1 items-center">
+                {/* GRID DE DISPOSICIÓ: SLIDERS A L'ESQUERRA (COL-12/7) I TANQUE A LA DRETA (COL-12/5) */}
+                <div className="grid grid-cols-12 gap-4 md:gap-1 items-center">
                   
                   {/* PANELL DE CONTROLS LLISCADORS VERTICALS (SP, Kp, Ki, Aix%, Pert, Inè, AL.H, AL.L, HYS) */}
-                  <div className="col-span-7 bg-slate-900/50 p-2.5 rounded-xl border border-slate-700/40 flex flex-row justify-around items-stretch h-[240px]">
+                  <div className="col-span-12 md:col-span-7 bg-slate-900/50 p-2.5 rounded-xl border border-slate-700/40 flex flex-row justify-around items-stretch h-[240px]">
                     
                     {/* Vertical Slider 1: Setpoint */}
                     <div className="flex flex-col items-center justify-between h-full group">
@@ -675,8 +675,8 @@
 
                   </div>
 
-                  {/* EL DIPÒSIT SVG ANIMAT (Ubicat el més a prop possible dels sliders, col-span-5) */}
-                  <div className="col-span-5 flex flex-col items-center justify-center p-0 m-0 ml-0 pl-0 relative">
+                  {/* EL DIPÒSIT SVG ANIMAT (Ubicat el més a prop possible dels sliders, col-span-12/5) */}
+                  <div className="col-span-12 md:col-span-5 flex flex-col items-center justify-center p-0 m-0 ml-0 pl-0 relative">
                     
                     {/* SVG principal del Dipòsit */}
                     <div className="w-full max-w-[245px] h-[240px]">
