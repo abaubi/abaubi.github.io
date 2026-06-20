@@ -130,7 +130,7 @@
       // Control manual de canvi d'estratègia sense reiniciar la simulació
       const setOptionControl = (mode) => {
         setModeControl(mode);
-        // Reiniciem només els acumuladors de control si escau, però conservem temps i nivell
+        // Reiniciem només els acumuladors de control si escau, pero conservem temps i nivell
         setSimState(prev => ({
           ...prev,
           errorIntegral: 0,
@@ -149,13 +149,13 @@
 
         // Afegim BOM de UTF-8 per garantir que Excel obri correctament els caràcters especials
         let contingutCSV = "\uFEFF";
-        contingutCSV += "Temps (s);Nivell (cm);Consigna (cm);Cabal Entrada (cm3/s);Cabal Sortida (cm3/s);Aixeta (%);Alarma Alta (cm);Alarma Baixa (cm);Area Base (cm2);Diametre Base (cm);Volum (L)\n";
+        contingutCSV += "Temps (s);Nivell (cm);Consigna (cm);Cabal Entrada (cm3/s);Cabal Sortida (cm3/s);Bomba (%);Aixeta (%);Alarma Alta (cm);Alarma Baixa (cm);Area Base (cm2);Diametre Base (cm);Volum (L);Kp;Ki;Pertorbacio;Inercia Bomba;Histeresi;Anti-Windup Actiu;Estat Histeresi\n";
         
         historial.forEach(row => {
           const diametre = (2 * Math.sqrt(areaBase / Math.PI)).toFixed(1);
           const volumL = (areaBase * row.nivell / 1000).toFixed(2);
           
-          contingutCSV += `${row.temps.replace('.', ',')};${row.nivell.toString().replace('.', ',')};${row.setpoint.toString().replace('.', ',')};${row.qi.toString().replace('.', ',')};${row.qo.toString().replace('.', ',')};${row.aixetaPct};${row.alarmHigh};${row.alarmLow};${areaBase};${diametre.replace('.', ',')};${volumL.replace('.', ',')}\n`;
+          contingutCSV += `${row.temps.replace('.', ',')};${row.nivell.toString().replace('.', ',')};${row.setpoint.toString().replace('.', ',')};${row.qi.toString().replace('.', ',')};${row.qo.toString().replace('.', ',')};${row.bombaPct};${row.aixetaPct};${row.alarmHigh};${row.alarmLow};${areaBase};${diametre.replace('.', ',')};${volumL.replace('.', ',')};${row.kp};${row.ki};${row.disturbi};${row.bombaInercia};${row.histeresiVal.toString().replace('.', ',')};${row.antiWindupActiu};${row.bombaActivaEstat}\n`;
         });
         
         const blob = new Blob([contingutCSV], { type: 'text/csv;charset=utf-8;' });
@@ -275,7 +275,7 @@
             alarmStr += nouBombaActiva ? "\t[HIST-ON]" : "\t[HIST-OFF]";
           }
 
-          // Guardem l'historial d'aquest pas (amb el percentatge de l'aixeta integrat)
+          // Guardem l'historial d'aquest pas (amb tots els indicadors, estat d'anti-windup, tipus de control i demés sliders)
           const nouRegistre = {
             temps: (nouTemps * dt).toFixed(1),
             nivell: parseFloat(nouNivell.toFixed(2)),
@@ -285,7 +285,16 @@
             error: parseFloat(error.toFixed(2)),
             alarmHigh: alarmHigh,
             alarmLow: alarmLow,
-            aixetaPct: kAixeta
+            aixetaPct: kAixeta,
+            bombaPct: Math.min(100, Math.max(0, Math.round((u / 1000) * 100))),
+            // Valor de l'estat d'sliders en temps real
+            kp: kp,
+            ki: ki,
+            disturbi: disturbi,
+            bombaInercia: bombaInercia,
+            histeresiVal: histeresiVal,
+            antiWindupActiu: actiuAW ? "Sí" : "No",
+            bombaActivaEstat: modeControl === 'HYS' ? (nouBombaActiva ? "ON" : "OFF") : ""
           };
 
           setHistorial((prevH) => {
@@ -479,21 +488,7 @@
                   <span className="text-[10px] text-slate-500 font-mono">PLANT_CONTROL_UNIT</span>
                 </div>
 
-                {/* INDICADORS DE FLUXOS EN VIU (Moguts a dalt del tanc per estalviar espai i evitar qualsevol superposició) */}
-                <div className="w-full flex flex-wrap justify-end gap-1.5 mb-2 text-[10px] font-mono shrink-0">
-                  <div className="bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700/60 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-sky-500 rounded-full animate-pulse"></span>
-                    <span>Entrada (Qi): <strong className="text-sky-400">{qi.toFixed(1)}</strong> cm³/s</span>
-                  </div>
-                  <div className="bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700/60 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-rose-500 rounded-full"></span>
-                    <span>Sortida (Qo): <strong className="text-rose-400">{qo.toFixed(1)}</strong> cm³/s</span>
-                  </div>
-                  <div className="bg-slate-900/90 px-2 py-0.5 rounded border border-slate-700/60 flex items-center gap-1.5">
-                    <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
-                    <span>Nivell: <strong className="text-emerald-400">{nivell.toFixed(2)} cm</strong></span>
-                  </div>
-                </div>
+                {/* Indicadors integrats a sota/dins del mateix dipòsit i cabals a l'esquemàtic SVG */}
 
                 {/* GRID DE DISPOSICIÓ: SLIDERS A L'ESQUERRA (COL-7) I TANQUE A LA DRETA SENSE ESPAIS (COL-5) */}
                 <div className="grid grid-cols-12 gap-1 items-center">
@@ -684,8 +679,8 @@
                   <div className="col-span-5 flex flex-col items-center justify-center p-0 m-0 ml-0 pl-0 relative">
                     
                     {/* SVG principal del Dipòsit */}
-                    <div className="w-full max-w-[210px] h-[240px]">
-                      <svg viewBox="0 0 200 240" className="w-full h-full">
+                    <div className="w-full max-w-[245px] h-[240px]">
+                      <svg viewBox="0 0 235 240" className="w-full h-full">
                         
                         {/* INDICADORS LED D'ALARMES */}
                         <g transform="translate(45, 15)">
@@ -703,11 +698,14 @@
                         <rect x="5" y="22" width="15" height="25" rx="2" fill="#1e293b" stroke="#64748b" strokeWidth="2" />
                         <text x="12" y="38" fontSize="8" fill="#38bdf8" textAnchor="middle" fontWeight="bold">M</text>
 
-                        {/* Indicador de % de funcionament digital de la bomba d'entrada */}
-                        <g transform="translate(10, 14)">
-                          <rect x="15" y="10" width="34" height="12" rx="2" fill="#0f172a" stroke="#475569" strokeWidth="0.5" />
-                          <text x="32" y="19" fontSize="7.5" fill="#a855f7" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
-                            {percentBomba}%
+                        {/* Indicadors d'Entrada Integrats (Moguts baix de les alarmes i damunt del dipòsit, completament lliure de superposicions) */}
+                        <g transform="translate(77, 24)">
+                          <rect x="0" y="0" width="56" height="22" rx="3.5" fill="#0f172a" fillOpacity="0.95" stroke="#38bdf8" strokeWidth="1" />
+                          <text x="28" y="8" fontSize="6.5" fill="#a855f7" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
+                            Bomba: {percentBomba}%
+                          </text>
+                          <text x="28" y="16.5" fontSize="6.5" fill="#38bdf8" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
+                            Qi: {qi.toFixed(1)}
                           </text>
                         </g>
 
@@ -724,23 +722,26 @@
                           />
                         )}
 
-                        {/* Tub d'escapament de l'aixeta */}
-                        <path d="M 170 210 L 200 210 L 200 220 L 170 220 Z" fill="#475569" />
-                        <circle cx="185" cy="215" r="7" fill="#dc2626" />
-                        <line x1="185" y1="205" x2="185" y2="225" stroke="#fca5a5" strokeWidth="2" />
+                        {/* Tub d'escapament de l'aixeta estès fins a x=205 per encabir l'indicat exterior de sortida */}
+                        <path d="M 170 210 L 205 210 L 205 220 L 170 220 Z" fill="#475569" />
+                        <circle cx="187" cy="215" r="7" fill="#dc2626" />
+                        <line x1="187" y1="205" x2="187" y2="225" stroke="#fca5a5" strokeWidth="2" />
 
-                        {/* Indicador de % d'obertura digital de l'aixeta, desplaçat correctament a sobre de la vàlvula */}
-                        <g transform="translate(165, 195)">
-                          <rect x="0" y="0" width="34" height="12" rx="2" fill="#0f172a" stroke="#475569" strokeWidth="0.5" />
-                          <text x="17" y="9" fontSize="7.5" fill="#f43f5e" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
-                            {kAixeta}%
+                        {/* Indicadors de Sortida Integrats (Quadre elegant ubicat a la dreta del test, a sobre dels elements de l'aixeta per a visibilitat òptima) */}
+                        <g transform="translate(174, 155)">
+                          <rect x="0" y="0" width="56" height="22" rx="3.5" fill="#0f172a" fillOpacity="0.95" stroke="#f43f5e" strokeWidth="1" />
+                          <text x="28" y="8" fontSize="6.5" fill="#f43f5e" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
+                            Aixeta: {kAixeta}%
+                          </text>
+                          <text x="28" y="16.5" fontSize="6.5" fill="#fb7185" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
+                            Qo: {qo.toFixed(1)}
                           </text>
                         </g>
 
-                        {/* Doll de sortida de l'aixeta */}
+                        {/* Doll de sortida de l'aixeta actualitzat amb el nou inici des de x=200 */}
                         {qo > 0.5 && kAixeta > 0 && (
                           <path 
-                            d={`M 195 215 Q 220 220 225 240`} 
+                            d={`M 200 215 Q 220 220 225 240`} 
                             fill="none" 
                             stroke="#0284c7" 
                             strokeWidth={Math.min(1 + qo/40, 6)} 
@@ -832,30 +833,28 @@
                         )}
 
                         {/* INDICADOR DE NIVELL AMB EL VOLUM ACTUAL DE SOTA (Fórmula del volum en el mateix format) */}
-                        <g transform={`translate(100, ${220 - (nivell / 30 * 160) + 12})`}>
-                          {nivell > 2 && (
-                            <g>
-                              {/* Quadre de fons fosc, ara més alt per encabir les dues línies perfectament */}
-                              <rect x="-35" y="-10" width="70" height="25" rx="3.5" fill="#0f172a" fillOpacity="0.85" stroke="#475569" strokeWidth="0.75" />
-                              {/* Línia 1: Nivell */}
-                              <text x="0" y="0" fill="#38bdf8" fontSize="8.5" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
-                                {nivell.toFixed(1)} cm
-                              </text>
-                              {/* Línia 2: Volum actual */}
-                              <text x="0" y="10" fill="#34d399" fontSize="7.5" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
-                                {volumActualL} L
-                              </text>
-                            </g>
-                          )}
+                        <g transform={`translate(100, ${Math.min(200, 220 - (nivell / 30 * 160) + 12)})`}>
+                          <g>
+                            {/* Quadre de fons fosc, ara més alt per encabir les dues línies perfectament */}
+                            <rect x="-35" y="-10" width="70" height="25" rx="3.5" fill="#0f172a" fillOpacity="0.85" stroke="#475569" strokeWidth="0.75" />
+                            {/* Línia 1: Nivell */}
+                            <text x="0" y="0" fill="#38bdf8" fontSize="8.5" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
+                              {nivell.toFixed(2)} cm
+                            </text>
+                            {/* Línia 2: Volum actual */}
+                            <text x="0" y="10" fill="#34d399" fontSize="7.5" fontWeight="bold" textAnchor="middle" fontFamily="monospace">
+                              {volumActualL} L
+                            </text>
+                          </g>
                         </g>
 
-                        {/* Regle de mesura */}
+                        {/* Regle de mesura Mogut a l'Esquerra */}
                         {[0, 10, 20, 30].map((val) => {
                           const yPos = 220 - (val / 30 * 160);
                           return (
                             <g key={val}>
-                              <line x1="170" y1={yPos} x2="175" y2={yPos} stroke="#94a3b8" strokeWidth="1.5" />
-                              <text x="181" y={yPos + 3} fill="#94a3b8" fontSize="8" fontFamily="monospace">{val}cm</text>
+                              <line x1="35" y1={yPos} x2="40" y2={yPos} stroke="#94a3b8" strokeWidth="1.5" />
+                              <text x="30" y={yPos + 3} fill="#94a3b8" fontSize="8" fontFamily="monospace" textAnchor="end">{val}cm</text>
                             </g>
                           );
                         })}
@@ -880,7 +879,7 @@
                   className={`px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md ${
                     isRunning 
                       ? 'bg-amber-600 hover:bg-amber-500 text-white shadow-amber-900/20' 
-                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-900/20'
+                      : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/20'
                   }`}
                 >
                   {isRunning ? (
@@ -1229,7 +1228,7 @@
               </div>
 
               <div className="mt-3 text-[10px] text-slate-400 bg-slate-900/35 p-2 rounded border border-slate-700/20">
-                <span className="font-bold text-blue-400">Comparativa:</span> Prova d'utilitzar el mode <span className="text-emerald-400">Tot o Res</span> per verure chattering frenètic, i després canvia a <span className="text-indigo-400">Histeresi</span> per reduir les commutacions.
+                <span className="font-bold text-blue-400">Comparativa:</span> Prova d'utilitzar el mode <span className="text-emerald-400">Tot o Res</span> per veure chattering frenètic, i després canvia a <span className="text-indigo-400">Histeresi</span> per reduir les commutacions.
               </div>
             </div>
 
