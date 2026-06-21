@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Simulador de Dipòsit SCADA</title>
+  <title>Mesura i regulació - Dipòsit</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <style>
@@ -28,6 +28,9 @@
     .animate-dash {
       animation: dash 1s linear infinite;
     }
+    .paused-animation {
+      animation-play-state: paused !important;
+    }
   </style>
 </head>
 <body class="bg-slate-900 text-slate-100 min-h-screen p-4 flex flex-col justify-between">
@@ -42,8 +45,8 @@
           </svg>
         </div>
         <div>
-          <h1 class="text-sm font-black tracking-tight bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">SCADA • DIPÒSIT</h1>
-          <span class="text-[9px] text-slate-400 block -mt-0.5">Controlador de Procés</span>
+          <h1 class="text-sm font-black tracking-tight bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">Mesura i regulació - Dipòsit</h1>
+          <span class="text-[9.5px] text-slate-400 block -mt-0.5 font-medium">Institut de l'Ebre - Agustí Baubí - <a href="mailto:abaubi@xtec.cat" class="text-blue-400 hover:underline">abaubi@xtec.cat</a></span>
         </div>
       </div>
 
@@ -99,7 +102,7 @@
           <div class="flex items-center justify-between border-b border-slate-700/60 pb-2 mb-2">
             <div class="flex items-center gap-2">
               <span id="mqtt-led" class="w-2.5 h-2.5 rounded-full bg-slate-600 transition-all"></span>
-              <span class="text-[10px] font-black text-slate-200 uppercase tracking-wider">Interconnexió MQTT (Bessó Digital)</span>
+              <span class="text-[10px] font-black text-slate-200 uppercase tracking-wider">MQTT</span>
             </div>
             <div class="flex items-center gap-1.5">
               <button id="btn-mqtt-config" onclick="toggleTelemetryWindow()" class="px-2 py-1 bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-300 text-[10px] font-bold rounded-md transition-all active:scale-95 flex items-center gap-1">
@@ -149,8 +152,10 @@
         <!-- PLANTA FÍSICA I CONTROLADORS VERTICALS -->
         <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700/60 shadow-lg space-y-4">
           <div class="border-b border-slate-700/60 pb-2 flex justify-between items-center">
-            <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Estat de la Planta Física i Controladors</h2>
-            <span class="text-[10px] text-slate-500 font-mono">PLANT_CONTROL_UNIT</span>
+            <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5 animate-duration-1000">
+              <span id="dot-planta" class="w-2.5 h-2.5 bg-indigo-500 rounded-full transition-all"></span>
+              PLANTA
+            </h2>
           </div>
 
           <div class="grid grid-cols-12 gap-3 items-center">
@@ -369,7 +374,10 @@
         <!-- GRÀFIC TEMPORAL DE NIVELL -->
         <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60 shadow-lg flex flex-col h-[210px] justify-between">
           <div class="flex justify-between items-center mb-1.5">
-            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider">Historial en Temps Real</h3>
+            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span id="dot-historial" class="w-2.5 h-2.5 bg-sky-500 rounded-full transition-all"></span>
+              Historial en Temps Real
+            </h3>
             <div class="flex items-center gap-2">
               <button onclick="descarregarDadesXLS()" class="bg-emerald-600/90 hover:bg-emerald-500 text-white text-[9px] font-bold px-2 py-1 rounded transition-all flex items-center gap-1 shadow">
                 <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -433,8 +441,8 @@
         <!-- PANELL DE CALCULS EN TEMPS REAL -->
         <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700/60 shadow-lg flex flex-col justify-between">
           <div class="border-b border-slate-700/60 pb-2 mb-3 flex items-center gap-2">
-            <span class="w-2.5 h-2.5 bg-amber-500 rounded-full animate-pulse"></span>
-            <h2 id="calc-header-title" class="text-xs font-bold text-slate-300 uppercase tracking-wider">Càlculs Interns (Mode PI)</h2>
+            <span id="dot-calculs" class="w-2.5 h-2.5 bg-amber-500 rounded-full transition-all"></span>
+            <h2 id="calc-header-title" class="text-xs font-bold text-slate-300 uppercase tracking-wider">CÀLCULS (Mode PI)</h2>
           </div>
 
           <div class="space-y-3 text-[10.5px] font-mono leading-tight">
@@ -453,7 +461,7 @@
             <!-- Pas 4 -->
             <div id="calc-physics" class="bg-slate-900/60 p-2.5 rounded border border-slate-800">
               <span class="text-slate-400 font-bold block uppercase tracking-wide">4. Física del dipòsit</span>
-              <div id="calc-physics-content" class="text-slate-200 mt-1 leading-relaxed"></div>
+              <div id="calc-physics-content" class="text-slate-200 mt-1 leading-relaxed whitespace-pre-wrap"></div>
             </div>
           </div>
         </div>
@@ -462,8 +470,8 @@
         <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60 shadow-md flex flex-col h-[200px]">
           <div class="flex justify-between items-center border-b border-slate-700/80 pb-1.5 mb-2">
             <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-              <span class="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span>
-              Console Monitor Sèrie (9600 bps)
+              <span id="dot-monitor" class="w-2 h-2 bg-emerald-500 rounded-full transition-all"></span>
+              MONITOR
             </h3>
             <button onclick="clearSerialLogs()" class="text-[9px] text-slate-400 hover:text-slate-200 bg-slate-900 px-2 py-0.5 rounded border border-slate-700">Esborrar</button>
           </div>
@@ -686,7 +694,7 @@
       </div>
 
       <div class="text-[10px] space-y-4 font-mono">
-        <p class="text-slate-400 font-sans">El sistema MQTT usa un <span class="text-blue-400 font-bold">tòpic base</span> (ex: <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-300">iesebre/diposit/</code>). Aquest s'afegeix davant de tots els tòpics de la taula. Per exemple, per llegir el nivell: <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-300">iesebre/diposit/nivell</code>. Pels comandaments s'afegeix <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-300">/set</code> al final, per exemple: <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-300">iesebre/diposit/setpoint/set</code>.</p>
+        <p class="text-slate-400 font-sans">El sistema MQTT usa un <span class="text-blue-400 font-bold">tòpic base</span> (ex: <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-300">iesebre/diposit/</code>). Aquest s'afegeix davant de tots els tòpics de la taula. Per exemple, per llegir el nivell: <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-300">iesebre/diposit/nivell</code>. Pels comandaments s'afegeix <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-300">/set</code> al final, per exemple: <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-300">iesebre/diposit/setpoint/set</code>. Per cada publicació (excepte per al temps simulat), es publica automàticament un tòpic amb el mateix valor i el sufix <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-400">-ts</code> sota la subcarpeta <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-400">ts/</code> (ex: <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-400">iesebre/diposit/ts/telemetria/bomba-ts</code> o <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-400">iesebre/diposit/ts/ki-ts</code>) amb el timestamp numèric Unix (en ms) de la darrera publicació.</p>
 
         <div class="border border-slate-700/60 rounded-xl overflow-hidden bg-slate-950/50">
           <table class="w-full text-left border-collapse">
@@ -700,52 +708,58 @@
             </thead>
             <tbody class="divide-y divide-slate-800/50">
               <tr class="hover:bg-slate-900/50">
-                <td class="px-3 py-2 text-emerald-400 font-bold">nivell</td>
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/nivell</td>
                 <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
                 <td class="px-3 py-2 text-center text-slate-500">0.0 – 30.0 (cm)</td>
                 <td class="px-3 py-2 text-slate-400">Nivell actual del dipòsit</td>
               </tr>
               <tr class="hover:bg-slate-900/50">
-                <td class="px-3 py-2 text-emerald-400 font-bold">volum</td>
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/volum</td>
                 <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
                 <td class="px-3 py-2 text-center text-slate-500">0.0+ (L)</td>
                 <td class="px-3 py-2 text-slate-400">Volum calculat de liquid</td>
               </tr>
               <tr class="hover:bg-slate-900/50">
-                <td class="px-3 py-2 text-emerald-400 font-bold">qi</td>
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/qi</td>
                 <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
                 <td class="px-3 py-2 text-center text-slate-500">0.0+ (cm³/s)</td>
                 <td class="px-3 py-2 text-slate-400">Cabal d'entrada (Q in)</td>
               </tr>
               <tr class="hover:bg-slate-900/50">
-                <td class="px-3 py-2 text-emerald-400 font-bold">qo</td>
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/qo</td>
                 <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
                 <td class="px-3 py-2 text-center text-slate-500">0.0+ (cm³/s)</td>
                 <td class="px-3 py-2 text-slate-400">Cabal de sortida (Q out)</td>
               </tr>
               <tr class="hover:bg-slate-900/50">
-                <td class="px-3 py-2 text-emerald-400 font-bold">bomba</td>
-                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
-                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
-                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded" title="Només actiu quan Mode de Control és extern (MQTT)">SUB*</span>
-                </td>
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/bomba</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
                 <td class="px-3 py-2 text-center text-slate-500">0 – 100 (%)</td>
-                <td class="px-3 py-2 text-slate-400">Potència aplicada a la bomba (*permet SUB en mode MQTT)</td>
+                <td class="px-3 py-2 text-slate-400">Feedback en temps real de la potència de la bomba</td>
               </tr>
               <tr class="hover:bg-slate-900/50">
-                <td class="px-3 py-2 text-emerald-400 font-bold">temps</td>
+                <td class="px-3 py-2 text-blue-400 font-bold">telemetria/bomba/set</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500">0 – 100 (%)</td>
+                <td class="px-3 py-2 text-slate-400">Consigna d'actuació sobre la bomba (en mode manual MQTT). També suporta <code class="text-indigo-400 font-bold">bomba/set</code>.</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/temps</td>
                 <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
                 <td class="px-3 py-2 text-center text-slate-500">0+ (s)</td>
                 <td class="px-3 py-2 text-slate-400">Temps simulat de la sessió actual</td>
               </tr>
               <tr class="hover:bg-slate-900/50">
-                <td class="px-3 py-2 text-emerald-400 font-bold">alarmaAlta</td>
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/alarmaAlta</td>
                 <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
                 <td class="px-3 py-2 text-center text-slate-500">true / false</td>
                 <td class="px-3 py-2 text-slate-400">Estat d'alerta per nivell alt</td>
               </tr>
               <tr class="hover:bg-slate-900/50">
-                <td class="px-3 py-2 text-emerald-400 font-bold">alarmaBaixa</td>
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/alarmaBaixa</td>
                 <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
                 <td class="px-3 py-2 text-center text-slate-500">true / false</td>
                 <td class="px-3 py-2 text-slate-400">Estat d'alerta per nivell baix</td>
@@ -823,13 +837,21 @@
                 <td class="px-3 py-2 text-slate-400">Banda d'histèresi pel control ON/OFF</td>
               </tr>
               <tr class="hover:bg-slate-900/50">
-                <td class="px-3 py-2 text-blue-400 font-bold">antiwindup</td>
+                <td class="px-3 py-2 text-emerald-400 font-bold">antiwindup</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500 text-[9px]">"ON", "OFF"</td>
+                <td class="px-3 py-2 text-slate-400">Estat clamat actiu en funcionament de la simulació</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-blue-400 font-bold">antiwindup/set</td>
                 <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
                   <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
                   <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
                 </td>
                 <td class="px-3 py-2 text-center text-slate-500 text-[9px]">"ON", "OFF"</td>
-                <td class="px-3 py-2 text-slate-400">Habilitar l'Anti-Windup per evitar saturació integral</td>
+                <td class="px-3 py-2 text-slate-400">Activar o no activar la funcionalitat de l'Anti-Windup</td>
               </tr>
               <tr class="hover:bg-slate-900/50">
                 <td class="px-3 py-2 text-blue-400 font-bold">alarmHighsp</td>
@@ -1025,12 +1047,53 @@
       addSerialLog("--- Consola Netejada ---");
     }
 
+    // Helper per publicar a MQTT i registrar el timestamp d'última publicació (amb sufix -ts sota ts/)
+    function publishMqtt(topic, value, options = {}, ara = Date.now(), logPublish = false, fromMqtt = false) {
+      if (!mqttClient || !mqttClient.connected) return;
+      
+      mqttClient.publish(topic, value, options);
+      
+      const lowerTopic = topic.toLowerCase();
+      if (lowerTopic.endsWith('telemetria/temps') || lowerTopic.endsWith('telemetria/temps/')) {
+        return;
+      }
+      
+      const cleanBase = state.baseTopic.endsWith('/') ? state.baseTopic.slice(0, -1) : state.baseTopic;
+      if (topic.startsWith(cleanBase)) {
+        let suffix = topic.substring(cleanBase.length);
+        if (suffix.startsWith('/')) {
+          suffix = suffix.substring(1);
+        }
+        
+        // Excloure també qualsevol tòpic de timestamp propi per evitar recursió
+        if (suffix.startsWith('ts/') || suffix.endsWith('-ts')) {
+          return;
+        }
+        
+        const tsTopic = cleanBase + '/ts/' + suffix + '-ts';
+        const tsVal = String(ara);
+        mqttClient.publish(tsTopic, tsVal, options);
+        
+        if (logPublish) {
+          if (!fromMqtt) {
+            addSerialLog(`[MQTT PUBLISH TS] ${tsTopic} -> ${tsVal}`);
+          } else {
+            addSerialLog(`[MQTT ECHO PUBLISH TS] ${tsTopic} -> ${tsVal}`);
+          }
+        }
+      }
+    }
+
     const mqttPublisherCache = {};
 
     // Publicar canvis de la web cap a MQTT de forma bidireccional
     function publishWebChange(topicSuffix, value, fromMqtt = false, logPublish = true, forcePublish = false) {
+      if (fromMqtt && topicSuffix.endsWith('/set')) {
+        return; // Evita bucles infinits de reentrada per a comandes rebudes del broker
+      }
       if (state.mqttConnected && mqttClient && mqttClient.connected) {
         try {
+          const ara = Date.now();
           const strValue = String(value);
           const cache = mqttPublisherCache[topicSuffix] || { lastValue: null, lastTime: 0, pendingTimeout: null };
           mqttPublisherCache[topicSuffix] = cache;
@@ -1042,7 +1105,7 @@
           const doPublish = () => {
              let cleanTopic = state.baseTopic;
              if (!cleanTopic.endsWith('/')) cleanTopic += '/';
-             mqttClient.publish(cleanTopic + topicSuffix, strValue, { qos: 0, retain: true });
+             publishMqtt(cleanTopic + topicSuffix, strValue, { qos: 0, retain: true }, ara, logPublish, fromMqtt);
              // L'ECHO de /set també es logueja per ser explícits que hi ha resposta
              if (logPublish) {
                  if (!fromMqtt) {
@@ -1055,7 +1118,6 @@
              cache.pendingTimeout = null;
           };
 
-          const ara = Date.now();
           if (fromMqtt || (ara - cache.lastTime) >= 1000) {
              if (cache.pendingTimeout) {
                  clearTimeout(cache.pendingTimeout);
@@ -1101,7 +1163,7 @@
       else if (key === 'alarmHigh') mqttKey = 'alarmHighsp';
       else if (key === 'alarmLow') mqttKey = 'alarmLowsp';
       else if (key === 'histeresiVal') mqttKey = 'histeresisp';
-      else if (key === 'tensioBombaExternal') mqttKey = 'bomba';
+      else if (key === 'tensioBombaExternal') mqttKey = 'telemetria/bomba';
       
       publishWebChange(mqttKey, pubVal, fromMqtt);
     }
@@ -1198,7 +1260,7 @@
       }
       updateCalculationsPanel();
 
-      publishWebChange('antiwindup', state.antiWindupHabilitat ? 'ON' : 'OFF', fromMqtt);
+      publishWebChange('antiwindup/set', state.antiWindupHabilitat ? 'ON' : 'OFF', fromMqtt);
     }
 
     function toggleAntiWindup() {
@@ -1213,7 +1275,7 @@
       state.bombaActiva = false;
 
       // Update calculations header
-      document.getElementById("calc-header-title").innerText = `Càlculs Interns (Mode ${mode === 'HYS' ? 'Histeresi' : mode})`;
+      document.getElementById("calc-header-title").innerText = `CÀLCULS (Mode ${mode === 'HYS' ? 'Histeresi' : mode})`;
 
       // Highlight active mode buttons
       const modes = ['PI', 'ON_OFF', 'HYS', 'MQTT'];
@@ -1358,6 +1420,7 @@
           mqttClient.subscribe(cleanTopic + 'histeresisp/set');
           mqttClient.subscribe(cleanTopic + 'mode/set');
           mqttClient.subscribe(cleanTopic + 'bomba/set');
+          mqttClient.subscribe(cleanTopic + 'telemetria/bomba/set');
           mqttClient.subscribe(cleanTopic + 'ctrl/play/set');
           mqttClient.subscribe(cleanTopic + 'ctrl/reset/set');
           mqttClient.subscribe(cleanTopic + 'ctrl/pas/set');
@@ -1407,7 +1470,7 @@
             if (['PI', 'ON_OFF', 'HYS', 'MQTT'].includes(modeClean)) {
               setOptionControl(modeClean, true);
             }
-          } else if (subtopic === 'bomba/set') {
+          } else if (subtopic === 'bomba/set' || subtopic === 'telemetria/bomba/set') {
             const val = parseFloat(payload);
             if (!isNaN(val)) {
               const pct = Math.min(100, Math.max(0, val));
@@ -1495,6 +1558,12 @@
       state.isRunning = running;
       const btn = document.getElementById("btn-play-pause");
 
+      // Actualitzar efectes de pampallugues (animació pulse/ping) als panells en Play
+      const dotPlanta = document.getElementById("dot-planta");
+      const dotHistorial = document.getElementById("dot-historial");
+      const dotCalculs = document.getElementById("dot-calculs");
+      const dotMonitor = document.getElementById("dot-monitor");
+
       if (state.isRunning) {
         if (!simIntervalID) {
           simIntervalID = setInterval(executarPasSimulacio, state.sampleTime);
@@ -1506,6 +1575,15 @@
             Pausa
           `;
         }
+        if (dotPlanta) dotPlanta.classList.add("animate-pulse");
+        if (dotHistorial) dotHistorial.classList.add("animate-pulse");
+        if (dotCalculs) dotCalculs.classList.add("animate-pulse");
+        if (dotMonitor) dotMonitor.classList.add("animate-ping");
+        
+        // Descongelar el moviment de l'aigua
+        document.querySelectorAll('.animate-dash').forEach(el => {
+          el.classList.remove('paused-animation');
+        });
       } else {
         if (simIntervalID) {
           clearInterval(simIntervalID);
@@ -1518,6 +1596,15 @@
             Iniciar (Play)
           `;
         }
+        if (dotPlanta) dotPlanta.classList.remove("animate-pulse");
+        if (dotHistorial) dotHistorial.classList.remove("animate-pulse");
+        if (dotCalculs) dotCalculs.classList.remove("animate-pulse");
+        if (dotMonitor) dotMonitor.classList.remove("animate-ping");
+        
+        // Congelar el moviment de l'aigua al fer pausa
+        document.querySelectorAll('.animate-dash').forEach(el => {
+          el.classList.add('paused-animation');
+        });
       }
 
       publishWebChange('ctrl/play', state.isRunning ? 'PLAY' : 'PAUSE', fromMqtt);
@@ -1587,6 +1674,10 @@
         // Es publica si supera el llindar absolut configurat
         if (canviAbs >= cfg.deadbandAbs) {
           shaDePublicar = true;
+        } else if (valorActual !== cfg.lastValue && tempsTranscorregut >= 5000) {
+          // Si el valor actual de telemetria ha variat respecte l'últim valor publicat fa més de 5 segons,
+          // forcem la publicació de l'últim valor actualitzat per evitar diferències residuals permanents.
+          shaDePublicar = true;
         }
       }
       
@@ -1595,7 +1686,7 @@
           const tBase = state.baseTopic.endsWith('/') ? state.baseTopic : state.baseTopic + '/';
           const subtopic = customSubtopic ? customSubtopic : nomProp;
           const valOut = typeof valorActual === 'boolean' ? (valorActual ? "true" : "false") : String(valorActual);
-          mqttClient.publish(tBase + subtopic, valOut);
+          publishMqtt(tBase + 'telemetria/' + subtopic, valOut, { qos: 0, retain: false }, ara, false);
           
           cfg.lastValue = valorActual;
           cfg.lastPublishTime = ara;
@@ -1701,9 +1792,9 @@
       // Alarma de nivell
       let alarmStr = "";
       if (nouNivell >= state.alarmHigh) {
-        alarmStr = "\t[ALETA NIVELL ALT]";
+        alarmStr = "\t[ALERTA NIVELL ALT]";
       } else if (nouNivell <= state.alarmLow) {
-        alarmStr = "\t[ALETA NIVELL BAIX]";
+        alarmStr = "\t[ALERTA NIVELL BAIX]";
       }
 
       if (state.modeControl === 'PI' && actiuAW) {
@@ -1883,9 +1974,9 @@
 
       // Pas 1
       let step1 = `<span class="text-slate-400 font-bold block uppercase tracking-wide">1. Error i Referència</span>
-                   <div class="text-blue-400 text-[13px] mt-1 font-bold">e = SP - Nivell<br>e = ${state.setpoint} - ${state.nivell.toFixed(2)} = <span class="text-emerald-400">${errVal} cm</span></div>`;
+                   <div class="text-blue-400 text-[13px] mt-1 font-bold">e = SP - Nivell<br>e = ${state.setpoint} - ${state.nivell.toFixed(2)} = <span class="text-emerald-400">${errVal} cm</span><br></div>`;
       if (pMod === 'HYS') {
-        step1 += `<div class="text-[9px] text-indigo-400 mt-1">Banda Histeresi: ${(state.setpoint - state.histeresiVal).toFixed(1)} cm a ${(state.setpoint + state.histeresiVal).toFixed(1)} cm</div>`;
+        step1 += `<div class="text-[9px] text-indigo-400 mt-1">Banda Histeresi: ${(state.setpoint - state.histeresiVal).toFixed(1)} cm a ${(state.setpoint + state.histeresiVal).toFixed(1)} cm<br></div>`;
       }
       document.getElementById("calc-error").innerHTML = step1;
 
@@ -1913,13 +2004,13 @@
                    <span class="text-slate-400 font-bold uppercase tracking-wide">2. Suma Integral</span>
                    <span class="text-[8px] px-1.5 py-0.5 rounded border font-sans font-bold ${awCls}">${awLabel}</span>
                  </div>
-                 <div class="text-teal-400 text-[11px] font-bold mt-1">Suma Integral = e_int_ant + e = ${eIntAnt} + (${errVal}) = ${state.errorIntegral.toFixed(1)}<br>e_int_ant = ${state.errorIntegral.toFixed(1)}</div>
-                 <div class="text-[10px] text-slate-300 font-normal border-t border-slate-800/80 pt-1 mt-1">${ruleLog}</div>
-                 <div class="text-[9px] text-slate-400 mt-1 font-sans italic">${descText}</div>`;
+                 <div class="text-teal-400 text-[11px] font-bold mt-1">Suma Integral = e_int_ant + e = ${eIntAnt} + (${errVal}) = ${state.errorIntegral.toFixed(1)}<br>e_int_ant = ${state.errorIntegral.toFixed(1)}<br></div>
+                 <div class="text-[10px] text-slate-300 font-normal border-t border-slate-800/80 pt-1 mt-1">${ruleLog}<br></div>
+                 <div class="text-[9px] text-slate-400 mt-1 font-sans italic">${descText}<br></div>`;
       } else if (pMod === 'ON_OFF') {
         step2 = `<span class="text-slate-400 font-bold">2. Lògica d'Estat On-Off</span>
-                 <div class="font-bold text-[11px] mt-1">Nivell < SP? ${parseFloat(errVal) > 0 ? '<span class="text-emerald-400">SÍ (Bomba ON)</span>' : '<span class="text-rose-400">NO (Bomba OFF)</span>'}</div>
-                 <p class="text-[9px] text-slate-500 font-sans italic mt-1">Commuta directament a potència total sense buffers intermitents.</p>`;
+                 <div class="font-bold text-[11px] mt-1">Nivell < SP? ${parseFloat(errVal) > 0 ? '<span class="text-emerald-400">SÍ (Bomba ON)</span>' : '<span class="text-rose-400">NO (Bomba OFF)</span>'}<br></div>
+                 <p class="text-[9px] text-slate-500 font-sans italic mt-1">Commuta directament a potència total sense buffers intermitents.<br></p>`;
       } else if (pMod === 'HYS') {
         const checkLow = state.nivell < (state.setpoint - state.histeresiVal);
         const checkHigh = state.nivell > (state.setpoint + state.histeresiVal);
@@ -1928,11 +2019,11 @@
         else if (checkHigh) logAct = `<span class="text-rose-400 font-bold">• Nivell per sobre LLindar Superior &rarr; Aturem Bomba OFF.</span>`;
 
         step2 = `<span class="text-slate-400 font-bold">2. Estat d'Histeresi</span>
-                 <div class="flex justify-between items-center text-[11px] mt-0.5"><span>Bomba física activa:</span><span class="font-bold text-emerald-400">${state.bombaActiva ? 'SÍ (ON)' : 'NO (OFF)'}</span></div>
-                 <div class="border-t border-slate-800/80 pt-1 mt-1 font-sans text-[9.5px]">${logAct}</div>`;
+                 <div class="flex justify-between items-center text-[11px] mt-0.5"><span>Bomba física activa:</span><span class="font-bold text-emerald-400">${state.bombaActiva ? 'SÍ (ON)' : 'NO (OFF)'}</span></div><br>
+                 <div class="border-t border-slate-800/80 pt-1 mt-1 font-sans text-[9.5px]">${logAct}<br></div>`;
       } else if (pMod === 'MQTT') {
         step2 = `<span class="text-slate-400 font-bold">2. Comandament Extern MQTT</span>
-                 <div class="text-[10.5px] mt-1">Tensió subscrita externa: <strong class="text-blue-400">${state.tensioBombaExternal.toFixed(1)} V</strong> (equivalent a ${Math.round((state.tensioBombaExternal/1000)*100)}% de potència).</div>`;
+                 <div class="text-[10.5px] mt-1">Tensió subscrita externa: <strong class="text-blue-400">${state.tensioBombaExternal.toFixed(1)} V</strong> (equivalent a ${Math.round((state.tensioBombaExternal/1000)*100)}% de potència).<br></div>`;
       }
       document.getElementById("calc-integral").innerHTML = step2;
 
@@ -1941,21 +2032,21 @@
       if (pMod === 'PI') {
         step3 = `u = (Kp · e) + (Ki · e_integral · dt)
 u = (${state.kp} · ${errVal}) + (${state.ki} · ${state.errorIntegral.toFixed(1)} · 0.1)
-u = ${pTermVal} + ${iTermVal} = <span class="text-purple-400 font-bold">${state.tensioBomba.toFixed(1)}</span>`;
+u = ${pTermVal} + ${iTermVal} = <span class="text-purple-400 font-bold">${state.tensioBomba.toFixed(1)}</span><br>`;
       } else if (pMod === 'ON_OFF') {
         step3 = `u = (e > 0) ? 1000 : 0
-u = (${errVal} > 0) ? <span class="text-purple-400 font-bold">${state.tensioBomba} (100% On)</span> : <span class="text-slate-400 font-bold">0 V (Off)</span>`;
+u = (${errVal} > 0) ? <span class="text-purple-400 font-bold">${state.tensioBomba} (100% On)</span> : <span class="text-slate-400 font-bold">0 V (Off)</span><br>`;
       } else {
         step3 = `u = (Bomba_Activa) ? 1000 : 0
-u = <span class="text-purple-400 font-bold">${state.tensioBomba}</span> (Estat actual: ${state.bombaActiva ? 'BOMBA_ON' : 'BOMBA_OFF'})`;
+u = <span class="text-purple-400 font-bold">${state.tensioBomba}</span> (Estat actual: ${state.bombaActiva ? 'BOMBA_ON' : 'BOMBA_OFF'})<br>`;
       }
       document.getElementById("calc-u-content").innerHTML = step3;
 
       // Pas 4
       const coef = state.kAixeta * 0.4;
       const qoVal = coef * state.nivell;
-      const step4 = `qo = (Aixeta% · 0.4) · Nivell = (${state.kAixeta}% · 0.4) · ${state.nivell.toFixed(2)} = <span class="text-rose-400 font-bold">${qoVal.toFixed(1)} cm³/s</span>
-ΔNivell = dt · (qi - qo + pertorbació) / Àrea = ${parseFloat(dt.toFixed(3))} · (${state.qi.toFixed(1)} - ${qoVal.toFixed(1)} + ${state.disturbi}) / ${state.areaBase} = <span class="text-amber-500 font-bold">${parseFloat(varPas) > 0 ? '+' + varPas : varPas} cm/pas</span>`;
+      const step4 = `qo = (Aixeta% · 0.4) · Nivell = (${state.kAixeta}% · 0.4) · ${state.nivell.toFixed(2)} = <span class="text-rose-400 font-bold">${qoVal.toFixed(1)} cm³/s</span><br>
+ΔNivell = dt · (qi - qo + pertorbació) / Àrea = ${parseFloat(dt.toFixed(3))} · (${state.qi.toFixed(1)} - ${qoVal.toFixed(1)} + ${state.disturbi}) / ${state.areaBase} = <span class="text-amber-500 font-bold">${parseFloat(varPas) > 0 ? '+' + varPas : varPas} cm/pas</span><br>`;
       document.getElementById("calc-physics-content").innerHTML = step4;
     }
 
@@ -1966,6 +2057,13 @@ u = <span class="text-purple-400 font-bold">${state.tensioBomba}</span> (Estat a
 
       const samples = state.tempsFinestra * 10;
       const visibleData = state.historial.slice(-samples);
+
+      // Limitem o traiem el gap quan hi ha moltes barres per evitar que col·lapsin a 0px física de subpíxels
+      if (visibleData.length > 150) {
+        container.style.gap = "0px";
+      } else {
+        container.style.gap = "1px";
+      }
 
       let html = "";
       visibleData.forEach((pt, idx) => {
