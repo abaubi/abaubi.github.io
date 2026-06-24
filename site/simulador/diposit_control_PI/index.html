@@ -998,8 +998,70 @@
     let simIntervalID = null;
     let mqttClient = null;
 
+    // Web Worker (The Metronome) for background tab resilience and high precision
+    let metronomeWorker = null;
+    let accumulator = 0;
+    let lastRealTime = performance.now();
+
+    function initMetronome() {
+      const workerCode = `
+        let intervalId = null;
+        self.onmessage = function(e) {
+          if (e.data.action === 'start') {
+            if (intervalId) clearInterval(intervalId);
+            intervalId = setInterval(() => {
+              self.postMessage('tick');
+            }, 16.6);
+          } else if (e.data.action === 'stop') {
+            if (intervalId) {
+              clearInterval(intervalId);
+              intervalId = null;
+            }
+          }
+        };
+      `;
+      const blob = new Blob([workerCode], { type: 'application/javascript' });
+      const workerUrl = URL.createObjectURL(blob);
+      metronomeWorker = new Worker(workerUrl);
+
+      metronomeWorker.onmessage = function(e) {
+        if (e.data === 'tick') {
+          const now = performance.now();
+          const elapsed = now - lastRealTime;
+          lastRealTime = now;
+
+          if (state.isRunning) {
+            accumulator += elapsed;
+
+            // Limit recovery steps to prevent spiral of death or memory overflow
+            const maxStepsPerFrame = 10;
+            let stepsRun = 0;
+
+            while (accumulator >= state.sampleTime && stepsRun < maxStepsPerFrame) {
+              executarPasSimulacio();
+              accumulator -= state.sampleTime;
+              stepsRun++;
+            }
+
+            // Discard excess accumulated time to prevent lag spikes on resume
+            if (accumulator > state.sampleTime) {
+              accumulator = 0;
+            }
+          } else {
+            accumulator = 0;
+          }
+        }
+      };
+
+      // Start worker
+      metronomeWorker.postMessage({ action: 'start' });
+    }
+
     // Inicialització en carregar la pàgina
     window.onload = function() {
+      // Inicialitzar el metrònom resilient en segon pla
+      initMetronome();
+
       // Connectar controladors de lliscadors verticals
       const sliders = ['kp', 'ki', 'setpoint', 'kAixeta', 'disturbi', 'bombaInercia', 'alarmHigh', 'alarmLow', 'histeresiVal', 'tensioBombaExternal'];
       sliders.forEach(s => {
@@ -1565,9 +1627,10 @@
       const dotMonitor = document.getElementById("dot-monitor");
 
       if (state.isRunning) {
-        if (!simIntervalID) {
-          simIntervalID = setInterval(executarPasSimulacio, state.sampleTime);
-        }
+        // Sincronitzar temps real i posar a zero l'acumulador per evitar salts en arrancar
+        lastRealTime = performance.now();
+        accumulator = 0;
+
         if (btn) {
           btn.className = "px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md bg-amber-600 hover:bg-amber-500 text-white shadow-amber-900/20";
           btn.innerHTML = `
@@ -1585,10 +1648,8 @@
           el.classList.remove('paused-animation');
         });
       } else {
-        if (simIntervalID) {
-          clearInterval(simIntervalID);
-          simIntervalID = null;
-        }
+        accumulator = 0; // Reset accumulator
+
         if (btn) {
           btn.className = "px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/20";
           btn.innerHTML = `
