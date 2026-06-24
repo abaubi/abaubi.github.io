@@ -1,0 +1,2232 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mesura i regulació - Dipòsit</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    input[type="range"][orient="vertical"] {
+      -webkit-appearance: slider-vertical;
+      width: 8px;
+      height: 120px;
+      padding: 0 2px;
+    }
+    @keyframes dash {
+      to {
+        stroke-dashoffset: 20;
+      }
+    }
+    .animate-dash {
+      animation: dash 1s linear infinite;
+    }
+    .paused-animation {
+      animation-play-state: paused !important;
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4 flex flex-col justify-between">
+
+  <div class="max-w-7xl mx-auto w-full space-y-4">
+    <!-- HEADER PRINCIPAL -->
+    <header class="bg-slate-800/90 rounded-xl p-3 border border-slate-700/60 shadow-md flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <div class="bg-blue-600/20 p-1.5 rounded-lg border border-blue-500/35">
+          <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </div>
+        <div>
+          <h1 class="text-sm font-black tracking-tight bg-gradient-to-r from-blue-400 to-indigo-300 bg-clip-text text-transparent">Mesura i regulació - Dipòsit</h1>
+          <span class="text-[9.5px] text-slate-400 block -mt-0.5 font-medium">Institut de l'Ebre - Agustí Baubí - <a href="mailto:abaubi@xtec.cat" class="text-blue-400 hover:underline">abaubi@xtec.cat</a></span>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3 bg-slate-900/40 p-1.5 rounded-lg border border-slate-700/30 grow justify-between md:justify-end">
+        <!-- Estratègia -->
+        <div class="flex items-center gap-1.5">
+          <span class="text-[9.5px] font-black text-slate-400 uppercase tracking-wider">Estratègia:</span>
+          <div class="bg-slate-950 p-0.5 rounded border border-slate-800 flex gap-0.5">
+            <button id="btn-mode-PI" onclick="setOptionControl('PI')" class="px-2 py-0.5 rounded text-[9px] font-bold bg-blue-600 text-white shadow shadow-blue-500/20">PI</button>
+            <button id="btn-mode-ON_OFF" onclick="setOptionControl('ON_OFF')" class="px-2 py-0.5 rounded text-[9px] font-bold text-slate-400 hover:text-white">On-Off</button>
+            <button id="btn-mode-HYS" onclick="setOptionControl('HYS')" class="px-2 py-0.5 rounded text-[9px] font-bold text-slate-400 hover:text-white">Histeresi</button>
+            <button id="btn-mode-MQTT" onclick="setOptionControl('MQTT')" class="px-2 py-0.5 rounded text-[9px] font-bold text-slate-400 hover:text-white">MQTT</button>
+          </div>
+        </div>
+
+        <div class="hidden md:block w-px h-5 bg-slate-800"></div>
+
+        <!-- Presets PI -->
+        <div class="flex items-center gap-1.5">
+          <span class="text-[9.5px] font-black text-slate-400 uppercase tracking-wider">Presets PI:</span>
+          <div class="flex gap-0.5" id="presets-container">
+            <button onclick="aplicarPreset('perfecte')" class="px-1.5 py-0.5 bg-slate-950 hover:bg-slate-700 border border-slate-800 rounded text-[9px] font-bold text-slate-300">Estable</button>
+            <button onclick="aplicarPreset('nomesP')" class="px-1.5 py-0.5 bg-slate-950 hover:bg-slate-700 border border-slate-800 rounded text-[9px] font-bold text-slate-300">Només P</button>
+            <button onclick="aplicarPreset('inestable')" class="px-1.5 py-0.5 bg-slate-950 hover:bg-slate-700 border border-slate-800 rounded text-[9px] font-bold text-slate-300">Inestable</button>
+            <button onclick="aplicarPreset('senseSortida')" class="px-1.5 py-0.5 bg-slate-950 hover:bg-slate-700 border border-slate-800 rounded text-[9px] font-bold text-slate-300">Tancat</button>
+          </div>
+        </div>
+
+        <div class="hidden md:block w-px h-5 bg-slate-800"></div>
+
+        <!-- Anti-Windup -->
+        <div id="aw-toggle-container" class="flex items-center gap-2">
+          <div class="leading-none text-left">
+            <span class="text-[9px] font-bold text-slate-300 block">ANTI-WINDUP</span>
+            <span class="text-[8px] text-slate-500 block">Clamping</span>
+          </div>
+          <button id="btn-aw" onclick="toggleAntiWindup()" class="w-8 h-4.5 flex items-center bg-rose-950 border border-rose-800/40 justify-start rounded-full p-0.5 transition-all duration-300">
+            <span id="btn-aw-dot" class="bg-white w-3.5 h-3.5 rounded-full shadow"></span>
+          </button>
+          <span id="btn-aw-txt" class="text-[9px] font-bold text-rose-400">OFF</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- GRID CENTRAL PRINCIPAL -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      
+      <!-- COLUMNA ESQUERRA (COL_SPAN 7): MQTT CONNECTIVITY + PLANT & SVGS + TIMELINE CHART -->
+      <div class="lg:col-span-7 flex flex-col gap-4">
+        
+        <!-- PANELL MQTT (COL·LOCAT A DALT DE LA COLUMNA PRINCIPAL, SOTA LA ESTRATEGIA I PRESETS) -->
+        <div class="bg-slate-800/85 rounded-xl p-3 border border-slate-700/60 shadow-lg">
+          <div class="flex items-center justify-between border-b border-slate-700/60 pb-2 mb-2">
+            <div class="flex items-center gap-2">
+              <span id="mqtt-led" class="w-2.5 h-2.5 rounded-full bg-slate-600 transition-all"></span>
+              <span class="text-[10px] font-black text-slate-200 uppercase tracking-wider">MQTT</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button id="btn-mqtt-config" onclick="toggleTelemetryWindow()" class="px-2 py-1 bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-300 text-[10px] font-bold rounded-md transition-all active:scale-95 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Telemetria
+              </button>
+              <button id="btn-mqtt-help" onclick="toggleHelpWindow()" class="px-2 py-1 bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-300 text-[10px] font-bold rounded-md transition-all active:scale-95 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Ajuda
+              </button>
+              <button id="btn-mqtt-conn" onclick="toggleMqtt()" class="px-3 py-1 bg-blue-950/80 hover:bg-blue-900 border border-blue-500/30 text-blue-300 text-[10px] font-bold rounded-md transition-all active:scale-95">CONNECTAR</button>
+            </div>
+          </div>
+
+          <div class="space-y-2 text-xs font-mono">
+            <div class="flex flex-col sm:flex-row gap-2">
+              <div class="flex-1">
+                <label class="text-[8.5px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">Broker Websocket:</label>
+                <input id="mqtt-broker" type="text" value="wss://test.mosquitto.org:8081/mqtt" class="w-full bg-slate-950/80 border border-slate-800 text-slate-300 rounded px-2 py-1 text-[10px] outline-none focus:border-blue-500 transition-colors">
+              </div>
+              <div class="sm:w-1/2">
+                <label class="text-[8.5px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">Tòpic Base:</label>
+                <input id="mqtt-topic" type="text" value="iesebre/diposit/" class="w-full bg-slate-950/80 border border-slate-800 text-slate-300 rounded px-2 py-1 text-[10px] outline-none focus:border-blue-500 transition-colors">
+              </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-2">
+              <div class="flex-1">
+                <label class="text-[8.5px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">Usuari MQTT (Opcional):</label>
+                <input id="mqtt-user" type="text" placeholder="Sense usuari" class="w-full bg-slate-950/80 border border-slate-800 text-slate-400 rounded px-2 py-1 text-[10px] outline-none placeholder-slate-700">
+              </div>
+              <div class="flex-1">
+                <label class="text-[8.5px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">Contrasenya MQTT (Opcional):</label>
+                <input id="mqtt-pass" type="password" placeholder="Sense contrasenya" class="w-full bg-slate-950/80 border border-slate-800 text-slate-400 rounded px-2 py-1 text-[10px] outline-none placeholder-slate-700">
+              </div>
+            </div>
+
+            <div id="mqtt-err-div" class="text-[9.5px] text-red-400 bg-red-950/20 border border-red-900/40 p-1 rounded hidden"></div>
+          </div>
+        </div>
+
+        <!-- PLANTA FÍSICA I CONTROLADORS VERTICALS -->
+        <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700/60 shadow-lg space-y-4">
+          <div class="border-b border-slate-700/60 pb-2 flex justify-between items-center">
+            <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5 animate-duration-1000">
+              <span id="dot-planta" class="w-2.5 h-2.5 bg-indigo-500 rounded-full transition-all"></span>
+              PLANTA
+            </h2>
+          </div>
+
+          <div class="grid grid-cols-12 gap-3 items-center">
+            <!-- Contenidor dels controls -->
+            <div class="col-span-12 md:col-span-7 flex flex-col gap-2">
+              <div class="bg-slate-900/50 p-2.5 rounded-xl border border-slate-700/40 flex flex-row justify-around items-stretch h-[180px]">
+              
+              <!-- SP -->
+              <div class="flex flex-col items-center justify-between h-full group">
+                <span class="text-[10px] font-bold text-blue-400">SP</span>
+                <input id="slider-setpoint" type="range" orient="vertical" min="0" max="30" step="1" value="20" class="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-blue-500">
+                <span id="val-setpoint" class="text-[9px] font-mono text-blue-300 bg-blue-950/80 px-1 py-0.5 rounded font-bold">20</span>
+                <span class="text-[7.5px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Consigna</span>
+              </div>
+
+              <!-- Kp -->
+              <div id="group-kp" class="flex flex-col items-center justify-between h-full group transition-all">
+                <span class="text-[10px] font-bold text-amber-400">Kp</span>
+                <input id="slider-kp" type="range" orient="vertical" min="0" max="500" step="10" value="200" class="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-amber-500">
+                <span id="val-kp" class="text-[9px] font-mono text-amber-300 bg-amber-950/80 px-1 py-0.5 rounded font-bold">200</span>
+                <span class="text-[7.5px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Proporc.</span>
+              </div>
+
+              <!-- Ki -->
+              <div id="group-ki" class="flex flex-col items-center justify-between h-full group transition-all">
+                <span class="text-[10px] font-bold text-teal-400">Ki</span>
+                <input id="slider-ki" type="range" orient="vertical" min="0" max="200" step="5" value="50" class="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-teal-500">
+                <span id="val-ki" class="text-[9px] font-mono text-teal-300 bg-teal-950/80 px-1 py-0.5 rounded font-bold">50</span>
+                <span class="text-[7.5px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Integral</span>
+              </div>
+
+              <!-- Aixeta -->
+              <div class="flex flex-col items-center justify-between h-full group">
+                <span class="text-[10px] font-bold text-rose-400">Aix.</span>
+                <input id="slider-kAixeta" type="range" orient="vertical" min="0" max="100" step="1" value="50" class="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-rose-500">
+                <span id="val-kAixeta" class="text-[9px] font-mono text-rose-300 bg-rose-950/80 px-1 py-0.5 rounded font-bold">50%</span>
+                <span class="text-[7.5px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Obertura</span>
+              </div>
+
+              <!-- Pertorbació -->
+              <div class="flex flex-col items-center justify-between h-full group">
+                <span class="text-[10px] font-bold text-violet-400">Pert</span>
+                <input id="slider-disturbi" type="range" orient="vertical" min="-150" max="150" step="10" value="0" class="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-violet-500">
+                <span id="val-disturbi" class="text-[9px] font-mono px-0.5 py-0.5 rounded font-bold bg-slate-950 text-slate-400">0</span>
+                <span class="text-[7.5px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Pluja</span>
+              </div>
+
+              <!-- Inèrcia -->
+              <div class="flex flex-col items-center justify-between h-full group">
+                <span class="text-[10px] font-bold text-slate-400">Inè.</span>
+                <input id="slider-bombaInercia" type="range" orient="vertical" min="1" max="50" step="1" value="10" class="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-slate-300">
+                <span id="val-bombaInercia" class="text-[9px] font-mono text-slate-300 bg-slate-850 px-1 py-0.5 rounded font-bold">10</span>
+                <span class="text-[7.5px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">BombaInè</span>
+              </div>
+
+              <!-- Alarma Alta -->
+              <div class="flex flex-col items-center justify-between h-full group border-l border-red-500/15 pl-1">
+                <span class="text-[10px] font-bold text-red-500">AL.H</span>
+                <input id="slider-alarmHigh" type="range" orient="vertical" min="15" max="30" step="1" value="26" class="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-red-600">
+                <span id="val-alarmHigh" class="text-[9px] font-mono text-red-400 bg-red-950/80 px-1 py-0.5 rounded font-bold">26</span>
+                <span class="text-[7.5px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">CotaAlta</span>
+              </div>
+
+              <!-- Alarma Baixa -->
+              <div class="flex flex-col items-center justify-between h-full group">
+                <span class="text-[10px] font-bold text-amber-500">AL.L</span>
+                <input id="slider-alarmLow" type="range" orient="vertical" min="0" max="14" step="1" value="4" class="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-amber-500">
+                <span id="val-alarmLow" class="text-[9px] font-mono text-amber-400 bg-amber-950/80 px-1 py-0.5 rounded font-bold">4</span>
+                <span class="text-[7.5px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">CotaBaix</span>
+              </div>
+
+              <!-- Hysteresis -->
+              <div id="group-histeresi" class="flex flex-col items-center justify-between h-full group border-l border-indigo-500/20 pl-1 transition-all opacity-20">
+                <span class="text-[10px] font-bold text-indigo-400">HYS</span>
+                <input id="slider-histeresiVal" type="range" orient="vertical" min="0.1" max="5.0" step="0.1" value="1.5" disabled class="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-indigo-500">
+                <span id="val-histeresiVal" class="text-[9px] font-mono text-indigo-300 bg-indigo-950 px-1 py-0.5 rounded font-bold">±1.5</span>
+                <span class="text-[7.5px] text-indigo-400 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">DeltaHys</span>
+              </div>
+
+              </div>
+              
+              <!-- Bomba Manual MQTT -->
+              <div id="group-bombaMQTT" class="w-full flex flex-col bg-slate-900/50 rounded-xl border border-slate-700/40 p-2 transition-all opacity-20 pointer-events-none">
+                 <div class="flex justify-between items-center w-full mb-1">
+                    <span class="text-[10px] font-bold text-purple-400">Bomba (Manual MQTT)</span>
+                    <span id="val-tensioBombaExternal" class="text-[10px] font-mono text-purple-300 bg-purple-950/80 px-1 py-0.5 rounded font-bold">0%</span>
+                 </div>
+                 <input id="slider-tensioBombaExternal" type="range" min="0" max="100" step="1" value="0" class="w-full h-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-purple-500">
+              </div>
+            </div>
+
+            <!-- SVG del Dipòsit -->
+            <div class="col-span-12 md:col-span-5 flex justify-center items-center">
+              <div class="w-full max-w-[320px] aspect-square">
+                <svg viewBox="0 0 235 240" class="w-full h-full drop-shadow-xl">
+                  <g transform="translate(45, 12)">
+                    <circle id="led-alarm-high" cx="0" cy="0" r="4" fill="#1e293b" stroke="#475569" stroke-width="1" />
+                    <text x="8" y="3" fill="#64748b" font-size="8.5" font-weight="900" id="txt-led-high">ALM ALT</text>
+                  </g>
+                  <g transform="translate(110, 12)">
+                    <circle id="led-alarm-low" cx="0" cy="0" r="4" fill="#1e293b" stroke="#475569" stroke-width="1" />
+                    <text x="8" y="3" fill="#64748b" font-size="8.5" font-weight="900" id="txt-led-low">ALM BAIX</text>
+                  </g>
+
+                  <!-- Bomba motoritzada -->
+                  <path d="M 10 32 L 70 32 L 70 47 L 60 47 L 60 40 L 10 40 Z" fill="#475569" />
+                  <rect x="5" y="22" width="15" height="25" rx="2" fill="#1e293b" stroke="#64748b" stroke-width="1.5" />
+                  <text x="12.5" y="37" font-size="8" fill="#38bdf8" text-anchor="middle" font-weight="bold">M</text>
+
+                  <!-- Caudal entrades text -->
+                  <g transform="translate(73, 23)">
+                    <rect x="0" y="0" width="67" height="26" rx="3.5" fill="#0f172a" fill-opacity="0.95" stroke="#38bdf8" stroke-width="0.75" />
+                    <text id="svg-txt-bomba-qi" x="33.5" y="0" font-size="7.5" text-anchor="middle" font-family="monospace" font-weight="bold">
+                      <tspan x="33.5" y="10" fill="#a855f7">Bomba: 0%</tspan>
+                      <tspan x="33.5" y="20" fill="#38bdf8">Qi: 0.0</tspan>
+                    </text>
+                  </g>
+
+                  <!-- Doll d'aigua d'entrada -->
+                  <path id="svg-doll-entrada" d="M 65 47 Q 65 100 65 220" fill="none" stroke="#38bdf8" stroke-width="3" stroke-dasharray="4 2" class="animate-dash" style="display: none;" />
+
+                  <!-- Escapaments de sortida -->
+                  <path d="M 170 210 L 205 210 L 205 220 L 170 220 Z" fill="#475569" />
+                  <circle cx="187" cy="215" r="6" fill="#dc2626" />
+                  <line x1="187" y1="207" x2="187" y2="223" stroke="#fca5a5" stroke-width="1.5" />
+
+                  <!-- Caudal sortida text -->
+                  <g transform="translate(170, 182)">
+                    <rect x="0" y="0" width="67" height="26" rx="3.5" fill="#0f172a" fill-opacity="0.95" stroke="#f43f5e" stroke-width="0.75" />
+                    <text id="svg-txt-aixeta-qo" x="33.5" y="0" font-size="7.5" text-anchor="middle" font-family="monospace" font-weight="bold">
+                      <tspan x="33.5" y="10" fill="#f43f5e">Aixeta: 50%</tspan>
+                      <tspan x="33.5" y="20" fill="#fb7185">Qo: 0.0</tspan>
+                    </text>
+                  </g>
+
+                  <!-- Doll de sortida -->
+                  <path id="svg-doll-sortida" d="M 200 215 Q 220 220 225 240" fill="none" stroke="#0284c7" stroke-width="3" stroke-dasharray="3 2" class="animate-dash" style="display: none;" />
+
+                  <!-- Cos del Dipòsit -->
+                  <rect x="40" y="50" width="130" height="170" fill="none" stroke="#94a3b8" stroke-width="3" rx="1.5" />
+                  <line x1="35" y1="60" x2="175" y2="60" stroke="#b91c1c" stroke-width="0.75" stroke-dasharray="2 2" opacity="0.5" />
+
+                  <!-- Hysteresi Band -->
+                  <g id="svg-hys-group" style="display: none;">
+                    <line id="svg-hys-line-high" x1="40" y1="100" x2="170" y2="100" stroke="#818cf8" stroke-width="0.75" stroke-dasharray="3 3" />
+                    <line id="svg-hys-line-low" x1="40" y1="120" x2="170" y2="120" stroke="#818cf8" stroke-width="0.75" stroke-dasharray="3 3" />
+                    <rect id="svg-hys-rect" x="41" y="100" width="128" height="20" fill="#818cf8" fill-opacity="0.08" />
+                  </g>
+
+                  <!-- Alarm Lines -->
+                  <g>
+                    <line id="svg-line-alarm-high" x1="38" y1="81" x2="172" y2="81" stroke="#ef4444" stroke-width="1.25" stroke-dasharray="4 3" opacity="0.85" />
+                    <text id="svg-txt-alarm-high" x="165" y="78" fill="#f87171" font-size="7.5" text-anchor="end" font-weight="bold">LIM ALT: 26cm</text>
+                  </g>
+                  <g>
+                    <line id="svg-line-alarm-low" x1="38" y1="198" x2="172" y2="198" stroke="#f59e0b" stroke-width="1.25" stroke-dasharray="4 3" opacity="0.85" />
+                    <text id="svg-txt-alarm-low" x="165" y="206" fill="#fbbf24" font-size="7.5" text-anchor="end" font-weight="bold">LIM BAIX: 4cm</text>
+                  </g>
+
+                  <!-- Setpoint Line -->
+                  <g>
+                    <line id="svg-line-setpoint" x1="38" y1="113" x2="172" y2="113" stroke="#3b82f6" stroke-width="1.75" stroke-dasharray="5 3" />
+                    <text id="svg-txt-setpoint" x="45" y="108" fill="#60a5fa" font-size="9" font-weight="bold">Consigna: 20cm</text>
+                  </g>
+
+                  <!-- Massa d'Aigua -->
+                  <rect id="svg-water-mass" x="41.5" y="220" width="127" height="0" fill="#38bdf8" fill-opacity="0.45" rx="0.5" style="display: none;" />
+
+                  <!-- Quadre de text dynamic nivell interior -->
+                  <g id="svg-water-label-group" transform="translate(100, 200)">
+                    <rect x="-38" y="-12" width="76" height="28" rx="3" fill="#0f172a" fill-opacity="0.85" stroke="#475569" stroke-width="0.5" />
+                    <text id="svg-txt-level-cm" x="0" y="2" fill="#38bdf8" font-size="9" font-weight="bold" text-anchor="middle" font-family="monospace">0.00 cm</text>
+                    <text id="svg-txt-level-l" x="0" y="12" fill="#34d399" font-size="8.5" font-weight="bold" text-anchor="middle" font-family="monospace">0.00 L</text>
+                  </g>
+
+                  <!-- Regle -->
+                  <line x1="39" y1="60" x2="39" y2="220" stroke="#94a3b8" stroke-width="1" />
+                  <g>
+                    <line x1="35" y1="220" x2="39" y2="220" stroke="#94a3b8" stroke-width="1" />
+                    <text x="32" y="222" fill="#94a3b8" font-size="8.5" font-family="monospace" text-anchor="end">0cm</text>
+                  </g>
+                  <g>
+                    <line x1="35" y1="166.6" x2="39" y2="166.6" stroke="#94a3b8" stroke-width="1" />
+                    <text x="32" y="169" fill="#94a3b8" font-size="8.5" font-family="monospace" text-anchor="end">10cm</text>
+                  </g>
+                  <g>
+                    <line x1="35" y1="113.3" x2="39" y2="113.3" stroke="#94a3b8" stroke-width="1" />
+                    <text x="32" y="116" fill="#94a3b8" font-size="8.5" font-family="monospace" text-anchor="end">20cm</text>
+                  </g>
+                  <g>
+                    <line x1="35" y1="60" x2="39" y2="60" stroke="#94a3b8" stroke-width="1" />
+                    <text x="32" y="62" fill="#94a3b8" font-size="8.5" font-family="monospace" text-anchor="end">30cm</text>
+                  </g>
+
+                  <text x="105" y="235" fill="#94a3b8" font-size="8.5" text-anchor="middle" font-family="monospace" font-weight="bold">Ø Base: 27.6 cm | Àrea: 600 cm²</text>
+                </svg>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Botonera Accions -->
+          <div class="bg-slate-900/60 p-2 rounded-xl border border-slate-700/30 flex items-center justify-between gap-3">
+            <span class="text-[9.5px] font-black text-slate-400 uppercase tracking-wider pl-2">Accions:</span>
+            <div class="flex gap-2">
+              <button id="btn-play-pause" onclick="toggleSimulation()" class="px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/20">
+                <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                Iniciar (Play)
+              </button>
+              <button onclick="executarPasSencer()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 transition-colors">Pas a Pas</button>
+              <button onclick="reiniciarSimulacio()" class="px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/50 text-rose-300 rounded-lg text-xs font-semibold border border-rose-500/20 transition-colors">Reset</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- GRÀFIC TEMPORAL DE NIVELL -->
+        <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60 shadow-lg flex flex-col h-[210px] justify-between">
+          <div class="flex justify-between items-center mb-1.5">
+            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span id="dot-historial" class="w-2.5 h-2.5 bg-sky-500 rounded-full transition-all"></span>
+              Historial en Temps Real
+            </h3>
+            <div class="flex items-center gap-2">
+              <button onclick="descarregarDadesXLS()" class="bg-emerald-600/90 hover:bg-emerald-500 text-white text-[9px] font-bold px-2 py-1 rounded transition-all flex items-center gap-1 shadow">
+                <svg class="w-3 h-3 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Descarregar XLS
+              </button>
+              <span class="text-[9.5px] font-bold text-slate-500 uppercase">Finestra:</span>
+              <select id="select-finestra" onchange="changeTempsFinestra(this.value)" class="bg-slate-950 border border-slate-800 text-slate-300 text-[10px] font-bold py-0.5 px-1 rounded">
+                <option value="10">10s</option>
+                <option value="20">20s</option>
+                <option value="30">30s</option>
+                <option value="40">40s</option>
+                <option value="50">50s</option>
+                <option value="60" selected>60s</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="relative flex-grow bg-slate-950 rounded-lg p-2 border border-slate-700/60 flex items-stretch h-0">
+            <!-- Eix Y -->
+            <div class="w-7 flex flex-col justify-between text-[7.5px] font-mono text-slate-500 text-right pr-1 pt-0.5 pb-0.5 border-r border-slate-800 pointer-events-none select-none">
+              <span>30cm</span>
+              <span>20cm</span>
+              <span>10cm</span>
+              <span>0cm</span>
+            </div>
+            <!-- Contenidor de barres -->
+            <div class="relative flex-grow ml-1 pt-0.5 pb-0.5">
+              <!-- Línies de referència -->
+              <div class="absolute inset-0 pointer-events-none z-0">
+                <div class="absolute w-full border-t border-slate-900" style="bottom: 33.33%"></div>
+                <div class="absolute w-full border-t border-slate-900" style="bottom: 66.66%"></div>
+              </div>
+              <div id="cfg-line-high" class="absolute left-0 right-0 border-t border-red-500/30 border-dotted z-10 pointer-events-none"></div>
+              <div id="cfg-line-sp" class="absolute left-0 right-0 border-t border-blue-500/40 border-dashed z-10 pointer-events-none"></div>
+              <div id="cfg-line-low" class="absolute left-0 right-0 border-t border-amber-500/30 border-dotted z-10 pointer-events-none"></div>
+
+              <!-- Barres directes d'historial -->
+              <div id="chart-bars-container" class="w-full h-full flex items-end justify-between gap-[1px] relative z-10"></div>
+            </div>
+          </div>
+
+          <!-- Panell de detall hover -->
+          <div id="chart-legend" class="mt-1.5 min-h-[22px] flex items-center justify-between text-[8px] text-slate-400">
+            <div class="flex flex-wrap gap-x-2">
+              <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 bg-sky-500 rounded-full"></span> Estàndard</span>
+              <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Consigna (±10%)</span>
+              <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span> Alarma Alta</span>
+              <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 bg-amber-500 rounded-full"></span> Alarma Baixa</span>
+            </div>
+            <span class="font-mono text-[7.5px] text-slate-500">Posa el cursor sobre les columnes</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- COLUMNA DRETA (COL_SPAN 5): REALTIME CALCULATIONS & SERIAL TELEMETRY -->
+      <div class="lg:col-span-5 flex flex-col gap-4">
+        
+        <!-- PANELL DE CALCULS EN TEMPS REAL -->
+        <div class="bg-slate-800/80 rounded-xl p-4 border border-slate-700/60 shadow-lg flex flex-col justify-between">
+          <div class="border-b border-slate-700/60 pb-2 mb-3 flex items-center gap-2">
+            <span id="dot-calculs" class="w-2.5 h-2.5 bg-amber-500 rounded-full transition-all"></span>
+            <h2 id="calc-header-title" class="text-xs font-bold text-slate-300 uppercase tracking-wider">CÀLCULS (Mode PI)</h2>
+          </div>
+
+          <div class="space-y-3 text-[10.5px] font-mono leading-tight">
+            <!-- Pas 1 -->
+            <div id="calc-error" class="bg-slate-900/60 p-2.5 rounded border border-slate-800"></div>
+
+            <!-- Pas 2 -->
+            <div id="calc-integral" class="bg-slate-900/60 p-2.5 rounded border border-slate-800"></div>
+
+            <!-- Pas 3 -->
+            <div id="calc-u" class="bg-slate-900/60 p-2.5 rounded border border-slate-800">
+              <span class="text-slate-400 font-bold block uppercase tracking-wide">3. Equació del Controlador (u)</span>
+              <div id="calc-u-content" class="text-slate-200 mt-1 leading-relaxed whitespace-pre-wrap"></div>
+            </div>
+
+            <!-- Pas 4 -->
+            <div id="calc-physics" class="bg-slate-900/60 p-2.5 rounded border border-slate-800">
+              <span class="text-slate-400 font-bold block uppercase tracking-wide">4. Física del dipòsit</span>
+              <div id="calc-physics-content" class="text-slate-200 mt-1 leading-relaxed whitespace-pre-wrap"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONSOLA MONITOR SERIE -->
+        <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60 shadow-md flex flex-col h-[200px]">
+          <div class="flex justify-between items-center border-b border-slate-700/80 pb-1.5 mb-2">
+            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span id="dot-monitor" class="w-2 h-2 bg-emerald-500 rounded-full transition-all"></span>
+              MONITOR
+            </h3>
+            <button onclick="clearSerialLogs()" class="text-[9px] text-slate-400 hover:text-slate-200 bg-slate-900 px-2 py-0.5 rounded border border-slate-700">Esborrar</button>
+          </div>
+          <div id="terminal-container" class="flex-grow bg-slate-950 rounded-lg p-2 font-mono text-emerald-400 overflow-y-auto space-y-0.5 border border-slate-900 text-[10px] h-0"></div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Modal de Configuració de Telemetria -->
+  <div id="telemetry-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl p-5 max-w-lg w-full shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="p-1.5 bg-blue-600/20 text-blue-400 rounded-lg border border-blue-500/25">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-slate-100 uppercase tracking-tight">Filtres de Telemetria (MQTT)</h3>
+            <span class="text-[9px] text-slate-500 block">Configurar deadbands i throttling per a les variables del gràfic</span>
+          </div>
+        </div>
+        <button onclick="toggleTelemetryWindow()" class="text-slate-400 hover:text-slate-150 text-xs p-1 bg-slate-800/60 hover:bg-slate-800 rounded-lg transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+        <div class="grid grid-cols-1 gap-2.5">
+          <!-- Variable: Nivell -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800/50 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-300 uppercase font-mono">Nivell (cm)</span>
+              <div class="flex items-center gap-1">
+                <input type="checkbox" id="tel-enable-nivell" checked class="w-3.5 h-3.5 accent-blue-500 rounded border-slate-700 bg-slate-900 pointer-events-auto">
+                <label for="tel-enable-nivell" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Canvi Absolut (cm)</label>
+                <input type="number" step="0.01" id="tel-abs-nivell" value="0.10" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Interval Mínim (ms)</label>
+                <input type="number" step="100" id="tel-int-nivell" value="500" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-blue-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Variable: Volum -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800/50 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-300 uppercase font-mono">Volum (L)</span>
+              <div class="flex items-center gap-1">
+                <input type="checkbox" id="tel-enable-volum" checked class="w-3.5 h-3.5 accent-blue-500 rounded border-slate-700 bg-slate-900">
+                <label for="tel-enable-volum" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Canvi Absolut (L)</label>
+                <input type="number" step="0.01" id="tel-abs-volum" value="0.05" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Interval Mínim (ms)</label>
+                <input type="number" step="100" id="tel-int-volum" value="500" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-blue-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Variable: Qi -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800/50 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-300 uppercase font-mono">Qi (cm³/s)</span>
+              <div class="flex items-center gap-1">
+                <input type="checkbox" id="tel-enable-qi" checked class="w-3.5 h-3.5 accent-blue-500 rounded border-slate-700 bg-slate-900">
+                <label for="tel-enable-qi" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Canvi Absolut (cm³/s)</label>
+                <input type="number" step="0.1" id="tel-abs-qi" value="1.0" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Interval Mínim (ms)</label>
+                <input type="number" step="100" id="tel-int-qi" value="500" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-blue-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Variable: Qo -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800/50 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-300 uppercase font-mono">Qo (cm³/s)</span>
+              <div class="flex items-center gap-1">
+                <input type="checkbox" id="tel-enable-qo" checked class="w-3.5 h-3.5 accent-blue-500 rounded border-slate-700 bg-slate-900">
+                <label for="tel-enable-qo" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Canvi Absolut (cm³/s)</label>
+                <input type="number" step="0.1" id="tel-abs-qo" value="1.0" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Interval Mínim (ms)</label>
+                <input type="number" step="100" id="tel-int-qo" value="500" class="w-full bg-slate-900 border border-slate-850 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-blue-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Variable: Bomba -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800/50 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-300 uppercase font-mono">Bomba (%)</span>
+              <div class="flex items-center gap-1">
+                <input type="checkbox" id="tel-enable-bomba" checked class="w-3.5 h-3.5 accent-blue-500 rounded border-slate-700 bg-slate-900">
+                <label for="tel-enable-bomba" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Canvi Absolut (%)</label>
+                <input type="number" step="0.1" id="tel-abs-bomba" value="0.5" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Interval Mínim (ms)</label>
+                <input type="number" step="100" id="tel-int-bomba" value="500" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-blue-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Variable: Temps -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800/50 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-300 uppercase font-mono">Temps (s)</span>
+              <div class="flex items-center gap-1">
+                <input type="checkbox" id="tel-enable-temps" checked class="w-3.5 h-3.5 accent-blue-500 rounded border-slate-700 bg-slate-900">
+                <label for="tel-enable-temps" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Canvi Absolut (s)</label>
+                <input type="number" step="0.5" id="tel-abs-temps" value="1.0" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Interval Mínim (ms)</label>
+                <input type="number" step="100" id="tel-int-temps" value="1000" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-blue-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Variable: AlarmHigh -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800/50 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-300 uppercase font-mono">Alarma Alta (actiu)</span>
+              <div class="flex items-center gap-1">
+                <input type="checkbox" id="tel-enable-alarmHigh" checked class="w-3.5 h-3.5 accent-blue-500 rounded border-slate-700 bg-slate-900">
+                <label for="tel-enable-alarmHigh" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 gap-2">
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Interval Mínim (ms)</label>
+                <input type="number" step="100" id="tel-int-alarmHigh" value="1000" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-blue-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Variable: AlarmLow -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800/50 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-300 uppercase font-mono">Alarma Baixa (actiu)</span>
+              <div class="flex items-center gap-1">
+                <input type="checkbox" id="tel-enable-alarmLow" checked class="w-3.5 h-3.5 accent-blue-500 rounded border-slate-700 bg-slate-900">
+                <label for="tel-enable-alarmLow" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 gap-2">
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Interval Mínim (ms)</label>
+                <input type="number" step="100" id="tel-int-alarmLow" value="1000" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-blue-500">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 border-t border-slate-800 pt-3">
+        <button onclick="guardarConfigTelemetry()" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow transition-colors">Guardar i Aplicar</button>
+        <button onclick="toggleTelemetryWindow()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-lg text-xs font-semibold border border-slate-700/60 transition-colors">Tancar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'Ajuda MQTT -->
+  <div id="help-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden text-slate-300">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl p-5 max-w-4xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto m-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="p-1.5 bg-emerald-600/20 text-emerald-400 rounded-lg border border-emerald-500/25">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-slate-100 uppercase tracking-tight">Manual MQTT (Pub/Sub)</h3>
+            <span class="text-[9px] text-slate-500 block">Llista de tòpics, permisos i rangs de valors del bessó digital</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="text-[10px] space-y-4 font-mono">
+        <p class="text-slate-400 font-sans">El sistema MQTT usa un <span class="text-blue-400 font-bold">tòpic base</span> (ex: <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-300">iesebre/diposit/</code>). Aquest s'afegeix davant de tots els tòpics de la taula. Per exemple, per llegir el nivell: <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-300">iesebre/diposit/nivell</code>. Pels comandaments s'afegeix <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-300">/set</code> al final, per exemple: <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-300">iesebre/diposit/setpoint/set</code>. Per cada publicació (excepte per al temps simulat), es publica automàticament un tòpic amb el mateix valor i el sufix <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-400">-ts</code> sota la subcarpeta <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-400">ts/</code> (ex: <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-400">iesebre/diposit/ts/telemetria/bomba-ts</code> o <code class="bg-slate-800 px-1 py-0.5 rounded text-slate-400">iesebre/diposit/ts/ki-ts</code>) amb el timestamp numèric Unix (en ms) de la darrera publicació.</p>
+
+        <div class="border border-slate-700/60 rounded-xl overflow-hidden bg-slate-950/50">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-slate-800/80 text-[9px] text-slate-400 uppercase tracking-wider">
+              <tr>
+                <th class="px-3 py-2.5 border-b border-slate-700 font-bold">Tòpic</th>
+                <th class="px-3 py-2.5 border-b border-slate-700 font-bold">Operador</th>
+                <th class="px-3 py-2.5 border-b border-slate-700 text-center font-bold">Rang / Valors</th>
+                <th class="px-3 py-2.5 border-b border-slate-700 font-bold">Descripció</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/50">
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/nivell</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">0.0 – 30.0 (cm)</td>
+                <td class="px-3 py-2 text-slate-400">Nivell actual del dipòsit</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/volum</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">0.0+ (L)</td>
+                <td class="px-3 py-2 text-slate-400">Volum calculat de liquid</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/qi</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">0.0+ (cm³/s)</td>
+                <td class="px-3 py-2 text-slate-400">Cabal d'entrada (Q in)</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/qo</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">0.0+ (cm³/s)</td>
+                <td class="px-3 py-2 text-slate-400">Cabal de sortida (Q out)</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/bomba</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">0 – 100 (%)</td>
+                <td class="px-3 py-2 text-slate-400">Feedback en temps real de la potència de la bomba</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-blue-400 font-bold">telemetria/bomba/set</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500">0 – 100 (%)</td>
+                <td class="px-3 py-2 text-slate-400">Consigna d'actuació sobre la bomba (en mode manual MQTT). També suporta <code class="text-indigo-400 font-bold">bomba/set</code>.</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/temps</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">0+ (s)</td>
+                <td class="px-3 py-2 text-slate-400">Temps simulat de la sessió actual</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/alarmaAlta</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">true / false</td>
+                <td class="px-3 py-2 text-slate-400">Estat d'alerta per nivell alt</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/alarmaBaixa</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">true / false</td>
+                <td class="px-3 py-2 text-slate-400">Estat d'alerta per nivell baix</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-blue-400 font-bold">setpoint</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500">0 – 30 (cm)</td>
+                <td class="px-3 py-2 text-slate-400">Control de la consigna desitjada del dipòsit</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-blue-400 font-bold">aixeta</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500">0 – 100 (%)</td>
+                <td class="px-3 py-2 text-slate-400">Apertura de la vàlvula de sortida manual</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-blue-400 font-bold">mode</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500 text-[9px]">"MANUAL", "ONOFF", "PI", "MQTT"</td>
+                <td class="px-3 py-2 text-slate-400">Tipus de controlador utilitzat</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-blue-400 font-bold">kp</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500">0 – 500</td>
+                <td class="px-3 py-2 text-slate-400">Constant Proporcional (Control PI)</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-blue-400 font-bold">ki</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500">0 – 200</td>
+                <td class="px-3 py-2 text-slate-400">Constant Integral (Control PI)</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-blue-400 font-bold">pert</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500">-150 – +150</td>
+                <td class="px-3 py-2 text-slate-400">Ficció per sumar o restar cabal com a disturbi</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-blue-400 font-bold">inercia</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500">1 – 50</td>
+                <td class="px-3 py-2 text-slate-400">Inèrcia/Retard del motor de la bomba</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-blue-400 font-bold">histeresisp</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500">0.1 – 5.0 (cm)</td>
+                <td class="px-3 py-2 text-slate-400">Banda d'histèresi pel control ON/OFF</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-emerald-400 font-bold">antiwindup</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500 text-[9px]">"ON", "OFF"</td>
+                <td class="px-3 py-2 text-slate-400">Estat clamat actiu en funcionament de la simulació</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-blue-400 font-bold">antiwindup/set</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500 text-[9px]">"ON", "OFF"</td>
+                <td class="px-3 py-2 text-slate-400">Activar o no activar la funcionalitat de l'Anti-Windup</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-blue-400 font-bold">alarmHighsp</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500">15 – 30 (cm)</td>
+                <td class="px-3 py-2 text-slate-400">Consigna pel límit d'alarma alta</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-blue-400 font-bold">alarmLowsp</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500">0 – 14 (cm)</td>
+                <td class="px-3 py-2 text-slate-400">Consigna pel límit d'alarma baixa</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-amber-400 font-bold">presetsPI</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500 text-[9px]">"T1", "T2", "T3"</td>
+                <td class="px-3 py-2 text-slate-400">Aplicar paràmetres programats i activar mode PI</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-amber-400 font-bold">ctrl/play</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500 text-[9px]">"PLAY", "PAUSE"</td>
+                <td class="px-3 py-2 text-slate-400">Pausar i reprendre el pas de temps</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-amber-400 font-bold">ctrl/pas</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500 text-[9px]">"PAS"</td>
+                <td class="px-3 py-2 text-slate-400">Si el sistema està en pausa, avança 1 cicle</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-amber-400 font-bold">ctrl/reset</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500 text-[9px]">"RESET"</td>
+                <td class="px-3 py-2 text-slate-400">Buidar el dipòsit a 0 cm, restablir error i temps t=0s</td>
+              </tr>
+              <tr class="hover:bg-slate-900/50">
+                <td class="px-3 py-2 text-amber-400 font-bold">tempsFinestra</td>
+                <td class="px-3 py-2 text-[8px] uppercase space-x-0.5">
+                  <span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded">PUB</span>
+                  <span class="bg-blue-950 text-blue-500 border border-blue-800 px-1 rounded">SUB</span>
+                </td>
+                <td class="px-3 py-2 text-center text-slate-500">10 – 600 (s)</td>
+                <td class="px-3 py-2 text-slate-400">Amplada (eix X) del temps que es veu als gràfics</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end border-t border-slate-800 pt-3">
+        <button onclick="toggleHelpWindow()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-lg text-xs font-semibold border border-slate-700/60 shadow transition-colors">Tancar i Tornar</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="mt-4 text-center text-[10px] text-slate-500">
+    Desenvolupat en Vanilla JS per a entorns SCADA • Bessó Digital Actiu
+  </footer>
+
+  <!-- LÒGICA INTERACTIVA VANILLA JS -->
+  <script>
+    // Paràmetres d'estat globals del simulador
+    const state = {
+      // Paràmetres de control
+      kp: 200,
+      ki: 50,
+      setpoint: 20,
+      areaBase: 600,
+      kAixeta: 50,
+      sampleTime: 100, // ms
+      bombaInercia: 10,
+      disturbi: 0,
+      modeControl: 'PI',
+      histeresiVal: 1.5,
+      antiWindupHabilitat: false,
+      alarmHigh: 26,
+      alarmLow: 4,
+      tempsFinestra: 60, // segons
+
+      // Estat de la simulació física
+      nivell: 0.0,
+      errorIntegral: 0.0,
+      qi: 0.0,
+      qo: 0.0,
+      tensioBomba: 0.0,
+      temps: 0,
+      windupActiu: false,
+      errorActual: 0.0,
+      bombaActiva: false,
+      tensioBombaExternal: 0.0,
+
+      isRunning: false,
+      historial: [],
+      serialLogs: ["--- Simulador Inicialitzat ---", "Configureu paràmetres i premeu PLAY"],
+
+      // Variables MQTT
+      brokerUrl: 'wss://test.mosquitto.org:8081/mqtt',
+      baseTopic: 'iesebre/diposit/',
+      mqttUser: '',
+      mqttPassword: '',
+      mqttConnected: false,
+      mqttError: '',
+
+      // Filtres de publicació de telemetria dels gràfics
+      telemetry: {
+        nivell: { enabled: true, deadbandAbs: 0.10, minInterval: 500, lastValue: null, lastPublishTime: 0 },
+        volum: { enabled: true, deadbandAbs: 0.05, minInterval: 500, lastValue: null, lastPublishTime: 0 },
+        qi: { enabled: true, deadbandAbs: 1.0, minInterval: 500, lastValue: null, lastPublishTime: 0 },
+        qo: { enabled: true, deadbandAbs: 1.0, minInterval: 500, lastValue: null, lastPublishTime: 0 },
+        bomba: { enabled: true, deadbandAbs: 0.5, minInterval: 500, lastValue: null, lastPublishTime: 0 },
+        temps: { enabled: true, deadbandAbs: 1.0, minInterval: 1000, lastValue: null, lastPublishTime: 0 },
+        alarmHigh: { enabled: true, minInterval: 1000, lastValue: null, lastPublishTime: 0 },
+        alarmLow: { enabled: true, minInterval: 1000, lastValue: null, lastPublishTime: 0 }
+      }
+    };
+
+    const presets = {
+      perfecte: { name: "PI Estable (Perfecte)", kp: 250, ki: 15, setpoint: 20, kAixeta: 50, inercia: 10, alH: 26, alL: 4 },
+      nomesP: { name: "Només P (Error permanent)", kp: 150, ki: 0, setpoint: 20, kAixeta: 50, inercia: 10, alH: 26, alL: 4 },
+      inestable: { name: "Inestable (Massa Ki)", kp: 50, ki: 100, setpoint: 20, kAixeta: 50, inercia: 10, alH: 26, alL: 4 },
+      senseSortida: { name: "Aixeta tancada (K = 0)", kp: 100, ki: 10, setpoint: 20, kAixeta: 0, inercia: 10, alH: 26, alL: 4 }
+    };
+
+    let simIntervalID = null;
+    let mqttClient = null;
+
+    // Inicialització en carregar la pàgina
+    window.onload = function() {
+      // Connectar controladors de lliscadors verticals
+      const sliders = ['kp', 'ki', 'setpoint', 'kAixeta', 'disturbi', 'bombaInercia', 'alarmHigh', 'alarmLow', 'histeresiVal', 'tensioBombaExternal'];
+      sliders.forEach(s => {
+        const el = document.getElementById(`slider-${s}`);
+        if (el) {
+          el.addEventListener('input', (e) => updateParam(s, e.target.value));
+        }
+      });
+
+      // Carregar presets i sincronitzar
+      syncAllParamUI();
+      updateHysteresisBand();
+      updateCalculationsPanel();
+      renderChart();
+      printInitialLogs();
+    };
+
+    function printInitialLogs() {
+      const container = document.getElementById("terminal-container");
+      container.innerHTML = "";
+      state.serialLogs.forEach(log => appendTerminalLogLine(log));
+    }
+
+    function appendTerminalLogLine(line) {
+      const container = document.getElementById("terminal-container");
+      if (container) {
+        const div = document.createElement("div");
+        div.className = "whitespace-pre-wrap leading-tight text-[10px] opacity-90 border-b border-slate-900/30 pb-0.5";
+        div.innerText = line;
+        container.appendChild(div);
+        container.scrollTop = container.scrollHeight;
+      }
+    }
+
+    function addSerialLog(msg) {
+      state.serialLogs.push(msg);
+      if (state.serialLogs.length > 150) state.serialLogs.shift();
+      appendTerminalLogLine(msg);
+    }
+
+    function clearSerialLogs() {
+      state.serialLogs = ["--- Consola Netejada ---"];
+      const container = document.getElementById("terminal-container");
+      if (container) container.innerHTML = "";
+      addSerialLog("--- Consola Netejada ---");
+    }
+
+    // Helper per publicar a MQTT i registrar el timestamp d'última publicació (amb sufix -ts sota ts/)
+    function publishMqtt(topic, value, options = {}, ara = Date.now(), logPublish = false, fromMqtt = false) {
+      if (!mqttClient || !mqttClient.connected) return;
+      
+      mqttClient.publish(topic, value, options);
+      
+      const lowerTopic = topic.toLowerCase();
+      if (lowerTopic.endsWith('telemetria/temps') || lowerTopic.endsWith('telemetria/temps/')) {
+        return;
+      }
+      
+      const cleanBase = state.baseTopic.endsWith('/') ? state.baseTopic.slice(0, -1) : state.baseTopic;
+      if (topic.startsWith(cleanBase)) {
+        let suffix = topic.substring(cleanBase.length);
+        if (suffix.startsWith('/')) {
+          suffix = suffix.substring(1);
+        }
+        
+        // Excloure també qualsevol tòpic de timestamp propi per evitar recursió
+        if (suffix.startsWith('ts/') || suffix.endsWith('-ts')) {
+          return;
+        }
+        
+        const tsTopic = cleanBase + '/ts/' + suffix + '-ts';
+        const tsVal = String(ara);
+        mqttClient.publish(tsTopic, tsVal, options);
+        
+        if (logPublish) {
+          if (!fromMqtt) {
+            addSerialLog(`[MQTT PUBLISH TS] ${tsTopic} -> ${tsVal}`);
+          } else {
+            addSerialLog(`[MQTT ECHO PUBLISH TS] ${tsTopic} -> ${tsVal}`);
+          }
+        }
+      }
+    }
+
+    const mqttPublisherCache = {};
+
+    // Publicar canvis de la web cap a MQTT de forma bidireccional
+    function publishWebChange(topicSuffix, value, fromMqtt = false, logPublish = true, forcePublish = false) {
+      if (fromMqtt && topicSuffix.endsWith('/set')) {
+        return; // Evita bucles infinits de reentrada per a comandes rebudes del broker
+      }
+      if (state.mqttConnected && mqttClient && mqttClient.connected) {
+        try {
+          const ara = Date.now();
+          const strValue = String(value);
+          const cache = mqttPublisherCache[topicSuffix] || { lastValue: null, lastTime: 0, pendingTimeout: null };
+          mqttPublisherCache[topicSuffix] = cache;
+
+          if (!fromMqtt && !forcePublish && cache.lastValue === strValue) {
+             return; // No publiquem si el valor no ha canviat
+          }
+
+          const doPublish = () => {
+             let cleanTopic = state.baseTopic;
+             if (!cleanTopic.endsWith('/')) cleanTopic += '/';
+             publishMqtt(cleanTopic + topicSuffix, strValue, { qos: 0, retain: true }, ara, logPublish, fromMqtt);
+             // L'ECHO de /set també es logueja per ser explícits que hi ha resposta
+             if (logPublish) {
+                 if (!fromMqtt) {
+                     addSerialLog(`[MQTT PUBLISH] ${cleanTopic + topicSuffix} -> ${strValue}`);
+                 } else {
+                     addSerialLog(`[MQTT ECHO PUBLISH] ${cleanTopic + topicSuffix} -> ${strValue}`);
+                 }
+             }
+             cache.lastValue = strValue;
+             cache.pendingTimeout = null;
+          };
+
+          if (fromMqtt || (ara - cache.lastTime) >= 1000) {
+             if (cache.pendingTimeout) {
+                 clearTimeout(cache.pendingTimeout);
+                 cache.pendingTimeout = null;
+             }
+             doPublish();
+             cache.lastTime = Date.now();
+          } else {
+             // Limitat a 1 por segon per a esdeveniments de sliders freqüents
+             if (cache.pendingTimeout) {
+                 clearTimeout(cache.pendingTimeout);
+             }
+             cache.pendingTimeout = setTimeout(() => {
+                 doPublish();
+                 cache.lastTime = Date.now();
+             }, 1000 - (ara - cache.lastTime));
+          }
+        } catch (e) {
+          console.error("Error publicant canvi web per MQTT:", e);
+        }
+      }
+    }
+
+    // Actualitzar un paràmetre d'estat (de forma segura bidireccional)
+    function updateParam(key, value, fromMqtt = false) {
+      if (key === 'histeresiVal') {
+        state[key] = parseFloat(value);
+      } else if (key === 'tensioBombaExternal') {
+        state[key] = (parseInt(value) / 100) * 1000;
+        if (state.modeControl === 'MQTT') {
+           state.tensioBomba = state[key];
+        }
+      } else {
+        state[key] = parseInt(value);
+      }
+      syncParamUI(key);
+
+      let mqttKey = key;
+      let pubVal = value;
+      if (key === 'kAixeta') mqttKey = 'aixeta';
+      else if (key === 'disturbi') mqttKey = 'pert';
+      else if (key === 'bombaInercia') mqttKey = 'inercia';
+      else if (key === 'alarmHigh') mqttKey = 'alarmHighsp';
+      else if (key === 'alarmLow') mqttKey = 'alarmLowsp';
+      else if (key === 'histeresiVal') mqttKey = 'histeresisp';
+      else if (key === 'tensioBombaExternal') mqttKey = 'telemetria/bomba';
+      
+      publishWebChange(mqttKey, pubVal, fromMqtt);
+    }
+
+    // Sincronitzar la interfície d'un paràmetre
+    function syncParamUI(key) {
+      const elVal = document.getElementById(`val-${key}`);
+      if (elVal) {
+        if (key === 'histeresiVal') elVal.innerText = '±' + state[key].toFixed(1);
+        else if (key === 'kAixeta') elVal.innerText = state[key] + '%';
+        else if (key === 'tensioBombaExternal') elVal.innerText = Math.round((state[key]/1000)*100) + '%';
+        else elVal.innerText = state[key];
+      }
+
+      const slider = document.getElementById(`slider-${key}`);
+      if (slider) {
+        if (key === 'tensioBombaExternal') slider.value = Math.round((state[key]/1000)*100);
+        else slider.value = state[key];
+      }
+
+      // Sync limits on SVG
+      if (key === 'setpoint') {
+        const ySP = 220 - (state.setpoint / 30 * 160);
+        document.getElementById("svg-line-setpoint").setAttribute("y1", ySP);
+        document.getElementById("svg-line-setpoint").setAttribute("y2", ySP);
+        document.getElementById("svg-txt-setpoint").setAttribute("y", ySP - 4);
+        document.getElementById("svg-txt-setpoint").textContent = `Consigna: ${state.setpoint}cm`;
+        document.getElementById("cfg-line-sp").style.bottom = `${(state.setpoint/30)*100}%`;
+        updateHysteresisBand();
+      }
+      else if (key === 'alarmHigh') {
+        const yAH = 220 - (state.alarmHigh / 30 * 160);
+        document.getElementById("svg-line-alarm-high").setAttribute("y1", yAH);
+        document.getElementById("svg-line-alarm-high").setAttribute("y2", yAH);
+        document.getElementById("svg-txt-alarm-high").setAttribute("y", yAH - 3);
+        document.getElementById("svg-txt-alarm-high").textContent = `LIM ALT: ${state.alarmHigh}cm`;
+        document.getElementById("cfg-line-high").style.bottom = `${(state.alarmHigh/30)*100}%`;
+      }
+      else if (key === 'alarmLow') {
+        const yAL = 220 - (state.alarmLow / 30 * 160);
+        document.getElementById("svg-line-alarm-low").setAttribute("y1", yAL);
+        document.getElementById("svg-line-alarm-low").setAttribute("y2", yAL);
+        document.getElementById("svg-txt-alarm-low").setAttribute("y", yAL + 8);
+        document.getElementById("svg-txt-alarm-low").textContent = `LIM BAIX: ${state.alarmLow}cm`;
+        document.getElementById("cfg-line-low").style.bottom = `${(state.alarmLow/30)*100}%`;
+      }
+      else if (key === 'histeresiVal') {
+        updateHysteresisBand();
+      }
+
+      updateCalculationsPanel();
+    }
+
+    function syncAllParamUI() {
+      const keys = ['kp', 'ki', 'setpoint', 'kAixeta', 'disturbi', 'bombaInercia', 'alarmHigh', 'alarmLow', 'histeresiVal', 'tensioBombaExternal'];
+      keys.forEach(k => {
+        syncParamUI(k);
+      });
+    }
+
+    function updateHysteresisBand() {
+      const g = document.getElementById("svg-hys-group");
+      if (!g) return;
+      if (state.modeControl === 'HYS') {
+        g.style.display = "block";
+        const limInf = state.setpoint - state.histeresiVal;
+        const limSup = state.setpoint + state.histeresiVal;
+        const yInf = 220 - (limInf / 30 * 160);
+        const ySup = 220 - (limSup / 30 * 160);
+        document.getElementById("svg-hys-line-high").setAttribute("y1", ySup);
+        document.getElementById("svg-hys-line-high").setAttribute("y2", ySup);
+        document.getElementById("svg-hys-line-low").setAttribute("y1", yInf);
+        document.getElementById("svg-hys-line-low").setAttribute("y2", yInf);
+        document.getElementById("svg-hys-rect").setAttribute("y", ySup);
+        document.getElementById("svg-hys-rect").setAttribute("height", Math.max(0, yInf - ySup));
+      } else {
+        g.style.display = "none";
+      }
+    }
+
+    function setAntiWindup(status, fromMqtt = false) {
+      state.antiWindupHabilitat = status;
+      const btn = document.getElementById("btn-aw");
+      const txt = document.getElementById("btn-aw-txt");
+
+      if (state.antiWindupHabilitat) {
+        btn.className = "w-8 h-4.5 flex items-center bg-emerald-600 justify-end rounded-full p-0.5 transition-all duration-300";
+        txt.className = "text-[9px] font-bold text-emerald-400";
+        txt.innerText = "ON";
+      } else {
+        btn.className = "w-8 h-4.5 flex items-center bg-rose-950 border border-rose-800/40 justify-start rounded-full p-0.5 transition-all duration-300";
+        txt.className = "text-[9px] font-bold text-rose-400";
+        txt.innerText = "OFF";
+      }
+      updateCalculationsPanel();
+
+      publishWebChange('antiwindup/set', state.antiWindupHabilitat ? 'ON' : 'OFF', fromMqtt);
+    }
+
+    function toggleAntiWindup() {
+      if (state.modeControl !== 'PI' && state.modeControl !== 'MQTT') return;
+      setAntiWindup(!state.antiWindupHabilitat, false);
+    }
+
+    function setOptionControl(mode, fromMqtt = false) {
+      state.modeControl = mode;
+      state.errorIntegral = 0;
+      state.tensioBomba = 0;
+      state.bombaActiva = false;
+
+      // Update calculations header
+      document.getElementById("calc-header-title").innerText = `CÀLCULS (Mode ${mode === 'HYS' ? 'Histeresi' : mode})`;
+
+      // Highlight active mode buttons
+      const modes = ['PI', 'ON_OFF', 'HYS', 'MQTT'];
+      modes.forEach(m => {
+        const btn = document.getElementById(`btn-mode-${m}`);
+        if (btn) {
+          if (m === mode) {
+            btn.className = "px-2 py-0.5 rounded text-[9px] font-bold bg-blue-600 text-white shadow shadow-blue-500/20";
+          } else {
+            btn.className = "px-2 py-0.5 rounded text-[9px] font-bold text-slate-400 hover:text-white";
+          }
+        }
+      });
+
+      // Enable/disable sliders
+      const kpS = document.getElementById("slider-kp");
+      const kiS = document.getElementById("slider-ki");
+      const hysS = document.getElementById("slider-histeresiVal");
+      const awT = document.getElementById("aw-toggle-container");
+
+      if (mode === 'PI' || mode === 'MQTT') {
+        kpS.removeAttribute("disabled");
+        kiS.removeAttribute("disabled");
+        document.getElementById("group-kp").classList.remove("opacity-20");
+        document.getElementById("group-ki").classList.remove("opacity-20");
+        awT.classList.remove("opacity-25", "pointer-events-none");
+      } else {
+        kpS.setAttribute("disabled", "true");
+        kiS.setAttribute("disabled", "true");
+        document.getElementById("group-kp").classList.add("opacity-20");
+        document.getElementById("group-ki").classList.add("opacity-20");
+        awT.classList.add("opacity-25", "pointer-events-none");
+      }
+
+      if (mode === 'HYS' || mode === 'MQTT') {
+        hysS.removeAttribute("disabled");
+        document.getElementById("group-histeresi").classList.remove("opacity-20");
+      } else {
+        hysS.setAttribute("disabled", "true");
+        document.getElementById("group-histeresi").classList.add("opacity-20");
+      }
+
+      const bombaMqttGrp = document.getElementById("group-bombaMQTT");
+      const bombaMqttSld = document.getElementById("slider-tensioBombaExternal");
+      if (bombaMqttGrp && bombaMqttSld) {
+        if (mode === 'MQTT') {
+           bombaMqttGrp.classList.remove("opacity-20", "pointer-events-none");
+           bombaMqttSld.removeAttribute("disabled");
+        } else {
+           bombaMqttGrp.classList.add("opacity-20", "pointer-events-none");
+           bombaMqttSld.setAttribute("disabled", "true");
+        }
+      }
+
+      addSerialLog(`[SISTEMA] Canvi d'estratègia a: ${mode === 'PI' ? 'Control PI' : mode === 'ON_OFF' ? 'Tot o Res' : mode === 'HYS' ? 'Histeresi' : 'Control Extern MQTT'}`);
+      updateHysteresisBand();
+      updateCalculationsPanel();
+
+      publishWebChange('mode', mode, fromMqtt);
+    }
+
+    function aplicarPreset(pKey, fromMqtt = false) {
+      const p = presets[pKey];
+      if (!p) return;
+      
+      updateParam('kp', p.kp, fromMqtt);
+      updateParam('ki', p.ki, fromMqtt);
+      updateParam('setpoint', p.setpoint, fromMqtt);
+      updateParam('kAixeta', p.kAixeta, fromMqtt);
+      updateParam('bombaInercia', p.inercia, fromMqtt);
+      updateParam('alarmHigh', p.alH, fromMqtt);
+      updateParam('alarmLow', p.alL, fromMqtt);
+
+      setOptionControl('PI', fromMqtt);
+      syncAllParamUI();
+
+      addSerialLog(`[PRESET] Aplicat: ${p.name} (Kp: ${p.kp}, Ki: ${p.ki}, SP: ${p.setpoint}cm, Aixeta: ${p.kAixeta}%) sense reiniciar la simulació`);
+
+      publishWebChange('presetsPI', pKey, fromMqtt);
+    }
+
+    // CONTROL MQTT
+    function toggleMqtt() {
+      if (state.mqttConnected && mqttClient) {
+        mqttClient.end();
+        mqttClient = null;
+        state.mqttConnected = false;
+        addSerialLog("[MQTT] Desconnectat manualment.");
+        syncMqttUI();
+        return;
+      }
+
+      state.mqttError = '';
+      const errDiv = document.getElementById("mqtt-err-div");
+      errDiv.classList.add("hidden");
+
+      const broker = document.getElementById("mqtt-broker").value.trim();
+      const topic = document.getElementById("mqtt-topic").value.trim();
+      const user = document.getElementById("mqtt-user").value.trim();
+      const pass = document.getElementById("mqtt-pass").value.trim();
+
+      state.brokerUrl = broker;
+      state.baseTopic = topic;
+      state.mqttUser = user;
+      state.mqttPassword = pass;
+
+      addSerialLog(`[MQTT] Connectant a broker: ${broker}...`);
+
+      const opts = {
+        reconnectPeriod: 2000,
+        connectTimeout: 5000
+      };
+      if (user !== '') opts.username = user;
+      if (pass !== '') opts.password = pass;
+
+      try {
+        mqttClient = mqtt.connect(broker, opts);
+
+        mqttClient.on('connect', () => {
+          state.mqttConnected = true;
+          state.mqttError = '';
+          addSerialLog(`[MQTT] Connectat correctament! Subscrivint a canvis...`);
+          syncMqttUI();
+
+          let cleanTopic = topic;
+          if (!cleanTopic.endsWith('/')) cleanTopic += '/';
+
+          // Subscripcions de control obligatòries
+          mqttClient.subscribe(cleanTopic + 'setpoint/set');
+          mqttClient.subscribe(cleanTopic + 'kp/set');
+          mqttClient.subscribe(cleanTopic + 'ki/set');
+          mqttClient.subscribe(cleanTopic + 'aixeta/set');
+          mqttClient.subscribe(cleanTopic + 'pert/set');
+          mqttClient.subscribe(cleanTopic + 'disturbi/set');
+          mqttClient.subscribe(cleanTopic + 'inercia/set');
+          mqttClient.subscribe(cleanTopic + 'bombaInercia/set');
+          mqttClient.subscribe(cleanTopic + 'alarmHigh/set');
+          mqttClient.subscribe(cleanTopic + 'alarmHighsp/set');
+          mqttClient.subscribe(cleanTopic + 'alarmLow/set');
+          mqttClient.subscribe(cleanTopic + 'alarmLowsp/set');
+          mqttClient.subscribe(cleanTopic + 'histeresi/set');
+          mqttClient.subscribe(cleanTopic + 'histeresisp/set');
+          mqttClient.subscribe(cleanTopic + 'mode/set');
+          mqttClient.subscribe(cleanTopic + 'bomba/set');
+          mqttClient.subscribe(cleanTopic + 'telemetria/bomba/set');
+          mqttClient.subscribe(cleanTopic + 'ctrl/play/set');
+          mqttClient.subscribe(cleanTopic + 'ctrl/reset/set');
+          mqttClient.subscribe(cleanTopic + 'ctrl/pas/set');
+          mqttClient.subscribe(cleanTopic + 'antiwindup/set');
+          mqttClient.subscribe(cleanTopic + 'tempsFinestra/set');
+          mqttClient.subscribe(cleanTopic + 'presetsPI/set');
+        });
+
+        mqttClient.on('message', (topicReceived, message) => {
+          const payload = message.toString().trim();
+          let cleanTopic = state.baseTopic;
+          if (!cleanTopic.endsWith('/')) cleanTopic += '/';
+
+          const subtopic = topicReceived.replace(cleanTopic, '');
+
+          addSerialLog(`[MQTT REBUUT] ${subtopic} -> ${payload}`);
+
+          if (subtopic === 'setpoint/set') {
+            const val = parseInt(payload);
+            if (!isNaN(val)) updateParam('setpoint', Math.min(30, Math.max(0, val)), true);
+          } else if (subtopic === 'kp/set') {
+            const val = parseInt(payload);
+            if (!isNaN(val)) updateParam('kp', Math.min(500, Math.max(0, val)), true);
+          } else if (subtopic === 'ki/set') {
+            const val = parseInt(payload);
+            if (!isNaN(val)) updateParam('ki', Math.min(200, Math.max(0, val)), true);
+          } else if (subtopic === 'aixeta/set') {
+            const val = parseInt(payload);
+            if (!isNaN(val)) updateParam('kAixeta', Math.min(100, Math.max(0, val)), true);
+          } else if (subtopic === 'pert/set' || subtopic === 'disturbi/set') {
+            const val = parseInt(payload);
+            if (!isNaN(val)) updateParam('disturbi', Math.min(150, Math.max(-150, val)), true);
+          } else if (subtopic === 'inercia/set' || subtopic === 'bombaInercia/set') {
+            const val = parseInt(payload);
+            if (!isNaN(val)) updateParam('bombaInercia', Math.min(100, Math.max(1, val)), true);
+          } else if (subtopic === 'alarmHigh/set' || subtopic === 'alarmHighsp/set') {
+            const val = parseInt(payload);
+            if (!isNaN(val)) updateParam('alarmHigh', Math.min(30, Math.max(0, val)), true);
+          } else if (subtopic === 'alarmLow/set' || subtopic === 'alarmLowsp/set') {
+            const val = parseInt(payload);
+            if (!isNaN(val)) updateParam('alarmLow', Math.min(30, Math.max(0, val)), true);
+          } else if (subtopic === 'histeresi/set' || subtopic === 'histeresisp/set') {
+            const val = parseFloat(payload);
+            if (!isNaN(val)) updateParam('histeresiVal', Math.min(5.0, Math.max(0.1, val)), true);
+          } else if (subtopic === 'mode/set') {
+            const modeClean = payload.toUpperCase();
+            if (['PI', 'ON_OFF', 'HYS', 'MQTT'].includes(modeClean)) {
+              setOptionControl(modeClean, true);
+            }
+          } else if (subtopic === 'bomba/set' || subtopic === 'telemetria/bomba/set') {
+            const val = parseFloat(payload);
+            if (!isNaN(val)) {
+              const pct = Math.min(100, Math.max(0, val));
+              updateParam('tensioBombaExternal', pct, true);
+            }
+          } else if (subtopic === 'ctrl/play/set') {
+            const pl = payload.toUpperCase();
+            if (pl === 'PLAY' || pl === '1' || pl === 'TRUE') {
+              setSimulationState(true, true);
+            } else if (pl === 'PAUSE' || pl === '0' || pl === 'FALSE') {
+              setSimulationState(false, true);
+            }
+          } else if (subtopic === 'ctrl/reset/set') {
+            reiniciarSimulacio(true);
+          } else if (subtopic === 'ctrl/pas/set') {
+            executarPasSencer(true);
+          } else if (subtopic === 'antiwindup/set') {
+            const awVal = payload.toUpperCase();
+            if (awVal === 'ON' || awVal === '1' || awVal === 'TRUE') {
+              setAntiWindup(true, true);
+            } else if (awVal === 'OFF' || awVal === '0' || awVal === 'FALSE') {
+              setAntiWindup(false, true);
+            }
+          } else if (subtopic === 'tempsFinestra/set') {
+            const val = parseInt(payload);
+            if (!isNaN(val)) {
+              changeTempsFinestra(val, true);
+            }
+          } else if (subtopic === 'presetsPI/set') {
+            const pKey = payload.toLowerCase().trim();
+            if (presets[pKey]) {
+              aplicarPreset(pKey, true);
+            }
+          }
+
+          syncAllParamUI();
+        });
+
+        mqttClient.on('error', (err) => {
+          state.mqttError = "Error de connexió MQTT";
+          state.mqttConnected = false;
+          syncMqttUI();
+          showMqttError(err.message);
+        });
+
+        mqttClient.on('close', () => {
+          state.mqttConnected = false;
+          syncMqttUI();
+        });
+
+      } catch (ex) {
+        state.mqttConnected = false;
+        syncMqttUI();
+        showMqttError(ex.message);
+      }
+    }
+
+    function showMqttError(msg) {
+      const errDiv = document.getElementById("mqtt-err-div");
+      errDiv.innerText = `⚠️ ${msg}`;
+      errDiv.classList.remove("hidden");
+      addSerialLog(`[MQTT ERROR] ${msg}`);
+    }
+
+    function syncMqttUI() {
+      const led = document.getElementById("mqtt-led");
+      const btn = document.getElementById("btn-mqtt-conn");
+      if (state.mqttConnected) {
+        led.className = "w-2.5 h-2.5 rounded-full bg-green-500 shadow-[0_0_8px_#22c55e]";
+        btn.className = "px-3 py-1 bg-rose-950/80 hover:bg-rose-900 border border-rose-500/30 text-rose-300 text-[10px] font-bold rounded-md transition-all active:scale-95";
+        btn.innerText = "DESCONNECTAR";
+      } else {
+        led.className = "w-2.5 h-2.5 rounded-full bg-slate-600 shadow-none";
+        btn.className = "px-3 py-1 bg-blue-950/80 hover:bg-blue-900 border border-blue-500/30 text-blue-300 text-[10px] font-bold rounded-md transition-all active:scale-95";
+        btn.innerText = "CONNECTAR";
+      }
+
+      // Update base topic (the visual indicators were removed)
+      let cleanTopic = state.baseTopic;
+      if (!cleanTopic.endsWith('/')) cleanTopic += '/';
+    }
+
+    // CONTROL DE SIMULACIÓ
+    function setSimulationState(running, fromMqtt = false) {
+      state.isRunning = running;
+      const btn = document.getElementById("btn-play-pause");
+
+      // Actualitzar efectes de pampallugues (animació pulse/ping) als panells en Play
+      const dotPlanta = document.getElementById("dot-planta");
+      const dotHistorial = document.getElementById("dot-historial");
+      const dotCalculs = document.getElementById("dot-calculs");
+      const dotMonitor = document.getElementById("dot-monitor");
+
+      if (state.isRunning) {
+        if (!simIntervalID) {
+          simIntervalID = setInterval(executarPasSimulacio, state.sampleTime);
+        }
+        if (btn) {
+          btn.className = "px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md bg-amber-600 hover:bg-amber-500 text-white shadow-amber-900/20";
+          btn.innerHTML = `
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+            Pausa
+          `;
+        }
+        if (dotPlanta) dotPlanta.classList.add("animate-pulse");
+        if (dotHistorial) dotHistorial.classList.add("animate-pulse");
+        if (dotCalculs) dotCalculs.classList.add("animate-pulse");
+        if (dotMonitor) dotMonitor.classList.add("animate-ping");
+        
+        // Descongelar el moviment de l'aigua
+        document.querySelectorAll('.animate-dash').forEach(el => {
+          el.classList.remove('paused-animation');
+        });
+      } else {
+        if (simIntervalID) {
+          clearInterval(simIntervalID);
+          simIntervalID = null;
+        }
+        if (btn) {
+          btn.className = "px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/20";
+          btn.innerHTML = `
+            <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            Iniciar (Play)
+          `;
+        }
+        if (dotPlanta) dotPlanta.classList.remove("animate-pulse");
+        if (dotHistorial) dotHistorial.classList.remove("animate-pulse");
+        if (dotCalculs) dotCalculs.classList.remove("animate-pulse");
+        if (dotMonitor) dotMonitor.classList.remove("animate-ping");
+        
+        // Congelar el moviment de l'aigua al fer pausa
+        document.querySelectorAll('.animate-dash').forEach(el => {
+          el.classList.add('paused-animation');
+        });
+      }
+
+      publishWebChange('ctrl/play', state.isRunning ? 'PLAY' : 'PAUSE', fromMqtt);
+    }
+
+    function toggleSimulation() {
+      setSimulationState(!state.isRunning, false);
+    }
+
+    function executarPasSencer(fromMqtt = false) {
+      setSimulationState(false, fromMqtt);
+      executarPasSimulacio();
+      
+      publishWebChange('ctrl/pas', 'PAS', fromMqtt);
+    }
+
+    function reiniciarSimulacio(fromMqtt = false) {
+      setSimulationState(false, fromMqtt);
+
+      state.nivell = 0;
+      state.errorIntegral = 0;
+      state.qi = 0;
+      state.qo = 0;
+      state.tensioBomba = 0;
+      state.temps = 0;
+      state.windupActiu = false;
+      state.errorActual = 0;
+      state.bombaActiva = false;
+      state.tensioBombaExternal = 0;
+
+      state.historial = [];
+      clearSerialLogs();
+      updateSVG(0, "0.00");
+      updateCalculationsPanel();
+      renderChart();
+
+      publishWebChange('ctrl/reset', 'RESET', fromMqtt);
+    }
+
+    // COMPROVA FILTRES I PUBLICA TELEMETRIA SEGONS CONFIGURACIÓ
+    function checkAndPublishTelemetryProperty(nomProp, valorActual, customSubtopic = null) {
+      if (!state.mqttConnected || !mqttClient || !mqttClient.connected) return;
+      
+      const cfg = state.telemetry[nomProp];
+      if (!cfg) return;
+      
+      // Si la variable de telemetria no està habilitada per a publicar-se
+      if (!cfg.enabled) return;
+      
+      const ara = Date.now();
+      const tempsTranscorregut = ara - cfg.lastPublishTime;
+      
+      // Comprovar si s'ha superat el temps/interval de publicació mínim configurable
+      if (tempsTranscorregut < cfg.minInterval) return;
+      
+      let shaDePublicar = false;
+      
+      if (cfg.lastValue === null) {
+        // Primera vegada que es llegeix la dada
+        shaDePublicar = true;
+      } else if (typeof valorActual === 'boolean') {
+        if (valorActual !== cfg.lastValue) shaDePublicar = true;
+      } else {
+        // Càlcul de canvi absolut
+        const canviAbs = Math.abs(valorActual - cfg.lastValue);
+        
+        // Es publica si supera el llindar absolut configurat
+        if (canviAbs >= cfg.deadbandAbs) {
+          shaDePublicar = true;
+        } else if (valorActual !== cfg.lastValue && tempsTranscorregut >= 5000) {
+          // Si el valor actual de telemetria ha variat respecte l'últim valor publicat fa més de 5 segons,
+          // forcem la publicació de l'últim valor actualitzat per evitar diferències residuals permanents.
+          shaDePublicar = true;
+        }
+      }
+      
+      if (shaDePublicar) {
+        try {
+          const tBase = state.baseTopic.endsWith('/') ? state.baseTopic : state.baseTopic + '/';
+          const subtopic = customSubtopic ? customSubtopic : nomProp;
+          const valOut = typeof valorActual === 'boolean' ? (valorActual ? "true" : "false") : String(valorActual);
+          publishMqtt(tBase + 'telemetria/' + subtopic, valOut, { qos: 0, retain: false }, ara, false);
+          
+          cfg.lastValue = valorActual;
+          cfg.lastPublishTime = ara;
+        } catch (e) {
+          console.error(`Error publicant telemetria filtrada per a ${nomProp}:`, e);
+        }
+      }
+    }
+
+    function executarPasSimulacio() {
+      const dt = state.sampleTime / 1000; // 0.1 segons
+      const error = state.setpoint - state.nivell;
+
+      let u = 0;
+      let actiuAW = false;
+      let nouErrorIntegral = state.errorIntegral;
+      let nouBombaActiva = state.bombaActiva;
+
+      if (state.modeControl === 'PI') {
+        const pTerm = state.kp * error;
+        const iTermPrevia = state.ki * state.errorIntegral * dt;
+        const uPrevia = pTerm + iTermPrevia;
+
+        const estaSaturatSota = uPrevia < 0;
+        const estaSaturatDalt = uPrevia > 1500;
+
+        const windupSota = estaSaturatSota && error < 0;
+        const windupDalt = estaSaturatDalt && error > 0;
+        const sotaAW = windupSota || windupDalt;
+
+        actiuAW = state.antiWindupHabilitat && sotaAW;
+
+        if (state.ki === 0) {
+          nouErrorIntegral = 0;
+        } else if (!actiuAW) {
+          nouErrorIntegral = state.errorIntegral + error;
+        }
+
+        const iTerm = state.ki * nouErrorIntegral * dt;
+        u = pTerm + iTerm;
+        nouBombaActiva = u > 0;
+
+      } else if (state.modeControl === 'ON_OFF') {
+        if (error > 0) {
+          u = 1000;
+          nouBombaActiva = true;
+        } else {
+          u = 0;
+          nouBombaActiva = false;
+        }
+        nouErrorIntegral = 0;
+
+      } else if (state.modeControl === 'HYS') {
+        const limitInferior = state.setpoint - state.histeresiVal;
+        const limitSuperior = state.setpoint + state.histeresiVal;
+
+        if (state.nivell < limitInferior) {
+          u = 1000;
+          nouBombaActiva = true;
+        } else if (state.nivell > limitSuperior) {
+          u = 0;
+          nouBombaActiva = false;
+        } else {
+          nouBombaActiva = state.bombaActiva;
+          u = nouBombaActiva ? 1000 : 0;
+        }
+        nouErrorIntegral = 0;
+
+      } else if (state.modeControl === 'MQTT') {
+        u = state.tensioBombaExternal !== undefined ? state.tensioBombaExternal : 0;
+        nouBombaActiva = u > 0;
+        nouErrorIntegral = 0;
+      }
+
+      // Inèrcia de la bomba
+      const limitU = Math.max(0, u);
+      const nouQi = state.qi + (limitU - state.qi) / state.bombaInercia;
+
+      // Simulació física
+      const coefAixetaFisic = state.kAixeta * 0.4;
+      const nouQo = coefAixetaFisic * state.nivell;
+      const qNet = nouQi - nouQo + state.disturbi;
+
+      const variacioNivell = dt * qNet / state.areaBase;
+      let nouNivell = state.nivell + variacioNivell;
+
+      if (nouNivell > 30) nouNivell = 30;
+      if (nouNivell < 0) nouNivell = 0;
+
+      state.temps += 1;
+      state.nivell = nouNivell;
+      state.errorIntegral = nouErrorIntegral;
+      state.qi = nouQi;
+      state.qo = nouQo;
+      state.tensioBomba = u;
+      state.windupActiu = actiuAW;
+      state.errorActual = error;
+      state.bombaActiva = nouBombaActiva;
+
+      const percentBombaVal = Math.min(100, Math.max(0, Math.round((u / 1000) * 100)));
+      const volumCalculatL = (state.areaBase * nouNivell / 1000).toFixed(2);
+
+      // Alarma de nivell
+      let alarmStr = "";
+      if (nouNivell >= state.alarmHigh) {
+        alarmStr = "\t[ALERTA NIVELL ALT]";
+      } else if (nouNivell <= state.alarmLow) {
+        alarmStr = "\t[ALERTA NIVELL BAIX]";
+      }
+
+      if (state.modeControl === 'PI' && actiuAW) {
+        alarmStr += "\t[AW-BLOQUEJAT]";
+      } else if (state.modeControl === 'ON_OFF') {
+        alarmStr += nouBombaActiva ? "\t[BOMBA-ON]" : "\t[BOMBA-OFF]";
+      } else if (state.modeControl === 'HYS') {
+        alarmStr += nouBombaActiva ? "\t[HIST-ON]" : "\t[HIST-OFF]";
+      } else if (state.modeControl === 'MQTT') {
+        alarmStr += `\t[MQTT-CMD:${Math.round((u/1000)*100)}%]`;
+      }
+
+      const tempsSegons = (state.temps * dt).toFixed(1);
+      addSerialLog(`${tempsSegons}s\tNivell: ${nouNivell.toFixed(2)} cm\tError: ${error.toFixed(2)}\tQi: ${nouQi.toFixed(1)} cm³/s\tQo: ${nouQo.toFixed(1)} cm³/s\tAixeta: ${state.kAixeta}%${alarmStr}`);
+
+      // Historial
+      const nouRegistre = {
+        temps: tempsSegons,
+        nivell: parseFloat(nouNivell.toFixed(2)),
+        setpoint: state.setpoint,
+        qi: parseFloat(nouQi.toFixed(1)),
+        qo: parseFloat(nouQo.toFixed(1)),
+        error: parseFloat(error.toFixed(2)),
+        alarmHigh: state.alarmHigh,
+        alarmLow: state.alarmLow,
+        aixetaPct: state.kAixeta,
+        bombaPct: percentBombaVal,
+        kp: state.kp,
+        ki: state.ki,
+        disturbi: state.disturbi,
+        bombaInercia: state.bombaInercia,
+        histeresiVal: state.histeresiVal,
+        antiWindupActiu: actiuAW ? "Sí" : "No",
+        bombaActivaEstat: state.modeControl === 'HYS' ? (nouBombaActiva ? "ON" : "OFF") : (state.modeControl === 'MQTT' ? "MQTT" : "")
+      };
+
+      state.historial.push(nouRegistre);
+      if (state.historial.length > 3000) state.historial.shift();
+
+      // Publicació MQTT
+      if (mqttClient && mqttClient.connected) {
+        try {
+          // Estàndard/Metries generals (no subjectes a filtres de gràfics segons deadband si així ho prefereix)
+          // Utilitzem publishWebChange amb logPublish = false per evitar saturar la consola i aprofitar el seu throttle d'1 segon i control de canvis
+          publishWebChange('setpoint', state.setpoint, false, false);
+          publishWebChange('aixeta', state.kAixeta, false, false);
+          publishWebChange('mode', state.modeControl, false, false);
+          publishWebChange('kp', state.kp, false, false);
+          publishWebChange('ki', state.ki, false, false);
+          publishWebChange('histeresisp', state.histeresiVal, false, false);
+          publishWebChange('antiwindup', actiuAW ? "ON" : "OFF", false, false);
+
+          // Sota Filtres d'usuari configurables per a les variables del gràfic:
+          // 1. Nivell
+          checkAndPublishTelemetryProperty('nivell', parseFloat(nouNivell.toFixed(2)));
+          // 2. Volum
+          checkAndPublishTelemetryProperty('volum', parseFloat(volumCalculatL));
+          // 3. Qi
+          checkAndPublishTelemetryProperty('qi', parseFloat(nouQi.toFixed(1)));
+          // 4. Qo
+          checkAndPublishTelemetryProperty('qo', parseFloat(nouQo.toFixed(1)));
+          // 5. alarmHigh (Alarma alta)
+          checkAndPublishTelemetryProperty('alarmHigh', nouNivell >= state.alarmHigh, 'alarmaAlta');
+          // 6. alarmLow (Alarma baixa)
+          checkAndPublishTelemetryProperty('alarmLow', nouNivell <= state.alarmLow, 'alarmaBaixa');
+          // 7. Bomba
+          checkAndPublishTelemetryProperty('bomba', percentBombaVal);
+          // 8. Temps
+          checkAndPublishTelemetryProperty('temps', parseFloat(tempsSegons));
+
+        } catch (e) {
+          console.error("Fallada en publicació MQTT:", e);
+        }
+      }
+
+      updateSVG(percentBombaVal, volumCalculatL);
+      updateCalculationsPanel();
+      renderChart();
+    }
+
+    // ACTUALITZAR SVG
+    function updateSVG(percentBomba, volumL) {
+      // LEDs alarma
+      const ledH = document.getElementById("led-alarm-high");
+      const ledL = document.getElementById("led-alarm-low");
+      const txtH = document.getElementById("txt-led-high");
+      const txtL = document.getElementById("txt-led-low");
+
+      if (state.nivell >= state.alarmHigh) {
+        ledH.setAttribute("fill", "#ef4444");
+        ledH.setAttribute("stroke", "#fca5a5");
+        ledH.classList.add("animate-pulse");
+        txtH.setAttribute("fill", "#ef4444");
+      } else {
+        ledH.setAttribute("fill", "#1e293b");
+        ledH.setAttribute("stroke", "#475569");
+        ledH.classList.remove("animate-pulse");
+        txtH.setAttribute("fill", "#64748b");
+      }
+
+      if (state.nivell <= state.alarmLow) {
+        ledL.setAttribute("fill", "#f59e0b");
+        ledL.setAttribute("stroke", "#fef08a");
+        ledL.classList.add("animate-pulse");
+        txtL.setAttribute("fill", "#f59e0b");
+      } else {
+        ledL.setAttribute("fill", "#1e293b");
+        ledL.setAttribute("stroke", "#475569");
+        ledL.classList.remove("animate-pulse");
+        txtL.setAttribute("fill", "#64748b");
+      }
+
+      // Bomba Qi text
+      document.getElementById("svg-txt-bomba-qi").innerHTML = `
+        <tspan x="33.5" y="10" fill="#a855f7">Bomba: ${percentBomba}%</tspan>
+        <tspan x="33.5" y="20" fill="#38bdf8">Qi: ${state.qi.toFixed(1)}</tspan>
+      `;
+
+      // Aixeta Qo text
+      document.getElementById("svg-txt-aixeta-qo").innerHTML = `
+        <tspan x="33.5" y="10" fill="#f43f5e">Aixeta: ${state.kAixeta}%</tspan>
+        <tspan x="33.5" y="20" fill="#fb7185">Qo: ${state.qo.toFixed(1)}</tspan>
+      `;
+
+      // Dolls d'entrada i sortida
+      const dIn = document.getElementById("svg-doll-entrada");
+      const dOut = document.getElementById("svg-doll-sortida");
+
+      if (state.qi > 0.5) {
+        dIn.style.display = "block";
+        const pathD = `M 65 47 Q 65 ${80 + (30 - state.nivell) * 2} ${65 + Math.min(state.qi/10, 15)} ${220 - (state.nivell / 30 * 160)}`;
+        dIn.setAttribute("d", pathD);
+        dIn.setAttribute("stroke-width", Math.min(2 + state.qi/40, 7));
+        dIn.style.strokeDashoffset = -state.temps * 5;
+      } else {
+        dIn.style.display = "none";
+      }
+
+      if (state.qo > 0.5 && state.kAixeta > 0) {
+        dOut.style.display = "block";
+        dOut.setAttribute("stroke-width", Math.min(1 + state.qo/40, 6));
+        dOut.style.strokeDashoffset = state.temps * 4;
+      } else {
+        dOut.style.display = "none";
+      }
+
+      // Rect d'aigua fons
+      const water = document.getElementById("svg-water-mass");
+      if (state.nivell > 0) {
+        water.style.display = "block";
+        const hPos = 220 - (state.nivell / 30 * 160);
+        const hHeight = (state.nivell / 30 * 160);
+        water.setAttribute("y", hPos);
+        water.setAttribute("height", hHeight);
+      } else {
+        water.style.display = "none";
+      }
+
+      // Etiqueta nivell interior
+      const label = document.getElementById("svg-water-label-group");
+      const yLabel = Math.min(200, 220 - (state.nivell / 30 * 160) + 12);
+      label.setAttribute("transform", `translate(100, ${yLabel})`);
+      document.getElementById("svg-txt-level-cm").textContent = `${state.nivell.toFixed(2)} cm`;
+      document.getElementById("svg-txt-level-l").textContent = `${volumL} L`;
+    }
+
+    // CALCULS PANEL DYNAMICS
+    function updateCalculationsPanel() {
+      const dt = state.sampleTime / 1000;
+      const errVal = (state.setpoint - state.nivell).toFixed(2);
+      const pTermVal = (state.kp * (state.setpoint - state.nivell)).toFixed(1);
+      const iTermVal = (state.ki * state.errorIntegral * dt).toFixed(1);
+      const pMod = state.modeControl;
+      
+      const vL = (state.areaBase * state.nivell / 1000).toFixed(2);
+      const varPas = (dt * (state.qi - state.qo + state.disturbi) / state.areaBase).toFixed(4);
+
+      // Pas 1
+      let step1 = `<span class="text-slate-400 font-bold block uppercase tracking-wide">1. Error i Referència</span>
+                   <div class="text-blue-400 text-[13px] mt-1 font-bold">e = SP - Nivell<br>e = ${state.setpoint} - ${state.nivell.toFixed(2)} = <span class="text-emerald-400">${errVal} cm</span><br></div>`;
+      if (pMod === 'HYS') {
+        step1 += `<div class="text-[9px] text-indigo-400 mt-1">Banda Histeresi: ${(state.setpoint - state.histeresiVal).toFixed(1)} cm a ${(state.setpoint + state.histeresiVal).toFixed(1)} cm<br></div>`;
+      }
+      document.getElementById("calc-error").innerHTML = step1;
+
+      // Pas 2
+      let step2 = "";
+      if (pMod === 'PI') {
+        const isKiZero = state.ki === 0;
+        const isAW = state.windupActiu;
+        const awCls = isKiZero ? 'bg-slate-800 text-slate-400 border-slate-700' : (!state.antiWindupHabilitat ? 'bg-slate-800 text-slate-400 border-slate-700' : (isAW ? 'bg-red-500/10 text-red-400 border-red-500/25 animate-pulse' : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25'));
+        const awLabel = isKiZero ? 'Ki deshabilitada' : (!state.antiWindupHabilitat ? 'AW: OFF' : (isAW ? '⚠️ AW clamat' : 'AW OK (Integrant)'));
+
+        let ruleLog = `Lògica: ${state.errorIntegral.toFixed(1)} + (${errVal}) = ${(state.errorIntegral + parseFloat(errVal)).toFixed(1)}`;
+        if (isKiZero) ruleLog = `Lògica: Ki = 0 &rarr; error_integral = 0 (Només P)`;
+        else if (isAW) ruleLog = `Lògica: Clamping actiu &rarr; ${state.errorIntegral.toFixed(1)} + 0 = ${state.errorIntegral.toFixed(1)}`;
+
+        let descText = "• Integració normal de l'error històric.";
+        if (isKiZero) descText = "• Proporcional pur (P): No s'integra l'error del passat.";
+        else if (isAW) descText = "<span class='text-red-400 font-semibold'>• Clamping Anti-Windup actiu: Integrador congelat per evitar sobredetall.</span>";
+        else if (!state.antiWindupHabilitat && (state.nivell > state.setpoint) && (state.qi <= 0.01)) {
+          descText = "<span class='text-rose-400 font-semibold'>• Risc de Windup integral: L'anti-windup està apagat i l'error s'acumula negativament sense fre.</span>";
+        }
+
+        const eIntAnt = (state.errorIntegral - parseFloat(errVal)).toFixed(1);
+        step2 = `<div class="flex justify-between items-center mb-1">
+                   <span class="text-slate-400 font-bold uppercase tracking-wide">2. Suma Integral</span>
+                   <span class="text-[8px] px-1.5 py-0.5 rounded border font-sans font-bold ${awCls}">${awLabel}</span>
+                 </div>
+                 <div class="text-teal-400 text-[11px] font-bold mt-1">Suma Integral = e_int_ant + e = ${eIntAnt} + (${errVal}) = ${state.errorIntegral.toFixed(1)}<br>e_int_ant = ${state.errorIntegral.toFixed(1)}<br></div>
+                 <div class="text-[10px] text-slate-300 font-normal border-t border-slate-800/80 pt-1 mt-1">${ruleLog}<br></div>
+                 <div class="text-[9px] text-slate-400 mt-1 font-sans italic">${descText}<br></div>`;
+      } else if (pMod === 'ON_OFF') {
+        step2 = `<span class="text-slate-400 font-bold">2. Lògica d'Estat On-Off</span>
+                 <div class="font-bold text-[11px] mt-1">Nivell < SP? ${parseFloat(errVal) > 0 ? '<span class="text-emerald-400">SÍ (Bomba ON)</span>' : '<span class="text-rose-400">NO (Bomba OFF)</span>'}<br></div>
+                 <p class="text-[9px] text-slate-500 font-sans italic mt-1">Commuta directament a potència total sense buffers intermitents.<br></p>`;
+      } else if (pMod === 'HYS') {
+        const checkLow = state.nivell < (state.setpoint - state.histeresiVal);
+        const checkHigh = state.nivell > (state.setpoint + state.histeresiVal);
+        let logAct = `<span class="text-indigo-300">• Dins de la banda diferencial. es guarda l'estat anterior (Bomba ${state.bombaActiva ? 'ON' : 'OFF'}).</span>`;
+        if (checkLow) logAct = `<span class="text-emerald-400 font-bold">• Nivell per sota LLindar Inferior &rarr; Forcem Bomba ON.</span>`;
+        else if (checkHigh) logAct = `<span class="text-rose-400 font-bold">• Nivell per sobre LLindar Superior &rarr; Aturem Bomba OFF.</span>`;
+
+        step2 = `<span class="text-slate-400 font-bold">2. Estat d'Histeresi</span>
+                 <div class="flex justify-between items-center text-[11px] mt-0.5"><span>Bomba física activa:</span><span class="font-bold text-emerald-400">${state.bombaActiva ? 'SÍ (ON)' : 'NO (OFF)'}</span></div><br>
+                 <div class="border-t border-slate-800/80 pt-1 mt-1 font-sans text-[9.5px]">${logAct}<br></div>`;
+      } else if (pMod === 'MQTT') {
+        step2 = `<span class="text-slate-400 font-bold">2. Comandament Extern MQTT</span>
+                 <div class="text-[10.5px] mt-1">Tensió subscrita externa: <strong class="text-blue-400">${state.tensioBombaExternal.toFixed(1)} V</strong> (equivalent a ${Math.round((state.tensioBombaExternal/1000)*100)}% de potència).<br></div>`;
+      }
+      document.getElementById("calc-integral").innerHTML = step2;
+
+      // Pas 3
+      let step3 = "";
+      if (pMod === 'PI') {
+        step3 = `u = (Kp · e) + (Ki · e_integral · dt)
+u = (${state.kp} · ${errVal}) + (${state.ki} · ${state.errorIntegral.toFixed(1)} · 0.1)
+u = ${pTermVal} + ${iTermVal} = <span class="text-purple-400 font-bold">${state.tensioBomba.toFixed(1)}</span><br>`;
+      } else if (pMod === 'ON_OFF') {
+        step3 = `u = (e > 0) ? 1000 : 0
+u = (${errVal} > 0) ? <span class="text-purple-400 font-bold">${state.tensioBomba} (100% On)</span> : <span class="text-slate-400 font-bold">0 V (Off)</span><br>`;
+      } else {
+        step3 = `u = (Bomba_Activa) ? 1000 : 0
+u = <span class="text-purple-400 font-bold">${state.tensioBomba}</span> (Estat actual: ${state.bombaActiva ? 'BOMBA_ON' : 'BOMBA_OFF'})<br>`;
+      }
+      document.getElementById("calc-u-content").innerHTML = step3;
+
+      // Pas 4
+      const coef = state.kAixeta * 0.4;
+      const qoVal = coef * state.nivell;
+      const step4 = `qo = (Aixeta% · 0.4) · Nivell = (${state.kAixeta}% · 0.4) · ${state.nivell.toFixed(2)} = <span class="text-rose-400 font-bold">${qoVal.toFixed(1)} cm³/s</span><br>
+ΔNivell = dt · (qi - qo + pertorbació) / Àrea = ${parseFloat(dt.toFixed(3))} · (${state.qi.toFixed(1)} - ${qoVal.toFixed(1)} + ${state.disturbi}) / ${state.areaBase} = <span class="text-amber-500 font-bold">${parseFloat(varPas) > 0 ? '+' + varPas : varPas} cm/pas</span><br>`;
+      document.getElementById("calc-physics-content").innerHTML = step4;
+    }
+
+    // DRAW CHART
+    function renderChart() {
+      const container = document.getElementById("chart-bars-container");
+      if (!container) return;
+
+      const samples = state.tempsFinestra * 10;
+      const visibleData = state.historial.slice(-samples);
+
+      // Limitem o traiem el gap quan hi ha moltes barres per evitar que col·lapsin a 0px física de subpíxels
+      if (visibleData.length > 150) {
+        container.style.gap = "0px";
+      } else {
+        container.style.gap = "1px";
+      }
+
+      let html = "";
+      visibleData.forEach((pt, idx) => {
+        const heightPct = (pt.nivell / 30) * 100;
+
+        // Comprovar proximitat del setpoint (més o menys 10%)
+        const errorPct = pt.setpoint > 0 ? Math.abs(pt.nivell - pt.setpoint) / pt.setpoint : (pt.nivell === 0 ? 0 : 999);
+        const propDelSP = errorPct <= 0.10;
+
+        let colorCls = "bg-sky-500/70 hover:bg-sky-400";
+        if (pt.nivell >= pt.alarmHigh) colorCls = "bg-red-600/85 hover:bg-red-500 shadow-[0_0_4px_rgba(239,68,68,0.2)]";
+        else if (pt.nivell <= pt.alarmLow) colorCls = "bg-amber-500/85 hover:bg-amber-400 shadow-[0_0_4px_rgba(245,158,11,0.2)]";
+        else if (propDelSP) colorCls = "bg-emerald-500/80 hover:bg-emerald-400 shadow-[0_0_4px_rgba(16,185,129,0.2)]";
+
+        // Busquem l'índex global dins del array historial
+        const globalIdx = state.historial.indexOf(pt);
+
+        html += `
+          <div class="flex-grow h-full relative group cursor-pointer" onmouseenter="showChartDetail(${globalIdx})" onmouseleave="hideChartDetail()">
+            <div class="absolute bottom-0 left-0 right-0 rounded-t-[1px] transition-all duration-150 ${colorCls}" style="height: ${heightPct}%;"></div>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function changeTempsFinestra(val, fromMqtt = false) {
+      state.tempsFinestra = parseInt(val);
+      const sel = document.getElementById("select-finestra");
+      if (sel) {
+        sel.value = String(val);
+      }
+      renderChart();
+      
+      publishWebChange('tempsFinestra', val, fromMqtt);
+    }
+
+    function showChartDetail(index) {
+      const pt = state.historial[index];
+      if (!pt) return;
+      document.getElementById("chart-legend").innerHTML = `
+        <div class="text-[10px] bg-slate-950 text-slate-200 px-3 py-1 rounded border border-slate-800 flex justify-between items-center w-full font-mono">
+          <span>Temps: <strong class="text-blue-400">${pt.temps}s</strong></span>
+          <span>Nivell: <strong class="text-emerald-400">${pt.nivell.toFixed(2)} cm</strong></span>
+          <span>Bomba (Qi): <strong class="text-purple-400">${pt.qi.toFixed(1)} cm3/s</strong></span>
+          <span>Sortida (Qo): <strong class="text-rose-400">${pt.qo.toFixed(1)} cm3/s</strong></span>
+          <span>Obertura Aix.: <strong class="text-amber-400">${pt.aixetaPct}%</strong></span>
+        </div>
+      `;
+    }
+
+    function hideChartDetail() {
+      document.getElementById("chart-legend").innerHTML = `
+        <div class="flex flex-wrap gap-x-2">
+          <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 bg-sky-500 rounded-full"></span> Estàndard</span>
+          <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Consigna (±10%)</span>
+          <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 bg-red-500 rounded-full"></span> Alarma Alta</span>
+          <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 bg-amber-500 rounded-full"></span> Alarma Baixa</span>
+        </div>
+        <span class="font-mono text-[7.5px] text-slate-500">Posa el cursor sobre les columnes</span>
+      `;
+    }
+
+    // EXPORTACIÓ COMPATIBLE EXCEL (UTF-8 BOM i semi-colons ;)
+    function descarregarDadesXLS() {
+      if (state.historial.length === 0) {
+        addSerialLog("[SISTEMA ERROR] No hi ha dades per exportar encara.");
+        return;
+      }
+
+      let csvContent = "\uFEFF"; // BOM UTF-8
+      csvContent += "Temps (s);Nivell (cm);Consigna (cm);Cabal Entrada (cm3/s);Cabal Sortida (cm3/s);Bomba (%);Aixeta (%);Alarma Alta (cm);Alarma Baixa (cm);Àrea Base (cm2);Diàmetre (cm);Volum (L);Kp;Ki;Pertorbació;Inèrcia;Histeresi;Anti-Windup;Estat Histeresi\n";
+
+      state.historial.forEach(row => {
+        const diam = (2 * Math.sqrt(state.areaBase / Math.PI)).toFixed(1);
+        const volL = (state.areaBase * row.nivell / 1000).toFixed(2);
+
+        csvContent += `${row.temps.replace('.', ',')};` +
+                      `${row.nivell.toString().replace('.', ',')};` +
+                      `${row.setpoint.toString().replace('.', ',')};` +
+                      `${row.qi.toString().replace('.', ',')};` +
+                      `${row.qo.toString().replace('.', ',')};` +
+                      `${row.bombaPct};` +
+                      `${row.aixetaPct};` +
+                      `${row.alarmHigh};` +
+                      `${row.alarmLow};` +
+                      `${state.areaBase};` +
+                      `${diam.replace('.', ',')};` +
+                      `${volL.replace('.', ',')};` +
+                      `${row.kp};` +
+                      `${row.ki};` +
+                      `${row.disturbi};` +
+                      `${row.bombaInercia};` +
+                      `${row.histeresiVal.toString().replace('.', ',')};` +
+                      `${row.antiWindupActiu};` +
+                      `${row.bombaActivaEstat}\n`;
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `SCADA_Dades_Diposit_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      addSerialLog(`[SISTEMA] Dades exportades (${state.historial.length} registres) de forma compatible amb Excel.`);
+    }
+
+    // GESTIÓ DEL MODAL DE CONFIGURACIÓ DE TELEMETRIA
+    function toggleTelemetryWindow() {
+      const modal = document.getElementById("telemetry-modal");
+      if (!modal) return;
+      
+      const isHidden = modal.classList.contains("hidden");
+      if (isHidden) {
+        // Omplir inputs abans de obrir amb la configuració actual
+        const keys = ['nivell', 'volum', 'qi', 'qo', 'bomba', 'temps', 'alarmHigh', 'alarmLow'];
+        keys.forEach(k => {
+          const cfg = state.telemetry[k];
+          if (!cfg) return;
+          
+          const enableCb = document.getElementById(`tel-enable-${k}`);
+          const absIn = document.getElementById(`tel-abs-${k}`);
+          const intIn = document.getElementById(`tel-int-${k}`);
+          
+          if (enableCb) enableCb.checked = cfg.enabled;
+          if (absIn) absIn.value = cfg.deadbandAbs;
+          if (intIn) intIn.value = cfg.minInterval;
+        });
+        
+        modal.classList.remove("hidden");
+      } else {
+        modal.classList.add("hidden");
+      }
+    }
+
+    function guardarConfigTelemetry() {
+      const keys = ['nivell', 'volum', 'qi', 'qo', 'bomba', 'temps', 'alarmHigh', 'alarmLow'];
+      keys.forEach(k => {
+        const cfg = state.telemetry[k];
+        if (!cfg) return;
+        
+        const enableCb = document.getElementById(`tel-enable-${k}`);
+        const absIn = document.getElementById(`tel-abs-${k}`);
+        const intIn = document.getElementById(`tel-int-${k}`);
+        
+        if (enableCb) cfg.enabled = enableCb.checked;
+        if (absIn) cfg.deadbandAbs = parseFloat(absIn.value) || 0;
+        if (intIn) cfg.minInterval = parseInt(intIn.value) || 0;
+      });
+      
+      addSerialLog("[TELEMETRIA] Filtres i intervals de telemetria desats i aplicats.");
+      toggleTelemetryWindow();
+    }
+    function toggleHelpWindow() {
+      const modal = document.getElementById("help-modal");
+      if (modal) {
+        modal.classList.toggle("hidden");
+      }
+    }
+  </script>
+</body>
+</html>
