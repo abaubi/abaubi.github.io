@@ -1039,7 +1039,9 @@
       senseSortida: { name: "Forn aïllat (Vent = 0%)", kp: 350, ki: 5, kd: 150, setpoint: 50, kAixeta: 0, inercia: 10, alH: 60, alL: 40 }
     };
 
-    let simIntervalID = null;
+    let simWorker = null;
+    let lastTime = performance.now();
+    let timeAccumulator = 0;
     let mqttClient = null;
 
     // Inicialització en carregar la pàgina
@@ -1059,6 +1061,69 @@
       updateCalculationsPanel();
       renderChart();
       printInitialLogs();
+
+      // Inicialitzar el Web Worker Metrònom
+      try {
+        const workerCode = `
+          let lastTick = performance.now();
+          setInterval(() => {
+            const now = performance.now();
+            self.postMessage({ type: 'tick', now: now });
+          }, 16.66);
+        `;
+        const blob = new Blob([workerCode], { type: 'application/javascript' });
+        const workerURL = URL.createObjectURL(blob);
+        simWorker = new Worker(workerURL);
+        
+        simWorker.onmessage = function(e) {
+          if (e.data.type === 'tick') {
+            const now = e.data.now;
+            if (!state.isRunning) {
+              lastTime = now;
+              return;
+            }
+            
+            let dtReal = now - lastTime;
+            if (dtReal < 0) dtReal = 0;
+            lastTime = now;
+            
+            timeAccumulator += dtReal;
+            
+            // Resiliència (Anti-spiral of death): màxim 10 passos de recuperació
+            const maxAccumulator = 10 * state.sampleTime;
+            if (timeAccumulator > maxAccumulator) {
+              timeAccumulator = maxAccumulator;
+            }
+            
+            while (timeAccumulator >= state.sampleTime) {
+              executarPasSimulacio();
+              timeAccumulator -= state.sampleTime;
+            }
+          }
+        };
+      } catch (err) {
+        console.error("No s'ha pogut iniciar el Web Worker. S'utilitzarà un fallback de requestAnimationFrame.", err);
+        // Fallback using requestAnimationFrame in case Web Workers are blocked or unsupported
+        function fallbackTick() {
+          const now = performance.now();
+          if (state.isRunning) {
+            let dtReal = now - lastTime;
+            if (dtReal < 0) dtReal = 0;
+            timeAccumulator += dtReal;
+            const maxAccumulator = 10 * state.sampleTime;
+            if (timeAccumulator > maxAccumulator) {
+              timeAccumulator = maxAccumulator;
+            }
+            while (timeAccumulator >= state.sampleTime) {
+              executarPasSimulacio();
+              timeAccumulator -= state.sampleTime;
+            }
+          }
+          lastTime = now;
+          requestAnimationFrame(fallbackTick);
+        }
+        requestAnimationFrame(fallbackTick);
+      }
     };
 
     function printInitialLogs() {
@@ -1635,9 +1700,8 @@
       const dotMonitor = document.getElementById("dot-monitor");
 
       if (state.isRunning) {
-        if (!simIntervalID) {
-          simIntervalID = setInterval(executarPasSimulacio, state.sampleTime);
-        }
+        lastTime = performance.now();
+        timeAccumulator = 0;
         if (btn) {
           btn.className = "px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md bg-amber-600 hover:bg-amber-500 text-white shadow-amber-900/20";
           btn.innerHTML = `
@@ -1655,10 +1719,6 @@
           el.classList.remove('paused-animation');
         });
       } else {
-        if (simIntervalID) {
-          clearInterval(simIntervalID);
-          simIntervalID = null;
-        }
         if (btn) {
           btn.className = "px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/20";
           btn.innerHTML = `
