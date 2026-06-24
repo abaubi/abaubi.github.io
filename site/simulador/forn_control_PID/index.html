@@ -506,7 +506,10 @@
               <span id="dot-monitor" class="w-2 h-2 bg-emerald-500 rounded-full transition-all"></span>
               MONITOR
             </h3>
-            <button onclick="clearSerialLogs()" class="text-[9px] text-slate-400 hover:text-slate-200 bg-slate-900 px-2 py-0.5 rounded border border-slate-700">Esborrar</button>
+            <div class="flex items-center gap-2">
+              <button id="btn-toggle-log" onclick="toggleLogging()" class="text-[9px] font-bold tracking-wider uppercase bg-emerald-700/80 hover:bg-emerald-600 text-white px-2 py-0.5 rounded border border-emerald-500/30 transition-colors">Registre: ON</button>
+              <button onclick="clearSerialLogs()" class="text-[9px] text-slate-400 hover:text-slate-200 bg-slate-900 px-2 py-0.5 rounded border border-slate-700">Esborrar</button>
+            </div>
           </div>
           <div id="terminal-container" class="flex-grow bg-slate-950 rounded-lg p-2 font-mono text-emerald-400 overflow-y-auto space-y-0.5 border border-slate-900 text-[10px] h-0"></div>
         </div>
@@ -1039,10 +1042,100 @@
       senseSortida: { name: "Forn aïllat (Vent = 0%)", kp: 350, ki: 5, kd: 150, setpoint: 50, kAixeta: 0, inercia: 10, alH: 60, alL: 40 }
     };
 
-    let simWorker = null;
+    let simIntervalID = null;
     let lastTime = performance.now();
     let timeAccumulator = 0;
     let mqttClient = null;
+    let loggingEnabled = true;
+    let audioCtx = null;
+
+    // --- 1. Polyfill de Temporitzadors amb Web Worker ---
+    const timerWorkerCode = `
+      const activeTimers = new Map();
+      self.onmessage = function(e) {
+        const { type, id, delay, isInterval } = e.data;
+        if (type === 'setInterval' || type === 'setTimeout') {
+          const cb = () => {
+            self.postMessage({ id, isInterval });
+            if (!isInterval) activeTimers.delete(id);
+          };
+          const timerId = isInterval ? setInterval(cb, delay) : setTimeout(cb, delay);
+          activeTimers.set(id, { timerId, isInterval });
+        } else if (type === 'clearInterval' || type === 'clearTimeout') {
+          const timer = activeTimers.get(id);
+          if (timer) {
+            timer.isInterval ? clearInterval(timer.timerId) : clearTimeout(timer.timerId);
+            activeTimers.delete(id);
+          }
+        }
+      };
+    `;
+    const timerBlob = new Blob([timerWorkerCode], { type: 'application/javascript' });
+    const timerWorker = new Worker(URL.createObjectURL(timerBlob));
+    const activeCallbacks = new Map();
+    let timerIdCounter = 0;
+
+    timerWorker.onmessage = (e) => {
+      const { id, isInterval } = e.data;
+      const cb = activeCallbacks.get(id);
+      if (cb) {
+        cb();
+        if (!isInterval) activeCallbacks.delete(id);
+      }
+    };
+
+    window.setTimeout = (cb, delay) => {
+      const id = ++timerIdCounter;
+      activeCallbacks.set(id, cb);
+      timerWorker.postMessage({ type: 'setTimeout', id, delay, isInterval: false });
+      return id;
+    };
+    window.clearTimeout = (id) => {
+      activeCallbacks.delete(id);
+      timerWorker.postMessage({ type: 'clearTimeout', id });
+    };
+    window.setInterval = (cb, delay) => {
+      const id = ++timerIdCounter;
+      activeCallbacks.set(id, cb);
+      timerWorker.postMessage({ type: 'setInterval', id, delay, isInterval: true });
+      return id;
+    };
+    window.clearInterval = (id) => {
+      activeCallbacks.delete(id);
+      timerWorker.postMessage({ type: 'clearInterval', id });
+    };
+    
+    // --- 3. WakeLock amb AudioContext ---
+    function initWakeLock() {
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const oscillator = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
+          gainNode.gain.value = 0; // silenci absolut
+          oscillator.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+          oscillator.start();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      } catch (err) {
+        console.warn("AudioContext no suportat per WakeLock", err);
+      }
+    }
+    
+    function toggleLogging() {
+      loggingEnabled = !loggingEnabled;
+      const btn = document.getElementById('btn-toggle-log');
+      if (loggingEnabled) {
+        btn.textContent = 'Registre: ON';
+        btn.className = "text-[9px] font-bold tracking-wider uppercase bg-emerald-700/80 hover:bg-emerald-600 text-white px-2 py-0.5 rounded border border-emerald-500/30 transition-colors";
+      } else {
+        btn.textContent = 'Registre: OFF';
+        btn.className = "text-[9px] font-bold tracking-wider uppercase bg-slate-700 hover:bg-slate-600 text-slate-400 px-2 py-0.5 rounded border border-slate-600 transition-colors";
+      }
+    }
 
     // Inicialització en carregar la pàgina
     window.onload = function() {
@@ -1062,68 +1155,6 @@
       renderChart();
       printInitialLogs();
 
-      // Inicialitzar el Web Worker Metrònom
-      try {
-        const workerCode = `
-          let lastTick = performance.now();
-          setInterval(() => {
-            const now = performance.now();
-            self.postMessage({ type: 'tick', now: now });
-          }, 16.66);
-        `;
-        const blob = new Blob([workerCode], { type: 'application/javascript' });
-        const workerURL = URL.createObjectURL(blob);
-        simWorker = new Worker(workerURL);
-        
-        simWorker.onmessage = function(e) {
-          if (e.data.type === 'tick') {
-            const now = e.data.now;
-            if (!state.isRunning) {
-              lastTime = now;
-              return;
-            }
-            
-            let dtReal = now - lastTime;
-            if (dtReal < 0) dtReal = 0;
-            lastTime = now;
-            
-            timeAccumulator += dtReal;
-            
-            // Resiliència (Anti-spiral of death): màxim 10 passos de recuperació
-            const maxAccumulator = 10 * state.sampleTime;
-            if (timeAccumulator > maxAccumulator) {
-              timeAccumulator = maxAccumulator;
-            }
-            
-            while (timeAccumulator >= state.sampleTime) {
-              executarPasSimulacio();
-              timeAccumulator -= state.sampleTime;
-            }
-          }
-        };
-      } catch (err) {
-        console.error("No s'ha pogut iniciar el Web Worker. S'utilitzarà un fallback de requestAnimationFrame.", err);
-        // Fallback using requestAnimationFrame in case Web Workers are blocked or unsupported
-        function fallbackTick() {
-          const now = performance.now();
-          if (state.isRunning) {
-            let dtReal = now - lastTime;
-            if (dtReal < 0) dtReal = 0;
-            timeAccumulator += dtReal;
-            const maxAccumulator = 10 * state.sampleTime;
-            if (timeAccumulator > maxAccumulator) {
-              timeAccumulator = maxAccumulator;
-            }
-            while (timeAccumulator >= state.sampleTime) {
-              executarPasSimulacio();
-              timeAccumulator -= state.sampleTime;
-            }
-          }
-          lastTime = now;
-          requestAnimationFrame(fallbackTick);
-        }
-        requestAnimationFrame(fallbackTick);
-      }
     };
 
     function printInitialLogs() {
@@ -1144,6 +1175,7 @@
     }
 
     function addSerialLog(msg) {
+      if (!loggingEnabled) return;
       state.serialLogs.push(msg);
       if (state.serialLogs.length > 150) state.serialLogs.shift();
       appendTerminalLogLine(msg);
@@ -1514,7 +1546,8 @@
 
       const opts = {
         reconnectPeriod: 2000,
-        connectTimeout: 5000
+        connectTimeout: 5000,
+        keepalive: 0
       };
       if (user !== '') opts.username = user;
       if (pass !== '') opts.password = pass;
@@ -1702,6 +1735,30 @@
       if (state.isRunning) {
         lastTime = performance.now();
         timeAccumulator = 0;
+        initWakeLock();
+        
+        if (!simIntervalID) {
+          simIntervalID = setInterval(() => {
+            const now = performance.now();
+            let dtReal = now - lastTime;
+            if (dtReal < 0) dtReal = 0;
+            lastTime = now;
+            
+            timeAccumulator += dtReal;
+            
+            // Resiliència (Anti-spiral of death): màxim 10 passos de recuperació per frame
+            const maxAccumulator = 10 * state.sampleTime;
+            if (timeAccumulator > maxAccumulator) {
+              timeAccumulator = maxAccumulator;
+            }
+            
+            while (timeAccumulator >= state.sampleTime) {
+              executarPasSimulacio();
+              timeAccumulator -= state.sampleTime;
+            }
+          }, state.sampleTime);
+        }
+        
         if (btn) {
           btn.className = "px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md bg-amber-600 hover:bg-amber-500 text-white shadow-amber-900/20";
           btn.innerHTML = `
@@ -1719,6 +1776,10 @@
           el.classList.remove('paused-animation');
         });
       } else {
+        if (simIntervalID) {
+          clearInterval(simIntervalID);
+          simIntervalID = null;
+        }
         if (btn) {
           btn.className = "px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-all shadow-md bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-950/20";
           btn.innerHTML = `
@@ -1954,31 +2015,33 @@
       }
 
       const tempsSegons = (state.temps * dt).toFixed(1);
-      addSerialLog(`${tempsSegons}s\tTemp: ${nouNivell.toFixed(2)} ºC\tError: ${error.toFixed(2)}\tQi: ${nouQi.toFixed(1)} W\tQo: ${nouQo.toFixed(1)} W\tVentador: ${state.kAixeta}%${alarmStr}`);
+      if (loggingEnabled) {
+        addSerialLog(`${tempsSegons}s\tTemp: ${nouNivell.toFixed(2)} ºC\tError: ${error.toFixed(2)}\tQi: ${nouQi.toFixed(1)} W\tQo: ${nouQo.toFixed(1)} W\tVentador: ${state.kAixeta}%${alarmStr}`);
 
-      // Historial
-      const nouRegistre = {
-        temps: tempsSegons,
-        nivell: parseFloat(nouNivell.toFixed(2)),
-        setpoint: state.setpoint,
-        qi: parseFloat(nouQi.toFixed(1)),
-        qo: parseFloat(nouQo.toFixed(1)),
-        error: parseFloat(error.toFixed(2)),
-        alarmHigh: state.alarmHigh,
-        alarmLow: state.alarmLow,
-        aixetaPct: state.kAixeta,
-        bombaPct: percentBombaVal,
-        kp: state.kp,
-        ki: state.ki,
-        disturbi: state.disturbi,
-        bombaInercia: state.bombaInercia,
-        histeresiVal: state.histeresiVal,
-        antiWindupActiu: actiuAW ? "Sí" : "No",
-        bombaActivaEstat: state.modeControl === 'HYS' ? (nouBombaActiva ? "ON" : "OFF") : (state.modeControl === 'MQTT' ? "MQTT" : "")
-      };
+        // Historial
+        const nouRegistre = {
+          temps: tempsSegons,
+          nivell: parseFloat(nouNivell.toFixed(2)),
+          setpoint: state.setpoint,
+          qi: parseFloat(nouQi.toFixed(1)),
+          qo: parseFloat(nouQo.toFixed(1)),
+          error: parseFloat(error.toFixed(2)),
+          alarmHigh: state.alarmHigh,
+          alarmLow: state.alarmLow,
+          aixetaPct: state.kAixeta,
+          bombaPct: percentBombaVal,
+          kp: state.kp,
+          ki: state.ki,
+          disturbi: state.disturbi,
+          bombaInercia: state.bombaInercia,
+          histeresiVal: state.histeresiVal,
+          antiWindupActiu: actiuAW ? "Sí" : "No",
+          bombaActivaEstat: state.modeControl === 'HYS' ? (nouBombaActiva ? "ON" : "OFF") : (state.modeControl === 'MQTT' ? "MQTT" : "")
+        };
 
-      state.historial.push(nouRegistre);
-      if (state.historial.length > 3000) state.historial.shift();
+        state.historial.push(nouRegistre);
+        if (state.historial.length > 3000) state.historial.shift();
+      }
 
       // Publicació MQTT
       if (mqttClient && mqttClient.connected) {
@@ -2018,8 +2081,10 @@
       }
 
       updateSVG(percentBombaVal, volumCalculatL);
-      updateCalculationsPanel();
-      renderChart();
+      if (loggingEnabled) {
+        updateCalculationsPanel();
+        renderChart();
+      }
     }
 
     // ACTUALITZAR SVG
