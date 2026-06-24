@@ -1173,7 +1173,7 @@ void loop() {
                   if (lecturaLux &lt; Setpoint - h) SortidaPWM = SORTIDA_MAX;<br>
                   else if (lecturaLux &gt; Setpoint + h) SortidaPWM = SORTIDA_MIN;
                 </code>
-                2. Guarda en variables temporals els mil·lisegons en què la lectura creua exactament el Setpoint en la mateixa direcció per calcular el període crític <span class="text-fuchsia-400 font-bold font-mono">P<sub>u</sub></span> (el temps transcorregut entre creuaments consecutius en el same direction).<br>
+                2. Guarda en variables temporals els mil·lisegons en què la lectura creua exactament el Setpoint en la mateixa direcció per calcular el període crític <span class="text-fuchsia-400 font-bold font-mono">P<sub>u</sub></span> (el temps transcorregut entre creuaments consecutius en el mateix sentit).<br>
                 3. Registra el màxim i mínim valor que assoleix el sensor de Lux dins de cada cicle per obtenir l'amplitud d'oscil·lació:
                 <span class="inline-flex items-center gap-1 font-mono text-[10px] text-slate-300 ml-2 mt-1">
                   <span>A =</span>
@@ -1203,7 +1203,7 @@ const float SETPOINT = 500.0;  <span class="text-slate-500">// Consigna desitjad
 const float HYSTERESIS = 15.0; <span class="text-slate-500">// Amplitud de la histèresi h</span>
 const float PWM_MAX = 255.0;   <span class="text-slate-500">// Actuació alta (SORTIDA_MAX)</span>
 const float PWM_MIN = 0.0;     <span class="text-slate-500">// Actuació baixa (SORTIDA_MIN)</span>
-const float AMP_D = PWM_MAX;   <span class="text-slate-500">// Amplitud física de conmutació del relé (d = 255)</span>
+const float AMP_D = (PWM_MAX - PWM_MIN) / 2.0; <span class="text-slate-500">// Amplitud d'oscil·lació del relé (d = 127.5)</span>
 
 <span class="text-slate-500">// Variables d'estat de l'autotuner</span>
 unsigned long darrerCreuament = 0; <span class="text-slate-500">// Enregistra el temps de l'últim creuament pel SP</span>
@@ -1511,6 +1511,14 @@ void loop() {
       updateCalculationsPanel();
       renderChart();
       printInitialLogs();
+
+      // Sincronitzar canvis del checkbox de mode didàctic immediatament amb l'estat
+      const stepModeCheckbox = document.getElementById("tune-step-mode");
+      if (stepModeCheckbox) {
+        stepModeCheckbox.addEventListener('change', (e) => {
+          state.tuning.stepMode = e.target.checked;
+        });
+      }
     };
 
     function printInitialLogs() {
@@ -2520,6 +2528,12 @@ void loop() {
 
     function processAutotuning(dt, nivell, error) {
       if(!state.tuning.active) return null;
+      
+      const stepModeCheckbox = document.getElementById("tune-step-mode");
+      if (stepModeCheckbox) {
+        state.tuning.stepMode = stepModeCheckbox.checked;
+      }
+      
       let u = 0;
       const t = state.temps * dt;
       
@@ -2559,13 +2573,13 @@ void loop() {
             
             if(state.lastError > 0 && error <= 0) {
                if(state.tuning.tLastCross > 0) {
-                  const Pu = (t - state.tuning.tLastCross) * 2;
+                  const Pu = (t - state.tuning.tLastCross);
                   
                   if (Pu > 0.5) {
                       state.tuning.Pu = Pu;
                       state.tuning.A = Math.max(1, (state.tuning.luxMaxCycle - state.tuning.luxMinCycle) / 2);
                       
-                      const d = 1000;
+                      const d = 500;
                       state.tuning.Ku = (4 * d) / (Math.PI * state.tuning.A);
                       
                       state.tuning.calcKp = parseFloat((0.6 * state.tuning.Ku).toFixed(2));
