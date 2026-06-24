@@ -1003,6 +1003,34 @@
     let accumulator = 0;
     let lastRealTime = performance.now();
 
+    function processPendingMqttPublishes() {
+      if (!state.mqttConnected || !mqttClient || !mqttClient.connected) return;
+      const ara = Date.now();
+      for (const topicSuffix in mqttPublisherCache) {
+        const cache = mqttPublisherCache[topicSuffix];
+        if (cache && cache.hasPending && ara >= cache.targetTime) {
+          const strValue = cache.pendingValue;
+          let cleanTopic = state.baseTopic;
+          if (!cleanTopic.endsWith('/')) cleanTopic += '/';
+          
+          publishMqtt(cleanTopic + topicSuffix, strValue, { qos: 0, retain: true }, ara, cache.pendingLogPublish, cache.pendingFromMqtt);
+          
+          if (cache.pendingLogPublish) {
+            if (!cache.pendingFromMqtt) {
+              addSerialLog(`[MQTT PUBLISH] ${cleanTopic + topicSuffix} -> ${strValue}`);
+            } else {
+              addSerialLog(`[MQTT ECHO PUBLISH] ${cleanTopic + topicSuffix} -> ${strValue}`);
+            }
+          }
+          
+          cache.lastValue = strValue;
+          cache.lastTime = ara;
+          cache.hasPending = false;
+          cache.pendingValue = null;
+        }
+      }
+    }
+
     function initMetronome() {
       const workerCode = `
         let intervalId = null;
@@ -1029,6 +1057,10 @@
           const now = performance.now();
           const elapsed = now - lastRealTime;
           lastRealTime = now;
+
+          // Processar les publicacions MQTT pendents de manera robusta,
+          // de manera lliure de throttle de setTimeout clàssics en segon pla.
+          processPendingMqttPublishes();
 
           if (state.isRunning) {
             accumulator += elapsed;
@@ -1157,7 +1189,7 @@
         try {
           const ara = Date.now();
           const strValue = String(value);
-          const cache = mqttPublisherCache[topicSuffix] || { lastValue: null, lastTime: 0, pendingTimeout: null };
+          const cache = mqttPublisherCache[topicSuffix] || { lastValue: null, lastTime: 0, hasPending: false, pendingValue: null, targetTime: 0 };
           mqttPublisherCache[topicSuffix] = cache;
 
           if (!fromMqtt && !forcePublish && cache.lastValue === strValue) {
@@ -1176,26 +1208,28 @@
                      addSerialLog(`[MQTT ECHO PUBLISH] ${cleanTopic + topicSuffix} -> ${strValue}`);
                  }
              }
-             cache.lastValue = strValue;
-             cache.pendingTimeout = null;
+             cache.lastValue = strValue; cache.hasPending = false; cache.pendingValue = null;
           };
 
-          if (fromMqtt || (ara - cache.lastTime) >= 1000) {
+          if (fromMqtt || forcePublish || (ara - cache.lastTime) >= 1000) {
              if (cache.pendingTimeout) {
                  clearTimeout(cache.pendingTimeout);
-                 cache.pendingTimeout = null;
+                 cache.hasPending = false;
+              cache.pendingValue = null;
              }
              doPublish();
              cache.lastTime = Date.now();
           } else {
-             // Limitat a 1 por segon per a esdeveniments de sliders freqüents
+             // Limitat a 1 per segon per a esdeveniments de sliders de fons (gestionat pel Web Worker)
+             cache.hasPending = true; cache.pendingValue = strValue; cache.pendingLogPublish = logPublish; cache.pendingFromMqtt = fromMqtt; cache.targetTime = cache.lastTime + 1000;
+             if (false) {
              if (cache.pendingTimeout) {
                  clearTimeout(cache.pendingTimeout);
              }
              cache.pendingTimeout = setTimeout(() => {
                  doPublish();
                  cache.lastTime = Date.now();
-             }, 1000 - (ara - cache.lastTime));
+             }, 1000 - (ara - cache.lastTime)); }
           }
         } catch (e) {
           console.error("Error publicant canvi web per MQTT:", e);
