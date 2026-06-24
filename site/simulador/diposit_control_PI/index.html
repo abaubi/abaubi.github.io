@@ -385,6 +385,10 @@
                 </svg>
                 Descarregar XLS
               </button>
+              <button id="btn-toggle-log-1" onclick="toggleLogging()" class="px-2 py-1 bg-emerald-600/90 hover:bg-emerald-500 text-white text-[9px] font-bold rounded shadow transition-all flex items-center gap-1">
+                <span id="log-status-1" class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                Registre: ON
+              </button>
               <span class="text-[9.5px] font-bold text-slate-500 uppercase">Finestra:</span>
               <select id="select-finestra" onchange="changeTempsFinestra(this.value)" class="bg-slate-950 border border-slate-800 text-slate-300 text-[10px] font-bold py-0.5 px-1 rounded">
                 <option value="10">10s</option>
@@ -473,7 +477,13 @@
               <span id="dot-monitor" class="w-2 h-2 bg-emerald-500 rounded-full transition-all"></span>
               MONITOR
             </h3>
-            <button onclick="clearSerialLogs()" class="text-[9px] text-slate-400 hover:text-slate-200 bg-slate-900 px-2 py-0.5 rounded border border-slate-700">Esborrar</button>
+            <div class="flex items-center gap-2">
+              <button id="btn-toggle-log-2" onclick="toggleLogging()" class="px-2 py-0.5 bg-emerald-600/90 hover:bg-emerald-500 text-white text-[9px] font-bold rounded shadow border border-emerald-500/30 transition-all flex items-center gap-1">
+                <span id="log-status-2" class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>
+                Registre: ON
+              </button>
+              <button onclick="clearSerialLogs()" class="text-[9px] text-slate-400 hover:text-slate-200 bg-slate-900 px-2 py-0.5 rounded border border-slate-700">Esborrar</button>
+            </div>
           </div>
           <div id="terminal-container" class="flex-grow bg-slate-950 rounded-lg p-2 font-mono text-emerald-400 overflow-y-auto space-y-0.5 border border-slate-900 text-[10px] h-0"></div>
         </div>
@@ -974,6 +984,7 @@
       mqttPassword: '',
       mqttConnected: false,
       mqttError: '',
+      loggingEnabled: true,
 
       // Filtres de publicació de telemetria dels gràfics
       telemetry: {
@@ -1058,25 +1069,33 @@
           const elapsed = now - lastRealTime;
           lastRealTime = now;
 
-          // Processar les publicacions MQTT pendents de manera robusta,
-          // de manera lliure de throttle de setTimeout clàssics en segon pla.
           processPendingMqttPublishes();
 
           if (state.isRunning) {
             accumulator += elapsed;
 
-            // Limit recovery steps to prevent spiral of death or memory overflow
-            const maxStepsPerFrame = 10;
+            // En pestanyes de fons, el tick pot trigar fins a 1 segon (o més).
+            // Amb sampleTime de 100ms, 1 segon = 10 passos. 10 segons = 100 passos.
+            const maxStepsPerFrame = 1000;
             let stepsRun = 0;
+            const stepsNeeded = Math.floor(accumulator / state.sampleTime);
+            const stepsToRun = Math.min(stepsNeeded, maxStepsPerFrame);
 
-            while (accumulator >= state.sampleTime && stepsRun < maxStepsPerFrame) {
-              executarPasSimulacio();
+            while (stepsRun < stepsToRun) {
+              const isLastStep = (stepsRun === stepsToRun - 1);
+              executarPasSimulacio(!isLastStep);
               accumulator -= state.sampleTime;
               stepsRun++;
             }
+            
+            if (stepsToRun > 1) {
+              // Si hem fet més d'un pas en aquest tick (pestanya en fons posant-se al dia),
+              // forcem un render final de la consola de cop.
+              printInitialLogs();
+            }
 
-            // Discard excess accumulated time to prevent lag spikes on resume
-            if (accumulator > state.sampleTime) {
+            // Evitar desbordaments si es penja durant molt de temps (>60 segons acumulats pendents)
+            if (accumulator > 60000) {
               accumulator = 0;
             }
           } else {
@@ -1091,6 +1110,12 @@
 
     // Inicialització en carregar la pàgina
     window.onload = function() {
+      document.addEventListener('click', () => {
+        if (wakeLockAudioCtx && wakeLockAudioCtx.state === 'suspended') {
+          wakeLockAudioCtx.resume();
+        }
+      }, { once: true });
+
       // Inicialitzar el metrònom resilient en segon pla
       initMetronome();
 
@@ -1114,24 +1139,29 @@
     function printInitialLogs() {
       const container = document.getElementById("terminal-container");
       container.innerHTML = "";
-      state.serialLogs.forEach(log => appendTerminalLogLine(log));
+      state.serialLogs.forEach(log => appendTerminalLogLine(log, true));
+      container.scrollTop = container.scrollHeight;
     }
 
-    function appendTerminalLogLine(line) {
+    function appendTerminalLogLine(line, skipScroll = false) {
       const container = document.getElementById("terminal-container");
       if (container) {
         const div = document.createElement("div");
         div.className = "whitespace-pre-wrap leading-tight text-[10px] opacity-90 border-b border-slate-900/30 pb-0.5";
         div.innerText = line;
         container.appendChild(div);
-        container.scrollTop = container.scrollHeight;
+        while (container.childElementCount > 150) {
+          container.removeChild(container.firstChild);
+        }
+        if (!skipScroll) container.scrollTop = container.scrollHeight;
       }
     }
 
-    function addSerialLog(msg) {
+    function addSerialLog(msg, skipRender = false, forceLog = false) {
+      if (!state.loggingEnabled && !forceLog) return;
       state.serialLogs.push(msg);
       if (state.serialLogs.length > 150) state.serialLogs.shift();
-      appendTerminalLogLine(msg);
+      if (!skipRender) appendTerminalLogLine(msg);
     }
 
     function clearSerialLogs() {
@@ -1139,6 +1169,32 @@
       const container = document.getElementById("terminal-container");
       if (container) container.innerHTML = "";
       addSerialLog("--- Consola Netejada ---");
+    }
+
+    function toggleLogging() {
+      state.loggingEnabled = !state.loggingEnabled;
+      const b1 = document.getElementById("btn-toggle-log-1");
+      const b2 = document.getElementById("btn-toggle-log-2");
+      const s1 = document.getElementById("log-status-1");
+      const s2 = document.getElementById("log-status-2");
+
+      if (state.loggingEnabled) {
+        if (b1) b1.className = "px-2 py-1 bg-emerald-600/90 hover:bg-emerald-500 text-white text-[9px] font-bold rounded shadow transition-all flex items-center gap-1";
+        if (b2) b2.className = "px-2 py-0.5 bg-emerald-600/90 hover:bg-emerald-500 text-white text-[9px] font-bold rounded shadow border border-emerald-500/30 transition-all flex items-center gap-1";
+        if (s1) s1.className = "w-1.5 h-1.5 rounded-full bg-white animate-pulse";
+        if (s2) s2.className = "w-1.5 h-1.5 rounded-full bg-white animate-pulse";
+        if (b1) b1.innerHTML = `<span id="log-status-1" class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>Registre: ON`;
+        if (b2) b2.innerHTML = `<span id="log-status-2" class="w-1.5 h-1.5 rounded-full bg-white animate-pulse"></span>Registre: ON`;
+        addSerialLog("[SISTEMA] Registre de dades i gràfic ACTIU", false, true);
+      } else {
+        addSerialLog("[SISTEMA] Registre de dades i gràfic DESACTIVAT", false, true);
+        if (b1) b1.className = "px-2 py-1 bg-rose-900/80 hover:bg-rose-800 text-rose-200 text-[9px] font-bold rounded shadow border border-rose-700/50 transition-all flex items-center gap-1";
+        if (b2) b2.className = "px-2 py-0.5 bg-rose-900/80 hover:bg-rose-800 text-rose-200 text-[9px] font-bold rounded shadow border border-rose-700/50 transition-all flex items-center gap-1";
+        if (s1) s1.className = "w-1.5 h-1.5 rounded-full bg-rose-400";
+        if (s2) s2.className = "w-1.5 h-1.5 rounded-full bg-rose-400";
+        if (b1) b1.innerHTML = `<span id="log-status-1" class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>Registre: OFF`;
+        if (b2) b2.innerHTML = `<span id="log-status-2" class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>Registre: OFF`;
+      }
     }
 
     // Helper per publicar a MQTT i registrar el timestamp d'última publicació (amb sufix -ts sota ts/)
@@ -1212,24 +1268,17 @@
           };
 
           if (fromMqtt || forcePublish || (ara - cache.lastTime) >= 1000) {
-             if (cache.pendingTimeout) {
-                 clearTimeout(cache.pendingTimeout);
-                 cache.hasPending = false;
-              cache.pendingValue = null;
-             }
+             cache.hasPending = false;
+             cache.pendingValue = null;
              doPublish();
              cache.lastTime = Date.now();
           } else {
              // Limitat a 1 per segon per a esdeveniments de sliders de fons (gestionat pel Web Worker)
-             cache.hasPending = true; cache.pendingValue = strValue; cache.pendingLogPublish = logPublish; cache.pendingFromMqtt = fromMqtt; cache.targetTime = cache.lastTime + 1000;
-             if (false) {
-             if (cache.pendingTimeout) {
-                 clearTimeout(cache.pendingTimeout);
-             }
-             cache.pendingTimeout = setTimeout(() => {
-                 doPublish();
-                 cache.lastTime = Date.now();
-             }, 1000 - (ara - cache.lastTime)); }
+             cache.hasPending = true; 
+             cache.pendingValue = strValue; 
+             cache.pendingLogPublish = logPublish; 
+             cache.pendingFromMqtt = fromMqtt; 
+             cache.targetTime = cache.lastTime + 1000;
           }
         } catch (e) {
           console.error("Error publicant canvi web per MQTT:", e);
@@ -1455,6 +1504,11 @@
 
     // CONTROL MQTT
     function toggleMqtt() {
+      initWakeLock();
+      if (wakeLockAudioCtx && wakeLockAudioCtx.state === 'suspended') {
+        wakeLockAudioCtx.resume();
+      }
+      
       if (state.mqttConnected && mqttClient) {
         mqttClient.end();
         mqttClient = null;
@@ -1482,7 +1536,8 @@
 
       const opts = {
         reconnectPeriod: 2000,
-        connectTimeout: 5000
+        connectTimeout: 5000,
+        keepalive: 0 // Evita que el broker tanqui la connexió si la pestanya de fons es posa a dormir i no envia PINGs
       };
       if (user !== '') opts.username = user;
       if (pass !== '') opts.password = pass;
@@ -1650,7 +1705,38 @@
     }
 
     // CONTROL DE SIMULACIÓ
+    let wakeLockAudioCtx = null;
+    let wakeLockSource = null;
+
+    function initWakeLock() {
+      if (wakeLockAudioCtx) return;
+      try {
+        wakeLockAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const buffer = wakeLockAudioCtx.createBuffer(1, 1, 22050);
+        wakeLockSource = wakeLockAudioCtx.createBufferSource();
+        wakeLockSource.buffer = buffer;
+        wakeLockSource.loop = true;
+        wakeLockSource.connect(wakeLockAudioCtx.destination);
+        wakeLockSource.start();
+
+        const osc = wakeLockAudioCtx.createOscillator();
+        const gain = wakeLockAudioCtx.createGain();
+        gain.gain.value = 0; // silenci absolut
+        osc.connect(gain);
+        gain.connect(wakeLockAudioCtx.destination);
+        osc.start();
+      } catch (e) {
+        console.warn("AudioContext no suportat, la pestanya pot adormir-se.", e);
+      }
+    }
+
     function setSimulationState(running, fromMqtt = false) {
+      if (running) {
+        initWakeLock();
+        if (wakeLockAudioCtx && wakeLockAudioCtx.state === 'suspended') {
+          wakeLockAudioCtx.resume();
+        }
+      }
       state.isRunning = running;
       const btn = document.getElementById("btn-play-pause");
 
@@ -1791,7 +1877,7 @@
       }
     }
 
-    function executarPasSimulacio() {
+    function executarPasSimulacio(skipRender = false) {
       const dt = state.sampleTime / 1000; // 0.1 segons
       const error = state.setpoint - state.nivell;
 
@@ -1903,31 +1989,33 @@
       }
 
       const tempsSegons = (state.temps * dt).toFixed(1);
-      addSerialLog(`${tempsSegons}s\tNivell: ${nouNivell.toFixed(2)} cm\tError: ${error.toFixed(2)}\tQi: ${nouQi.toFixed(1)} cm³/s\tQo: ${nouQo.toFixed(1)} cm³/s\tAixeta: ${state.kAixeta}%${alarmStr}`);
+      if (state.loggingEnabled) {
+        addSerialLog(`${tempsSegons}s\tNivell: ${nouNivell.toFixed(2)} cm\tError: ${error.toFixed(2)}\tQi: ${nouQi.toFixed(1)} cm³/s\tQo: ${nouQo.toFixed(1)} cm³/s\tAixeta: ${state.kAixeta}%${alarmStr}`, skipRender);
 
-      // Historial
-      const nouRegistre = {
-        temps: tempsSegons,
-        nivell: parseFloat(nouNivell.toFixed(2)),
-        setpoint: state.setpoint,
-        qi: parseFloat(nouQi.toFixed(1)),
-        qo: parseFloat(nouQo.toFixed(1)),
-        error: parseFloat(error.toFixed(2)),
-        alarmHigh: state.alarmHigh,
-        alarmLow: state.alarmLow,
-        aixetaPct: state.kAixeta,
-        bombaPct: percentBombaVal,
-        kp: state.kp,
-        ki: state.ki,
-        disturbi: state.disturbi,
-        bombaInercia: state.bombaInercia,
-        histeresiVal: state.histeresiVal,
-        antiWindupActiu: actiuAW ? "Sí" : "No",
-        bombaActivaEstat: state.modeControl === 'HYS' ? (nouBombaActiva ? "ON" : "OFF") : (state.modeControl === 'MQTT' ? "MQTT" : "")
-      };
+        // Historial
+        const nouRegistre = {
+          temps: tempsSegons,
+          nivell: parseFloat(nouNivell.toFixed(2)),
+          setpoint: state.setpoint,
+          qi: parseFloat(nouQi.toFixed(1)),
+          qo: parseFloat(nouQo.toFixed(1)),
+          error: parseFloat(error.toFixed(2)),
+          alarmHigh: state.alarmHigh,
+          alarmLow: state.alarmLow,
+          aixetaPct: state.kAixeta,
+          bombaPct: percentBombaVal,
+          kp: state.kp,
+          ki: state.ki,
+          disturbi: state.disturbi,
+          bombaInercia: state.bombaInercia,
+          histeresiVal: state.histeresiVal,
+          antiWindupActiu: actiuAW ? "Sí" : "No",
+          bombaActivaEstat: state.modeControl === 'HYS' ? (nouBombaActiva ? "ON" : "OFF") : (state.modeControl === 'MQTT' ? "MQTT" : "")
+        };
 
-      state.historial.push(nouRegistre);
-      if (state.historial.length > 3000) state.historial.shift();
+        state.historial.push(nouRegistre);
+        if (state.historial.length > 3000) state.historial.shift();
+      }
 
       // Publicació MQTT
       if (mqttClient && mqttClient.connected) {
@@ -1965,9 +2053,11 @@
         }
       }
 
-      updateSVG(percentBombaVal, volumCalculatL);
-      updateCalculationsPanel();
-      renderChart();
+      if (!skipRender) {
+        updateSVG(percentBombaVal, volumCalculatL);
+        updateCalculationsPanel();
+        renderChart();
+      }
     }
 
     // ACTUALITZAR SVG
