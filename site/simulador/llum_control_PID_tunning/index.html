@@ -180,7 +180,7 @@
               <!-- Kp -->
               <div id="group-kp" class="flex flex-col items-center justify-between h-full group transition-all">
                 <span class="text-[10px] font-bold text-amber-400">Kp</span>
-                <input id="slider-kp" type="range" orient="vertical" min="0" max="20" step="0.1" value="10" class="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-amber-500">
+                <input id="slider-kp" type="range" orient="vertical" min="0" max="100" step="0.1" value="10" class="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-amber-500">
                 <span id="val-kp" class="text-[9px] font-mono text-amber-300 bg-amber-950/80 px-1 py-0.5 rounded font-bold">10</span>
                 <span class="text-[7.5px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Proporc.</span>
               </div>
@@ -188,7 +188,7 @@
               <!-- Ki -->
               <div id="group-ki" class="flex flex-col items-center justify-between h-full group transition-all">
                 <span class="text-[10px] font-bold text-teal-400">Ki</span>
-                <input id="slider-ki" type="range" orient="vertical" min="0" max="10" step="0.01" value="4" class="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-teal-500">
+                <input id="slider-ki" type="range" orient="vertical" min="0" max="40" step="0.01" value="4" class="w-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-teal-500">
                 <span id="val-ki" class="text-[9px] font-mono text-teal-300 bg-teal-950/80 px-1 py-0.5 rounded font-bold">4</span>
                 <span class="text-[7.5px] text-slate-500 uppercase mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity">Integral</span>
               </div>
@@ -394,7 +394,7 @@
         </div>
 
         <!-- GRÀFIC TEMPORAL DE NIVELL -->
-        <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60 shadow-lg flex flex-col h-[210px] justify-between">
+        <div class="bg-slate-800/80 rounded-xl p-3 border border-slate-700/60 shadow-lg flex flex-col h-[210px] justify-between mb-4">
           <div class="flex justify-between items-center mb-1.5">
             <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
               <span id="dot-historial" class="w-2.5 h-2.5 bg-sky-500 rounded-full transition-all"></span>
@@ -452,6 +452,56 @@
               <span class="flex items-center gap-1"><span class="w-1.5 h-1.5 bg-amber-500 rounded-full"></span> Alarma Baixa</span>
             </div>
             <span class="font-mono text-[7.5px] text-slate-500">Posa el cursor sobre les columnes</span>
+          </div>
+        </div>
+
+        <!-- SINTONITZACIÓ DIDÀCTICA -->
+        <div class="bg-slate-800/85 rounded-xl p-4 border border-slate-700/60 shadow-lg flex flex-col mb-4">
+          <div class="border-b border-slate-700/60 pb-2 mb-3 flex flex-wrap justify-between items-center gap-2">
+            <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 bg-fuchsia-500 rounded-full"></span>
+              SINTONITZACIÓ DIDÀCTICA (AUTOTUNING)
+            </h2>
+            <button onclick="toggleTuningGuideModal()" class="px-2.5 py-1 bg-slate-900 hover:bg-slate-750 border border-slate-700 text-slate-300 text-[10px] font-bold rounded-md transition-all active:scale-95 flex items-center gap-1 cursor-pointer">
+              <svg class="w-3.5 h-3.5 text-fuchsia-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+              </svg>
+              Guia de Tunning
+            </button>
+          </div>
+          
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- COLUMNA ESQUERRA (Controls) -->
+            <div class="flex flex-col gap-3">
+              <div class="flex flex-col gap-1.5">
+                <label class="text-[9.5px] font-black text-slate-400 uppercase tracking-wider">Metodologia:</label>
+                <select id="tune-method" onchange="changeTuneMethod()" class="bg-slate-950/80 border border-slate-700 text-slate-300 text-xs py-1.5 px-2 rounded outline-none focus:border-fuchsia-500">
+                  <option value="manual">Ajust Manual (Guia Didàctica)</option>
+                  <option value="ziegler_obert">Corba de Reacció (Llaç Obert de Ziegler-Nichols)</option>
+                  <option value="astrom_tancat">Assaig de Relé d'Åström (Llaç Tancat)</option>
+                </select>
+              </div>
+              
+              <div class="flex items-center gap-3 bg-slate-900/50 p-2 rounded-lg border border-slate-700/50">
+                <span class="text-[10px] font-bold text-slate-300">Mode Execució:</span>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                  <input type="checkbox" id="tune-step-mode" class="w-3.5 h-3.5 accent-fuchsia-500 rounded bg-slate-900">
+                  <span class="text-[9.5px] font-bold text-slate-400 uppercase">Mode Didàctic (Pas a Pas en Pauses)</span>
+                </label>
+              </div>
+
+              <div class="flex flex-wrap gap-2 mt-1" id="tune-actions">
+                <!-- Actions will be injected here via JS -->
+              </div>
+            </div>
+            
+            <!-- COLUMNA DRETA (Pissarra) -->
+            <div class="bg-slate-950 rounded-lg border border-slate-700/50 p-3 h-full min-h-[140px] flex flex-col">
+              <h3 class="text-[9.5px] font-black text-slate-500 uppercase tracking-wider mb-2 border-b border-slate-800 pb-1">Pissarra Digital Matemàtica</h3>
+              <div id="tune-board" class="font-mono text-[10px] text-slate-300 flex-grow space-y-1.5 whitespace-pre-wrap leading-tight">
+                Selecciona un mètode per començar...
+              </div>
+            </div>
           </div>
         </div>
 
@@ -659,6 +709,643 @@
     </div>
   </div>
 
+  <!-- Modal de Guia de Tunning Didàctica -->
+  <div id="tuning-guide-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden text-slate-300">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl p-5 max-w-5xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto m-4">
+      
+      <!-- CAPÇALERA -->
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="p-1.5 bg-fuchsia-600/20 text-fuchsia-400 rounded-lg border border-fuchsia-500/25">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-slate-100 uppercase tracking-tight">Guia didàctica de sintonització de bucles (Tunning)</h3>
+            <span class="text-[9px] text-slate-500 block">Metodologies pràctiques d'enginyeria de control i aplicació en microcontroladors reals</span>
+          </div>
+        </div>
+        <button onclick="toggleTuningGuideModal()" class="text-slate-500 hover:text-slate-300 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- BOTONS DE PESTANYES / TABS -->
+      <div class="flex flex-wrap gap-1 border-b border-slate-800 pb-2">
+        <button id="tuning-guide-btn-manual" onclick="changeTuningGuideTab('manual')" class="tuning-guide-tab-btn px-3 py-1.5 rounded-lg border text-xs font-bold transition-all bg-fuchsia-600 text-white border-fuchsia-500 cursor-pointer">
+          1. Ajust manual (Prova i Error)
+        </button>
+        <button id="tuning-guide-btn-open" onclick="changeTuningGuideTab('open')" class="tuning-guide-tab-btn px-3 py-1.5 rounded-lg border text-xs font-bold transition-all bg-slate-950 text-slate-400 border-slate-800 hover:text-white cursor-pointer">
+          2. Corba de reacció (Ziegler-Nichols Llaç Obert)
+        </button>
+        <button id="tuning-guide-btn-closed" onclick="changeTuningGuideTab('closed')" class="tuning-guide-tab-btn px-3 py-1.5 rounded-lg border text-xs font-bold transition-all bg-slate-950 text-slate-400 border-slate-800 hover:text-white cursor-pointer">
+          3. Assaig de relé d'Åström (Llaç Tancat)
+        </button>
+      </div>
+
+      <!-- CONTINGUT DE LES PESTANYES -->
+      <div>
+        
+        <!-- PESTANYA 1: AJUST MANUAL -->
+        <div id="tuning-guide-tab-manual" class="tuning-guide-tab-content space-y-4">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="lg:col-span-7 space-y-3">
+              <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider border-l-2 border-fuchsia-500 pl-2">Fonaments del control manual</h4>
+              <p class="text-xs text-slate-400 leading-relaxed font-sans">
+                La sintonització manual per "prova i error" és el mètode més immediat quan no disposem d'un model matemàtic del procés. Consisteix a ajustar els tres paràmetres actuant directament sobre els components físics:
+              </p>
+              <ul class="text-[11px] space-y-2 list-none pl-1">
+                <li><strong class="text-amber-400">Kp (Proporcional):</strong> Multiplica l'error actual. Puja el Kp per accelerar la planta i respondre amb força, però vés amb compte: un Kp massa alt provoca oscil·lacions inestables (sobrepic exagerat).</li>
+                <li><strong class="text-teal-400">Ki (Integral):</strong> Acumula l'error en el temps. S'encarrega d'esborrar l'error residual permanent o "offset" (el buit que queda entre la mesura real i la consigna). Si el puges massa, el sistema oscil·larà de manera molt lenta i pesant.</li>
+                <li><strong class="text-fuchsia-400">Kd (Derivatiu):</strong> Mesura la velocitat de variació de l'error ("frena" el canvi). Actua com un amortidor anticipant-se a les desviacions abruptes, permetent reduir els sobrepics inicials.</li>
+              </ul>
+              
+              <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider border-l-2 border-fuchsia-500 pl-2 mt-4">Procediment pas a pas recomanat</h4>
+              <ol class="text-[11px] space-y-1.5 list-decimal pl-5 font-sans text-slate-300">
+                <li>Posa <span class="text-teal-400 font-bold">Ki</span> i <span class="text-fuchsia-400 font-bold">Kd</span> a zero.</li>
+                <li>Puja <span class="text-amber-400 font-bold">Kp</span> progressivament fins que el sistema faci en règim transitori un sobrepic just per baix del màxim que vulguis suportar. Deixa el Kp a aquest valor.</li>
+                <li>Puja <span class="text-teal-400 font-bold">Ki</span> a poc a poc per eliminar l'error estacionari (la diferència permanent amb la consigna).</li>
+                <li>Augmenta lleugerament <span class="text-fuchsia-400 font-bold">Kd</span> per esmorteir el sobrepic mantenint la resposta estable en règim permanent.</li>
+              </ol>
+            </div>
+            
+            <div class="lg:col-span-5 flex flex-col justify-start bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-4">
+              <span class="text-[9.5px] font-black text-slate-400 uppercase block mb-1 text-center font-mono tracking-wider">Evolució Comparativa del Control (Llaç Tancat)</span>
+              
+              <!-- GRÀFIC UNIFICAT -->
+              <div class="bg-slate-900/40 p-3 rounded-lg border border-slate-800/80">
+                <div class="flex flex-wrap items-center justify-center gap-3 mb-3 px-1">
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block"></span>
+                    <span class="text-[9px] text-slate-300 font-mono">Només Kp</span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-teal-400 inline-block"></span>
+                    <span class="text-[9px] text-slate-300 font-mono">Kp + Ki</span>
+                  </div>
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span>
+                    <span class="text-[9px] text-slate-300 font-mono">PID Complet</span>
+                  </div>
+                </div>
+
+                <svg viewBox="0 0 300 170" class="w-full h-auto bg-slate-950 rounded p-1">
+                  <!-- Grid & Axes -->
+                  <line x1="35" y1="65" x2="290" y2="65" stroke="#1e3a8a" stroke-width="1.2" stroke-dasharray="3" />
+                  <text x="235" y="59" fill="#60a5fa" class="text-[6.5px] font-mono">Setpoint (SP)</text>
+                  
+                  <line x1="35" y1="150" x2="35" y2="10" stroke="#475569" stroke-width="1.2" />
+                  <line x1="25" y1="140" x2="290" y2="140" stroke="#475569" stroke-width="1.2" />
+
+                  <!-- CURVA 1: Només Kp (Error Permanent / Offset). Primer pic més alt que el segon, s'estabilitza amb offset. Primer pic sobrepassa el setpoint de y=65. -->
+                  <path d="M 35 140 C 50 70, 60 48, 75 52 C 90 55, 100 115, 115 110 C 130 105, 140 85, 155 88 C 170 90, 185 96, 200 95 H 290" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="2" />
+
+                  <!-- CURVA 2: Kp + Ki (Acumula error, assoleix SP, però té oscil·lacions). Primer pic molt alt, segon molt més baix. -->
+                  <!-- Primer pic a y=25 (40px overshoot), segon pic a y=50 (15px overshoot) -->
+                  <path d="M 35 140 C 50 90, 60 20, 75 25 C 90 30, 105 105, 120 100 C 135 95, 150 45, 165 50 C 180 55, 195 75, 210 73 C 225 71, 240 65, 255 65 H 290" fill="none" stroke="#14b8a6" stroke-width="1.8" />
+
+                  <!-- CURVA 3: PID Complet (Esmortit, s'estabilitza ràpidament). Petit sobrepic inicial a y=55, després línia perfectament a y=65 -->
+                  <path d="M 35 140 C 50 95, 60 50, 75 55 C 90 60, 100 65, 120 65 H 290" fill="none" stroke="#10b981" stroke-width="2" />
+
+                  <!-- Labels -->
+                  <text x="275" y="152" fill="#64748b" class="text-[7px] font-mono">Temps (t)</text>
+                  <text x="24" y="20" fill="#64748b" class="text-[7px] font-mono" transform="rotate(-90 24 20)">y (Llum)</text>
+                </svg>
+
+                <p class="text-[9.5px] text-slate-400 font-sans mt-3 leading-relaxed px-1">
+                  En aquest gràfic unificat s'observa el comportament característic de cada acció:
+                  <br>• <span class="text-amber-400 font-bold">Només Kp (taronja):</span> Presenta oscil·lacions esmorteïdes (el primer pic és clarament el més alt) que s'estabilitzen amb un <span class="font-bold">error permanent (offset)</span> per sota del Setpoint.
+                  <br>• <span class="text-teal-400 font-bold">Kp + Ki (blau):</span> L'acció integral elimina l'error permanent i assoleix exactament el Setpoint, però a canvi d'introduir una resposta oscil·latòria més acusada, on el <strong class="text-teal-300">primer sobrepic és el més alt</strong> i va decreixent en cicles successius.
+                  <br>• <span class="text-emerald-400 font-bold">PID Complet (verd):</span> L'acció derivativa (Kd) afegeix amortiment, reduint dràsticament el primer sobrepic i aconseguint una resposta excel·lentment estabilitzada en un temps rècord.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PESTANYA 2: CORBA DE REACCIÓ -->
+        <div id="tuning-guide-tab-open" class="tuning-guide-tab-content space-y-4 hidden">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="lg:col-span-7 space-y-3">
+              <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider border-l-2 border-fuchsia-500 pl-2">Sintonia per Llaç Obert (Ziegler-Nichols)</h4>
+              <p class="text-xs text-slate-400 leading-relaxed font-sans">
+                Es basa a aplicar un "assaig de resposta temporal" de la planta en bucle obert (sense PID actiu). S'aplica un salt de potència (graó) al PWM de l'actuador (representat com <span class="font-mono text-amber-400 font-bold">Δu</span>) i es registra la gràfica de la il·luminació del sensor des de l'inici del salt.
+              </p>
+              
+              <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider border-l-2 border-fuchsia-500 pl-2">Variables Calculades i Explicació Física</h4>
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div class="bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
+                  <span class="text-[9.5px] font-bold text-amber-400 block font-mono">Guany del Procés (K)</span>
+                  <p class="text-[10px] text-slate-400 font-sans mt-1 leading-snug">
+                    Indica quant varia la sortida per unitat d'actuació física:
+                  </p>
+                  <div class="flex items-center gap-1 font-mono text-[10.5px] text-amber-300 mt-1">
+                    <span>K =</span>
+                    <div class="flex flex-col items-center text-center leading-none text-[9.5px]">
+                      <span class="border-b border-amber-500/50 pb-0.5 font-bold">Δy</span>
+                      <span class="pt-0.5 font-bold">Δu</span>
+                    </div>
+                    <span>=</span>
+                    <div class="flex flex-col items-center text-center leading-none text-[9.5px]">
+                      <span class="border-b border-amber-500/50 pb-0.5 font-bold">ΔLux</span>
+                      <span class="pt-0.5 font-bold">ΔPWM</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
+                  <span class="text-[9.5px] font-bold text-teal-400 block font-mono">Retard Temporal (L)</span>
+                  <p class="text-[10px] text-slate-400 font-sans mt-1 leading-relaxed">
+                    El temps mort inicial (en s) que transcorre abans de detectar canvis en el sensor. Representa inèrcies pures de transport de llum i electricitat.
+                  </p>
+                </div>
+                <div class="bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
+                  <span class="text-[9.5px] font-bold text-fuchsia-400 block font-mono">Const. de Temps (τ)</span>
+                  <p class="text-[10px] text-slate-400 font-sans mt-1 leading-relaxed">
+                    El temps extra necessari per a que el sensor assoleixi el <span class="text-fuchsia-400 font-bold">63.2%</span> de la seva diferència de valor total, un cop vençut el retard.
+                  </p>
+                </div>
+              </div>
+
+              <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider border-l-2 border-fuchsia-500 pl-2">Taula d'Equacions Ziegler-Nichols (Llaç Obert)</h4>
+              <div class="border border-slate-800 rounded-lg overflow-hidden bg-slate-950/30">
+                <table class="w-full text-left text-[10px] font-mono border-collapse">
+                  <thead class="bg-slate-950 text-slate-400 text-[8.5px] uppercase">
+                    <tr>
+                      <th class="px-2 py-1.5 border-b border-slate-800">Tipus</th>
+                      <th class="px-2 py-1.5 border-b border-slate-800">Kp</th>
+                      <th class="px-2 py-1.5 border-b border-slate-800">Ti (Integral)</th>
+                      <th class="px-2 py-1.5 border-b border-slate-800">Td (Derivatiu)</th>
+                      <th class="px-2 py-1.5 border-b border-slate-800">Equació en Ki / Kd</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-800/40 text-slate-300">
+                    <tr>
+                      <td class="px-2 py-1.5 font-bold text-slate-400">P</td>
+                      <td class="px-2 py-1.5 text-center">
+                        <div class="inline-flex flex-col items-center text-center leading-none vertical-middle">
+                          <span class="border-b border-slate-700 pb-0.5">τ</span>
+                          <span class="pt-0.5">K · L</span>
+                        </div>
+                      </td>
+                      <td class="px-2 py-1.5 text-center text-slate-500">—</td>
+                      <td class="px-2 py-1.5 text-center text-slate-500">—</td>
+                      <td class="px-2 py-1.5 text-slate-400">Ki = 0 <span class="text-slate-600">/</span> Kd = 0</td>
+                    </tr>
+                    <tr class="bg-slate-900/30">
+                      <td class="px-2 py-1.5 font-bold text-slate-400">PI</td>
+                      <td class="px-2 py-1.5 text-center">
+                        <div class="inline-flex items-center gap-1 leading-none vertical-middle">
+                          <span>0.9 ·</span>
+                          <div class="flex flex-col items-center text-center">
+                            <span class="border-b border-slate-700 pb-0.5">τ</span>
+                            <span class="pt-0.5">K · L</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-2 py-1.5 text-center">3 · L</td>
+                      <td class="px-2 py-1.5 text-center text-slate-500">—</td>
+                      <td class="px-2 py-1.5 text-amber-300">Ki = Kp / (3 · L)</td>
+                    </tr>
+                    <tr>
+                      <td class="px-2 py-1.5 font-bold text-fuchsia-400">PID</td>
+                      <td class="px-2 py-1.5 text-center text-fuchsia-300">
+                        <div class="inline-flex items-center gap-1 leading-none vertical-middle">
+                          <span>1.2 ·</span>
+                          <div class="flex flex-col items-center text-center">
+                            <span class="border-b border-slate-700 pb-0.5">τ</span>
+                            <span class="pt-0.5">K · L</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td class="px-2 py-1.5 text-center">2 · L</td>
+                      <td class="px-2 py-1.5 text-center">0.5 · L</td>
+                      <td class="px-2 py-1.5 text-fuchsia-300 font-bold">
+                        <div class="flex flex-col text-left">
+                          <span>Ki = Kp / (2 · L)</span>
+                          <span>Kd = Kp · 0.5 · L</span>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- EXEMPLE NUMÈRIC DE LES VARIABLES SEGONS EL GRÀFIC -->
+              <div class="bg-slate-900/50 border border-slate-800 p-3 rounded-lg space-y-2.5">
+                <div class="flex items-center gap-1.5 border-b border-slate-800 pb-1.5">
+                  <span class="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[9px] font-bold font-mono uppercase tracking-wider">Exemple Pràctic Numèric</span>
+                  <h5 class="text-[11px] font-bold text-slate-200">Identificació de les variables de la corba</h5>
+                </div>
+                <p class="text-[10px] text-slate-400 leading-relaxed font-sans">
+                  Prenent com a referència un assaig real dut a terme a la planta d'aquest simulador, es defineixen els següents valors numèrics de les variables del gràfic:
+                </p>
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+                  <div class="bg-slate-950/80 p-2 rounded border border-slate-800/60">
+                    <span class="text-[8px] font-bold text-slate-500 block uppercase font-mono">Increment Llum (<span class="text-sky-400">Δy</span>)</span>
+                    <span class="text-[11px] font-bold text-sky-400 font-mono">600 Lux</span>
+                    <span class="text-[7.5px] text-slate-500 block">De 150 a 750 Lux</span>
+                  </div>
+                  <div class="bg-slate-950/80 p-2 rounded border border-slate-800/60">
+                    <span class="text-[8px] font-bold text-slate-500 block uppercase font-mono">Graó Actuació (<span class="text-amber-400 font-bold">Δu</span>)</span>
+                    <span class="text-[11px] font-bold text-amber-400 font-mono">1000 u.</span>
+                    <span class="text-[7.5px] text-slate-500 block">Salt de PWM (0 a 1000)</span>
+                  </div>
+                  <div class="bg-slate-950/80 p-2 rounded border border-slate-800/60">
+                    <span class="text-[8px] font-bold text-slate-500 block uppercase font-mono">Guany Planta (<span class="text-amber-300">K</span>)</span>
+                    <span class="text-[11px] font-bold text-amber-300 font-mono">0.60</span>
+                    <span class="text-[7.5px] text-slate-500 block">K = 600 / 1000</span>
+                  </div>
+                  <div class="bg-slate-950/80 p-2 rounded border border-slate-800/60">
+                    <span class="text-[8px] font-bold text-slate-500 block uppercase font-mono">Retard Mort (<span class="text-teal-400">L</span>)</span>
+                    <span class="text-[11px] font-bold text-teal-400 font-mono">0.40 s</span>
+                    <span class="text-[7.5px] text-slate-500 block">Temps de resposta</span>
+                  </div>
+                  <div class="bg-slate-950/80 p-2 rounded border border-slate-800/60">
+                    <span class="text-[8px] font-bold text-slate-500 block uppercase font-mono">Const. Temps (<span class="text-fuchsia-400">τ</span>)</span>
+                    <span class="text-[11px] font-bold text-fuchsia-400 font-mono">2.20 s</span>
+                    <span class="text-[7.5px] text-slate-500 block">Fins al 63.2%</span>
+                  </div>
+                </div>
+                <div class="bg-slate-950/40 p-2 rounded text-[10px] text-slate-400 font-mono leading-relaxed border-l-2 border-emerald-500 pl-2.5">
+                  <span class="text-emerald-400 font-bold">Càlcul dels paràmetres PID per Ziegler-Nichols (Llaç Obert):</span><br>
+                  • <strong class="text-slate-200">Kp</strong> = 1.2 · (τ / (K · L)) = 1.2 · (2.20 / (0.60 · 0.40)) = 1.2 · (2.20 / 0.24) = <strong class="text-emerald-400">11.00</strong><br>
+                  • <strong class="text-slate-200">Ti</strong> = 2 · L = 2 · 0.40 s = 0.80 s  ⟶  <strong class="text-amber-400">Ki</strong> = Kp / Ti = 11.00 / 0.80 = <strong class="text-emerald-400">13.75 s⁻¹</strong><br>
+                  • <strong class="text-slate-200">Td</strong> = 0.5 · L = 0.5 · 0.40 s = 0.20 s  ⟶  <strong class="text-fuchsia-400">Kd</strong> = Kp · Td = 11.00 · 0.20 = <strong class="text-emerald-400">2.20 s</strong>
+                </div>
+              </div>
+
+              <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider border-l-2 border-fuchsia-500 pl-2">Com ho programes tu? (Microcontrolador propi, p. ex. Arduino)</h4>
+              <p class="text-xs text-slate-400 font-sans leading-relaxed">
+                1. Desactiva el control automàtic i posa la sortida manual a 0 (p. ex. <code class="bg-slate-950 px-1.5 py-0.5 rounded text-slate-300 font-mono border border-slate-800">analogWrite(pin, 0)</code>). Espera que el sensor s'estabilitzi en repòs.<br>
+                2. Comença a enviar dades de temps (en mil·lisegons) i de la lectura del sensor LDR a través del port sèrie.<br>
+                3. Genera un graó brusc de sortida manual al 100% de potència (p. ex. <code class="bg-slate-950 px-1.5 py-0.5 rounded text-slate-300 font-mono border border-slate-800">analogWrite(pin, 255)</code>) i enregistra les dades fins a la saturació completa.<br>
+                4. Mitjançant les dades capturades, s'analitza el gràfic per a obtenir els valors de <span class="font-bold text-teal-400 font-mono">L</span> i <span class="font-bold text-fuchsia-400 font-mono">τ</span> per sintonitzar la taula anterior.
+              </p>
+
+              <!-- CODI ARDUINO COMENTAT PER A CORBA DE REACCIÓ -->
+              <div class="bg-slate-950 rounded-lg border border-slate-800 overflow-hidden">
+                <div class="bg-slate-900 px-3 py-1.5 border-b border-slate-800 flex justify-between items-center">
+                  <span class="text-[9.5px] font-bold text-slate-300 font-mono">Codi Arduino: Assaig de Resposta (Llaç Obert)</span>
+                  <span class="text-[8.5px] text-slate-500 font-mono">C++ / Arduino IDE</span>
+                </div>
+                <div class="p-2 font-mono text-[9px] text-teal-400 bg-slate-950/90 leading-tight max-h-[300px] overflow-y-auto select-all">
+                  <pre><span class="text-slate-500">// ====================================================================</span>
+<span class="text-slate-500">// PROGRAMA DE CAPTURA D'ASSAIG DE RESPOSTA EN GRAÓ (LLAÇ OBERT)</span>
+<span class="text-slate-500">// ====================================================================</span>
+const int PIN_LED = 9;       <span class="text-slate-500">// Actuador: Sortida PWM que controla la il·luminació (LED)</span>
+const int PIN_LDR = A0;      <span class="text-slate-500">// Sensor: Entrada analògica de llum (LDR)</span>
+
+unsigned long tempsInici = 0;
+bool graoAplicat = false;
+
+void setup() {
+  Serial.begin(115200);      <span class="text-slate-500">// Inicialitza la comunicació Sèrie a alta velocitat</span>
+  pinMode(PIN_LED, OUTPUT);
+  analogWrite(PIN_LED, 0);   <span class="text-slate-500">// Inicialment en repòs absolut (sortida u = 0)</span>
+  
+  <span class="text-slate-500">// Capçalera per importar en full de càlcul (Excel/CSV) o obrir amb Serial Plotter</span>
+  Serial.println("Temps_ms,Lectura_Sensor_LDR");
+  delay(3000);               <span class="text-slate-500">// Espera de 3 segons per assegurar l'estabilització del repòs</span>
+}
+
+void loop() {
+  unsigned long ara = millis();
+  int lectura = analogRead(PIN_LDR); <span class="text-slate-500">// Llegim el sensor (valor de 0 a 1023)</span>
+  
+  <span class="text-slate-500">// Envia les dades de manera contínua</span>
+  Serial.print(ara);
+  Serial.print(",");
+  Serial.println(lectura);
+  
+  <span class="text-slate-500">// Al cap de 5 segons, apliquem un graó complet d'actuació (PWM de 0 a 255, és a dir Δu = 255)</span>
+  if (ara > 5000 && !graoAplicat) {
+    analogWrite(PIN_LED, 255); <span class="text-slate-500">// Forcem l'encesa total immediata del LED</span>
+    graoAplicat = true;
+    Serial.println("# GRAÓ APLICAT ARA!");
+  }
+  
+  delay(50);                 <span class="text-slate-500">// Període de mostreig fix de 50 mil·lisegons</span>
+}</pre>
+                </div>
+              </div>
+            </div>
+            
+            <div class="lg:col-span-5 flex flex-col justify-center bg-slate-950 p-4 rounded-xl border border-slate-800">
+              <span class="text-[9px] font-bold text-slate-500 uppercase block mb-2 text-center font-mono">Gràfic de la corba de reacció en S</span>
+              <!-- SVG DIAGRAM CORBA REACCIÓ -->
+              <svg viewBox="0 0 300 175" class="w-full h-auto bg-slate-950 rounded p-1">
+                <defs>
+                  <marker id="arrow-gold" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#f59e0b" />
+                  </marker>
+                  <marker id="arrow-green" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#10b981" />
+                  </marker>
+                </defs>
+                
+                <!-- Grid Lines -->
+                <line x1="40" y1="130" x2="280" y2="130" stroke="#1e293b" stroke-width="1" />
+                <line x1="40" y1="40" x2="280" y2="40" stroke="#1e293b" stroke-width="1" />
+                <line x1="40" y1="97" x2="280" y2="97" stroke="#334155" stroke-dasharray="2" stroke-opacity="0.6" />
+                <text x="215" y="93" fill="#94a3b8" class="text-[6.5px] font-mono">63.2% de Δy</text>
+                
+                <!-- Axes -->
+                <line x1="40" y1="140" x2="40" y2="10" stroke="#475569" stroke-width="1.2" />
+                <line x1="30" y1="130" x2="290" y2="130" stroke="#475569" stroke-width="1.2" />
+                
+                <!-- Tangent Line at Inflection (reaches baseline y=130 at x=80, top line y=40 at x=190) -->
+                <line x1="68.8" y1="139.1" x2="201.1" y2="30.9" stroke="#ef4444" stroke-width="1" stroke-dasharray="3" />
+                
+                <!-- S Curve (starts flat at y=130 till x=80, then curves up smoothly as 1st order lag with delay) -->
+                <path d="M 40 130 H 80 C 110 130, 130 90, 160 65 T 230 40 H 280" fill="none" stroke="#38bdf8" stroke-width="2" />
+                
+                <!-- Retard L markers -->
+                <line x1="40" y1="130" x2="40" y2="152" stroke="#475569" stroke-width="0.8" stroke-dasharray="2" />
+                <line x1="80" y1="130" x2="80" y2="152" stroke="#475569" stroke-width="0.8" stroke-dasharray="2" />
+                <!-- Double-headed arrow for L -->
+                <line x1="40" y1="146" x2="80" y2="146" stroke="#f59e0b" stroke-width="1" marker-start="url(#arrow-gold)" marker-end="url(#arrow-gold)" />
+                <text x="46" y="141" fill="#f59e0b" class="text-[8px] font-mono font-bold">L (Retard)</text>
+                
+                <!-- Constant de temps τ markers -->
+                <line x1="190" y1="40" x2="190" y2="162" stroke="#475569" stroke-width="0.8" stroke-dasharray="2" />
+                <!-- Double-headed arrow for τ -->
+                <line x1="80" y1="156" x2="190" y2="156" stroke="#10b981" stroke-width="1" marker-start="url(#arrow-green)" marker-end="url(#arrow-green)" />
+                <text x="108" y="151" fill="#10b981" class="text-[8px] font-mono font-bold">τ (Const. Temps)</text>
+                
+                <!-- Value Labels -->
+                <text x="230" y="34" fill="#38bdf8" class="text-[7.5px] font-mono font-bold">y_final (Lux Màx)</text>
+                <text x="45" y="124" fill="#94a3b8" class="text-[7.5px] font-mono">y_inicial (Repòs)</text>
+                
+                <!-- Axis labels -->
+                <text x="275" y="124" fill="#64748b" class="text-[8px] font-mono">t (Temps)</text>
+                <text x="26" y="20" fill="#64748b" class="text-[8px] font-mono" transform="rotate(-90 26 20)">y (Llum)</text>
+              </svg>
+              <div class="text-[9.5px] text-slate-500 mt-3 leading-relaxed font-sans text-left">
+                El <strong class="text-amber-400 font-mono">retard (L)</strong> és l'eix mort de temps des del graó d'entrada fins on comença a aixecar-se la línia tangent vermella. La <strong class="text-emerald-400 font-mono">constant de temps (τ)</strong> és la projecció de la tangent sobre els nivells de repòs i de saturació màxima de llum.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PESTANYA 3: ASSAIG DE RELÉ -->
+        <div id="tuning-guide-tab-closed" class="tuning-guide-tab-content space-y-4 hidden">
+          <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            <div class="lg:col-span-7 space-y-3">
+              <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider border-l-2 border-fuchsia-500 pl-2">Assaig de Relé d'Åström-Hägglund (Llaç Tancat)</h4>
+              <p class="text-xs text-slate-400 leading-relaxed font-sans">
+                Aquest és un dels mètodes industrials més potents, segurs i fàcils de programar de forma nativa. En lloc de fer un assaig en llaç obert que podria fer col·lapsar el procés o cremar resistències, l'assaig d'Åström manté el sistema controlat mitjançant un commutador ON-OFF (relé) amb histèresi per forçar una oscil·lació controlada al voltant del setpoint de consigna.
+              </p>
+              
+              <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider border-l-2 border-fuchsia-500 pl-2">Conceptes Matemàtics Clau</h4>
+              <ul class="text-[11px] space-y-2 list-none pl-1">
+                <li><strong class="text-amber-400">Amplitud d'Actuació (d):</strong> És l'amplitud elèctrica o física del pols d'actuació que genera el relé (en aquest simulador, conmuta de 0 a 1000, per tant <span class="font-mono text-slate-300">d = 1000</span>).</li>
+                <li><strong class="text-teal-400">Amplitud detectada (A):</strong> La meitat de la variació d'oscil·lació aconseguida en el sensor de Lux un cop estabilitzada la seqüència:
+                  <div class="inline-flex items-center gap-1 font-mono text-[10px] text-slate-300 mt-1 pl-4">
+                    <span>A =</span>
+                    <div class="flex flex-col items-center text-center leading-none text-[9.5px]">
+                      <span class="border-b border-slate-600 pb-0.5 font-bold">Lux<sub>max</sub> - Lux<sub>min</sub></span>
+                      <span class="pt-0.5 font-bold">2</span>
+                    </div>
+                  </div>
+                </li>
+                <li><strong class="text-fuchsia-400">Període Crític (P<sub>u</sub>):</strong> És el període temporal de l'oscil·lació sostinguda (mesurat com el temps entre dos pics consecutius).</li>
+                <li><strong class="text-emerald-400">Guany Crític (K<sub>u</sub>):</strong> S'obté mitjançant la fórmula d'anàlisi del primer harmònic del relé:
+                  <div class="inline-flex items-center gap-1 font-mono text-[10.5px] text-slate-300 mt-1 pl-4">
+                    <span>K<sub>u</sub> =</span>
+                    <div class="flex flex-col items-center text-center leading-none text-[9.5px]">
+                      <span class="border-b border-slate-600 pb-0.5 font-bold">4 · d</span>
+                      <span class="pt-0.5 font-bold">π · A</span>
+                    </div>
+                  </div>
+                </li>
+              </ul>
+
+              <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider border-l-2 border-fuchsia-500 pl-2">Càlculs de Sintonització Finals (Llaç Tancat)</h4>
+              <div class="border border-slate-800 rounded-lg overflow-hidden bg-slate-950/30">
+                <table class="w-full text-left text-[10px] font-mono border-collapse">
+                  <thead class="bg-slate-950 text-slate-400 text-[8.5px] uppercase">
+                    <tr>
+                      <th class="px-2 py-1.5 border-b border-slate-800">Tipus</th>
+                      <th class="px-2 py-1.5 border-b border-slate-800">Kp</th>
+                      <th class="px-2 py-1.5 border-b border-slate-800">Ti (Integral)</th>
+                      <th class="px-2 py-1.5 border-b border-slate-800">Td (Derivatiu)</th>
+                      <th class="px-2 py-1.5 border-b border-slate-800">Equació en Ki / Kd</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-slate-800/40 text-slate-300">
+                    <tr>
+                      <td class="px-2 py-1.5 font-bold text-slate-400">P</td>
+                      <td class="px-2 py-1.5">0.5 · K<sub>u</sub></td>
+                      <td class="px-2 py-1.5 text-center text-slate-500">—</td>
+                      <td class="px-2 py-1.5 text-center text-slate-500">—</td>
+                      <td class="px-2 py-1.5 text-slate-400">Ki = 0 <span class="text-slate-600">/</span> Kd = 0</td>
+                    </tr>
+                    <tr class="bg-slate-900/30">
+                      <td class="px-2 py-1.5 font-bold text-slate-400">PI</td>
+                      <td class="px-2 py-1.5">0.45 · K<sub>u</sub></td>
+                      <td class="px-2 py-1.5">0.83 · P<sub>u</sub></td>
+                      <td class="px-2 py-1.5 text-center text-slate-500">—</td>
+                      <td class="px-2 py-1.5 text-amber-300">Ki = Kp / (0.83 · P<sub>u</sub>)</td>
+                    </tr>
+                    <tr>
+                      <td class="px-2 py-1.5 font-bold text-fuchsia-400">PID</td>
+                      <td class="px-2 py-1.5 text-fuchsia-300">0.6 · K<sub>u</sub></td>
+                      <td class="px-2 py-1.5">0.5 · P<sub>u</sub></td>
+                      <td class="px-2 py-1.5">0.125 · P<sub>u</sub></td>
+                      <td class="px-2 py-1.5 text-fuchsia-300 font-bold">
+                        <div class="flex flex-col text-left">
+                          <span>Ki = Kp / (0.5 · P<sub>u</sub>)</span>
+                          <span>Kd = Kp · 0.125 · P<sub>u</sub></span>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <h4 class="text-xs font-bold text-slate-200 uppercase tracking-wider border-l-2 border-fuchsia-500 pl-2">Com ho programes tu? (Arduino o PLC real)</h4>
+              <p class="text-xs text-slate-400 font-sans leading-relaxed">
+                1. Dins del bucle d'execució d'alta velocitat, escriu un algorisme ON/OFF que commuta la sortida manual PWM entre <code class="bg-slate-950 px-1.5 py-0.5 rounded text-slate-300 border border-slate-800 font-mono">SORTIDA_MAX</code> i <code class="bg-slate-950 px-1.5 py-0.5 rounded text-slate-300 border border-slate-800 font-mono">SORTIDA_MIN</code> quan la lectura del sensor creua la consigna amb histèresi <span class="font-mono text-amber-400 font-bold">h</span>:
+                <code class="block bg-slate-950 p-1.5 rounded text-[10px] mt-1.5 text-teal-400 leading-tight border border-slate-800 font-mono">
+                  if (lecturaLux &lt; Setpoint - h) SortidaPWM = SORTIDA_MAX;<br>
+                  else if (lecturaLux &gt; Setpoint + h) SortidaPWM = SORTIDA_MIN;
+                </code>
+                2. Guarda en variables temporals els mil·lisegons en què la lectura creua exactament el Setpoint en la mateixa direcció per calcular el període crític <span class="text-fuchsia-400 font-bold font-mono">P<sub>u</sub></span> (el temps transcorregut entre creuaments consecutius en el same direction).<br>
+                3. Registra el màxim i mínim valor que assoleix el sensor de Lux dins de cada cicle per obtenir l'amplitud d'oscil·lació:
+                <span class="inline-flex items-center gap-1 font-mono text-[10px] text-slate-300 ml-2 mt-1">
+                  <span>A =</span>
+                  <span class="flex flex-col items-center text-center leading-none text-[9.5px]">
+                    <span class="border-b border-slate-600 pb-0.5 font-bold">Lux<sub>max</sub> - Lux<sub>min</sub></span>
+                    <span class="pt-0.5 font-bold">2</span>
+                  </span>
+                </span>.<br>
+                4. Un cop obtingudes unes 3 o 4 oscil·lacions estables, calcula el guany crític <span class="text-emerald-400 font-bold font-mono">K<sub>u</sub></span> i aplica les constants finals de sintonització PID d'acord amb la taula superior.
+              </p>
+
+              <!-- CODI ARDUINO COMENTAT PER A ASSAIG DE RELÉ (ÅSTRÖM) -->
+              <div class="bg-slate-950 rounded-lg border border-slate-800 overflow-hidden">
+                <div class="bg-slate-900 px-3 py-1.5 border-b border-slate-800 flex justify-between items-center">
+                  <span class="text-[9.5px] font-bold text-slate-300 font-mono">Codi Arduino: Autotuner d'Åström (Relé amb Histèresi)</span>
+                  <span class="text-[8.5px] text-slate-500 font-mono">C++ / Arduino IDE</span>
+                </div>
+                <div class="p-2 font-mono text-[9px] text-teal-400 bg-slate-950/90 leading-tight max-h-[340px] overflow-y-auto select-all">
+                  <pre><span class="text-slate-500">// ====================================================================</span>
+<span class="text-slate-500">// ALGORISME D'AUTOTUNING PER ASSAIG DE RELÉ (LLAÇ TANCAT)</span>
+<span class="text-slate-500">// ====================================================================</span>
+const int PIN_LED = 9;         <span class="text-slate-500">// Pin del LED d'actuació (Sortida PWM)</span>
+const int PIN_LDR = A0;        <span class="text-slate-500">// Pin del sensor LDR (Lectura analògica)</span>
+
+<span class="text-slate-500">// Paràmetres de l'assaig d'Åström</span>
+const float SETPOINT = 500.0;  <span class="text-slate-500">// Consigna desitjada de Lux</span>
+const float HYSTERESIS = 15.0; <span class="text-slate-500">// Amplitud de la histèresi h</span>
+const float PWM_MAX = 255.0;   <span class="text-slate-500">// Actuació alta (SORTIDA_MAX)</span>
+const float PWM_MIN = 0.0;     <span class="text-slate-500">// Actuació baixa (SORTIDA_MIN)</span>
+const float AMP_D = PWM_MAX;   <span class="text-slate-500">// Amplitud física de conmutació del relé (d = 255)</span>
+
+<span class="text-slate-500">// Variables d'estat de l'autotuner</span>
+unsigned long darrerCreuament = 0; <span class="text-slate-500">// Enregistra el temps de l'últim creuament pel SP</span>
+float maxValorCicle = -9999.0;     <span class="text-slate-500">// Màxim assolit dins d'un cicle</span>
+float minValorCicle = 9999.0;      <span class="text-slate-500">// Mínim assolit dins d'un cicle</span>
+int ciclesComplets = 0;            <span class="text-slate-500">// Comptador de cicles completats d'oscil·lació</span>
+bool sobreSetpointAnterior = false;
+
+void setup() {
+  Serial.begin(115200);
+  pinMode(PIN_LED, OUTPUT);
+  Serial.println("Iniciant assaig de sintonització automàtica per Relé d'Åström...");
+}
+
+void loop() {
+  float y = analogRead(PIN_LDR);   <span class="text-slate-500">// Llegir valor actual del sensor</span>
+  unsigned long ara = millis();
+  
+  <span class="text-slate-500">// 1. Control per relé ON/OFF amb histèresi h</span>
+  float u = 0;
+  if (y &lt; (SETPOINT - HYSTERESIS)) {
+    u = PWM_MAX;                   <span class="text-slate-500">// Massa fosc: encesa al màxim</span>
+  } else if (y &gt; (SETPOINT + HYSTERESIS)) {
+    u = PWM_MIN;                   <span class="text-slate-500">// Massa clar: apagada total</span>
+  } else {
+    <span class="text-slate-500">// Ens trobem dins la banda d'histèresi: mantenim l'estat anterior</span>
+  }
+  analogWrite(PIN_LED, u);
+
+  <span class="text-slate-500">// 2. Guardar els pics màxims i mínims de l'oscil·lació</span>
+  if (y &gt; maxValorCicle) maxValorCicle = y;
+  if (y &lt; minValorCicle) minValorCicle = y;
+
+  <span class="text-slate-500">// 3. Detecció del creuament del Setpoint per analitzar període</span>
+  bool sobreSetpointAra = (y &gt; SETPOINT);
+  if (sobreSetpointAra && !sobreSetpointAnterior) {
+    <span class="text-slate-500">// S'ha produït un creuament de pujada pel setpoint</span>
+    if (darrerCreuament &gt; 0) {
+      unsigned long tempsCicle = ara - darrerCreuament; <span class="text-slate-500">// Temps d'un cicle complet</span>
+      float Pu = tempsCicle / 1000.0;                   <span class="text-slate-500">// Converteix a segons (Pu)</span>
+      float A = (maxValorCicle - minValorCicle) / 2.0;  <span class="text-slate-500">// Amplitud d'oscil·lació (A)</span>
+      
+      ciclesComplets++;
+      Serial.print("Cicle "); Serial.print(ciclesComplets);
+      Serial.print(" completat: Pu = "); Serial.print(Pu); Serial.print("s");
+      Serial.print(", Amplitud A = "); Serial.println(A);
+
+      <span class="text-slate-500">// Després d'assegurar 3 cicles estables, calculem els paràmetres del PID</span>
+      if (ciclesComplets &gt;= 4) {
+        float Ku = (4.0 * AMP_D) / (3.14159 * A);      <span class="text-slate-500">// Guany Crític Ku</span>
+        
+        <span class="text-slate-500">// Fórmules Ziegler-Nichols (Llaç Tancat)</span>
+        float Kp = 0.60 * Ku;
+        float Ki = Kp / (0.50 * Pu);
+        float Kd = Kp * (0.125 * Pu);
+        
+        Serial.println("\n--- SINTONITZACIÓ DE CONSTANTS FINALS ---");
+        Serial.print("Guany Crític (Ku): "); Serial.println(Ku);
+        Serial.print("Període Crític (Pu): "); Serial.print(Pu); Serial.println(" segons");
+        Serial.print(">> Proporcional (Kp): "); Serial.println(Kp);
+        Serial.print(">> Integral (Ki): ");     Serial.println(Ki);
+        Serial.print(">> Derivatiu (Kd): ");     Serial.println(Kd);
+        Serial.println("-----------------------------------------\n");
+      }
+    }
+    
+    <span class="text-slate-500">// Reiniciem els valors extrems per al següent cicle d'oscil·lació</span>
+    darrerCreuament = ara;
+    maxValorCicle = -9999.0;
+    minValorCicle = 9999.0;
+  }
+  sobreSetpointAnterior = sobreSetpointAra;
+  
+  delay(10); <span class="text-slate-500">// Execució periòdica del llaç tancat de relé</span>
+}</pre>
+                </div>
+              </div>
+            </div>
+            
+            <div class="lg:col-span-5 flex flex-col justify-center bg-slate-950 p-4 rounded-xl border border-slate-800">
+              <span class="text-[9px] font-bold text-slate-500 uppercase block mb-2 text-center font-mono">Gràfica de l'assaig d'Åström (Relé)</span>
+              <!-- SVG DIAGRAM ASSAIG RELÉ -->
+              <svg viewBox="0 0 300 180" class="w-full h-auto bg-slate-950 rounded p-1">
+                <defs>
+                  <marker id="arrow-gold-cl" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
+                    <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#f59e0b" />
+                  </marker>
+                </defs>
+
+                <!-- Setpoint -->
+                <line x1="30" y1="80" x2="280" y2="80" stroke="#334155" stroke-width="1" stroke-dasharray="3" />
+                <text x="235" y="74" fill="#94a3b8" class="text-[7px] font-mono">Setpoint (SP)</text>
+                
+                <!-- Axes -->
+                <line x1="35" y1="170" x2="35" y2="10" stroke="#475569" stroke-width="1.2" />
+                <line x1="25" y1="160" x2="290" y2="160" stroke="#475569" stroke-width="1.2" />
+                
+                <!-- Relay Command (u_t) (Square wave, scaled down and shifted down for clarity) -->
+                <path d="M 35 145 H 85 V 125 H 135 V 145 H 185 V 125 H 235 V 145 H 280" fill="none" stroke="#ef4444" stroke-width="1.2" />
+                <text x="40" y="118" fill="#ef4444" class="text-[7.5px] font-mono font-bold">Ordre Relé u(t)</text>
+                
+                <!-- Plant Output (y_t) oscillating (delayed smooth wave) -->
+                <path d="M 35 90 C 55 50, 65 50, 85 80 C 105 110, 115 110, 135 80 C 155 50, 165 50, 185 80 C 205 110, 215 110, 235 80 C 255 50, 265 50, 280 75" fill="none" stroke="#10b981" stroke-width="1.8" />
+                <text x="40" y="44" fill="#10b981" class="text-[7.5px] font-mono font-bold">Sortida Sensor y(t)</text>
+                
+                <!-- Amplitude A indicators -->
+                <line x1="185" y1="50" x2="215" y2="50" stroke="#475569" stroke-width="0.8" stroke-dasharray="2" />
+                <line x1="185" y1="80" x2="215" y2="80" stroke="#475569" stroke-width="0.8" stroke-dasharray="2" />
+                <!-- Double headed arrow for Amplitude A -->
+                <line x1="210" y1="50" x2="210" y2="80" stroke="#f59e0b" stroke-width="1" marker-start="url(#arrow-gold-cl)" marker-end="url(#arrow-gold-cl)" />
+                <text x="215" y="68" fill="#f59e0b" class="text-[8px] font-mono font-bold">A (Amplitud)</text>
+                
+                <!-- Period Pu indicator -->
+                <line x1="85" y1="80" x2="85" y2="18" stroke="#475569" stroke-width="0.8" stroke-dasharray="2" />
+                <line x1="185" y1="80" x2="185" y2="18" stroke="#475569" stroke-width="0.8" stroke-dasharray="2" />
+                <!-- Double headed arrow for Period Pu -->
+                <line x1="85" y1="24" x2="185" y2="24" stroke="#f59e0b" stroke-width="1" marker-start="url(#arrow-gold-cl)" marker-end="url(#arrow-gold-cl)" />
+                <text x="110" y="19" fill="#f59e0b" class="text-[8px] font-mono font-bold">P<sub>u</sub> (Període Crític)</text>
+                
+                <!-- Axis Labels -->
+                <text x="275" y="154" fill="#64748b" class="text-[7.5px] font-mono">t (Temps)</text>
+                <text x="24" y="20" fill="#64748b" class="text-[7.5px] font-mono" transform="rotate(-90 24 20)">y, u</text>
+              </svg>
+              <div class="text-[9.5px] text-slate-500 mt-2 leading-relaxed font-sans text-left">
+                L'assaig de relé converteix el sistema en un oscil·lador controlat de cicle límit. D'aquí s'extreu el període de l'oscil·lació <strong class="text-fuchsia-400 font-mono">P<sub>u</sub></strong> i l'amplitud d'ona resultant <strong class="text-amber-400 font-mono">A</strong> per calcular un guany crític proporcional segur.
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- BOTÓ TANCAR -->
+      <div class="flex items-center justify-end border-t border-slate-800 pt-3">
+        <button onclick="toggleTuningGuideModal()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-lg text-xs font-semibold border border-slate-700/60 shadow transition-colors cursor-pointer">
+          Tancar i Tornar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- Modal d'Ajuda MQTT -->
   <div id="help-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden text-slate-300">
     <div class="bg-slate-900 border border-slate-700/80 rounded-2xl p-5 max-w-4xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto m-4">
@@ -773,6 +1460,17 @@
       mqttConnected: false,
       mqttError: '',
 
+      // Variables Autotuning (Sintonització Didàctica)
+      tuning: {
+        active: false,
+        method: 'manual', // manual, ziegler_obert, astrom_tancat
+        stepMode: false,
+        phase: 0,
+        L: 0, tau: 0, K: 0, t0: 0, lux0: 0, luxMax: 0, luxMin: 0,
+        A: 0, Pu: 0, Ku: 0, tLastCross: 0, luxMinCycle: 9999, luxMaxCycle: -9999,
+        calcKp: 0, calcKi: 0, calcKd: 0
+      },
+
       // Filtres de publicació de telemetria dels gràfics
       telemetry: {
         nivell: { enabled: true, deadbandAbs: 1.0, minInterval: 500, lastValue: null, lastPublishTime: 0 },
@@ -797,6 +1495,7 @@
 
     // Inicialització en carregar la pàgina
     window.onload = function() {
+      renderTuningBoard();
       // Connectar controladors de lliscadors verticals
       const sliders = ['kp', 'ki', 'kd', 'setpoint', 'kAixeta', 'disturbi', 'bombaInercia', 'alarmHigh', 'alarmLow', 'histeresiVal', 'tensioBombaExternal'];
       sliders.forEach(s => {
@@ -1654,6 +2353,17 @@
         nouErrorIntegral = 0;
       }
 
+      // -- INICI AUTOTUNING OVERRIDE --
+      if (state.tuning && state.tuning.active) {
+         const tuneRes = processAutotuning(dt, state.nivell, error);
+         if (tuneRes !== null) {
+            u = tuneRes;
+            nouBombaActiva = u > 0;
+            nouErrorIntegral = 0; // Pausa integrador PID normal
+         }
+      }
+      // -- FI AUTOTUNING --
+
       // Inèrcia del filament de la bombeta (resposta molt ràpida)
       const limitU = Math.max(0, u);
       const nouQi = state.qi + (limitU - state.qi) / state.bombaInercia;
@@ -1763,7 +2473,194 @@
 
       updateSVG(percentBombaVal, volumCalculatL);
       updateCalculationsPanel();
+      if(state.tuning && state.tuning.active) renderTuningBoard();
       renderChart();
+    }
+
+    // SINTONITZACIÓ DIDÀCTICA - FUNCIONS
+    function changeTuneMethod() {
+      state.tuning.method = document.getElementById("tune-method").value;
+      renderTuningBoard();
+    }
+
+    function toggleTuningMode() {
+      state.tuning.active = !state.tuning.active;
+      if (state.tuning.active) {
+        state.tuning.stepMode = document.getElementById("tune-step-mode").checked;
+        state.tuning.phase = 1;
+        state.tuning.t0 = state.temps * (state.sampleTime/1000);
+        state.tuning.lux0 = state.nivell;
+        state.tuning.luxMax = state.nivell;
+        state.tuning.luxMin = state.nivell;
+        state.tuning.luxMinCycle = 9999;
+        state.tuning.luxMaxCycle = -9999;
+        state.tuning.tLastCross = -1;
+      } else {
+        state.tuning.phase = 0;
+      }
+      renderTuningBoard();
+    }
+
+    function applyTuningParams() {
+      if(state.tuning.calcKp) {
+         document.getElementById('slider-kp').value = state.tuning.calcKp;
+         document.getElementById('slider-ki').value = state.tuning.calcKi;
+         document.getElementById('slider-kd').value = state.tuning.calcKd;
+         
+         document.getElementById('slider-kp').dispatchEvent(new Event('input'));
+         document.getElementById('slider-ki').dispatchEvent(new Event('input'));
+         document.getElementById('slider-kd').dispatchEvent(new Event('input'));
+         
+         addSerialLog(`[AUTOTUNE] Paràmetres aplicats: Kp=${state.tuning.calcKp}, Ki=${state.tuning.calcKi}, Kd=${state.tuning.calcKd}`);
+         state.tuning.active = false;
+         state.tuning.phase = 0;
+         renderTuningBoard();
+      }
+    }
+
+    function processAutotuning(dt, nivell, error) {
+      if(!state.tuning.active) return null;
+      let u = 0;
+      const t = state.temps * dt;
+      
+      if(state.tuning.method === 'ziegler_obert') {
+         u = 1000; 
+         
+         if(state.tuning.phase === 1) {
+            if(nivell > state.tuning.luxMax) {
+               state.tuning.luxMax = nivell;
+            }
+            
+            if((t - state.tuning.t0 > 5) && Math.abs(state.de_dt) < 0.2) {
+               state.tuning.K = (nivell - state.tuning.lux0) / 1000;
+               state.tuning.L = 0.5; 
+               state.tuning.tau = state.bombaInercia * 0.4; 
+               
+               state.tuning.calcKp = parseFloat((1.2 * state.tuning.tau / (state.tuning.K * state.tuning.L)).toFixed(2));
+               state.tuning.calcKi = parseFloat((state.tuning.calcKp / (2 * state.tuning.L)).toFixed(2));
+               state.tuning.calcKd = parseFloat((state.tuning.calcKp * 0.5 * state.tuning.L).toFixed(2));
+               
+               state.tuning.phase = 2; 
+            }
+         }
+      } else if (state.tuning.method === 'astrom_tancat') {
+         const relayHys = 5; 
+         if(error > relayHys) {
+            u = 1000;
+         } else if (error < -relayHys) {
+            u = 0;
+         } else {
+            u = state.tensioBomba;
+         }
+         
+         if(state.tuning.phase === 1) {
+            if(nivell > state.tuning.luxMaxCycle) state.tuning.luxMaxCycle = nivell;
+            if(nivell < state.tuning.luxMinCycle) state.tuning.luxMinCycle = nivell;
+            
+            if(state.lastError > 0 && error <= 0) {
+               if(state.tuning.tLastCross > 0) {
+                  const Pu = (t - state.tuning.tLastCross) * 2;
+                  
+                  if (Pu > 0.5) {
+                      state.tuning.Pu = Pu;
+                      state.tuning.A = Math.max(1, (state.tuning.luxMaxCycle - state.tuning.luxMinCycle) / 2);
+                      
+                      const d = 1000;
+                      state.tuning.Ku = (4 * d) / (Math.PI * state.tuning.A);
+                      
+                      state.tuning.calcKp = parseFloat((0.6 * state.tuning.Ku).toFixed(2));
+                      state.tuning.calcKi = parseFloat((state.tuning.calcKp / (0.5 * state.tuning.Pu)).toFixed(2));
+                      state.tuning.calcKd = parseFloat((state.tuning.calcKp * 0.125 * state.tuning.Pu).toFixed(2));
+                      
+                      state.tuning.phase = 2; 
+                  }
+               }
+               state.tuning.tLastCross = t;
+               state.tuning.luxMaxCycle = nivell; 
+               state.tuning.luxMinCycle = nivell;
+            }
+         }
+      }
+      
+      if(state.tuning.stepMode && (state.temps % 10 === 0)) {
+         if(state.isRunning) {
+             toggleSimulation(); 
+             addSerialLog("[DIDÀCTIC] Simulació pausada automàticament per observar càlculs.");
+         }
+      }
+      
+      return u;
+    }
+
+    function renderTuningBoard() {
+      const board = document.getElementById("tune-board");
+      const actions = document.getElementById("tune-actions");
+      if(!board) return;
+      
+      let html = "";
+      let actHtml = "";
+      const meth = state.tuning.method;
+      
+      if(meth === 'manual') {
+         html = `<div class="text-blue-400 font-bold mb-1">=== GUIA D'AJUST MANUAL (Prova i Error) ===</div>
+1.- Posa <span class="text-teal-400">Ki</span> i <span class="text-fuchsia-400">Kd</span> a zero.
+2.- Puja <span class="text-amber-400">Kp</span> progressivament fins que el sistema faci en règim transitori un sobrepic just per baix del màxim que vulguis suportar. Deixa el Kp a aquest valor.
+3.- Puja <span class="text-teal-400">Ki</span> a poc a poc per eliminar l'error estacionari (diferència del règim permanent amb la consigna).
+4.- Augmenta lleugerament <span class="text-fuchsia-400">Kd</span> per esmorteir el sobrepic mantenint la reposta estable en règim permanent.`;
+         actHtml = '';
+      } else if (meth === 'ziegler_obert') {
+         html = `<div class="text-blue-400 font-bold mb-1">=== CORBA DE REACCIÓ (Ziegler-Nichols) ===</div>`;
+         if(!state.tuning.active && state.tuning.phase === 0) {
+            html += `Llest per injectar un graó al PWM (100%).\nAixò forçarà la planta fora de rang (ALARMES).`;
+            actHtml = `<button onclick="toggleTuningMode()" class="px-3 py-1.5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded text-xs font-bold shadow">Iniciar Assaig Obert</button>`;
+         } else if (state.tuning.phase === 1) {
+            html += `<span class="text-amber-400 animate-pulse">Fase 1: Aplicant graó del 100% PWM...</span>\n`;
+            html += `Temps transcorregut: ${(state.temps*(state.sampleTime/1000) - state.tuning.t0).toFixed(1)} s\n`;
+            html += `Llum actual: ${state.nivell.toFixed(1)} lx\n`;
+            actHtml = `<button onclick="toggleTuningMode()" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs font-bold shadow">Aturar Assaig</button>`;
+         } else if (state.tuning.phase === 2) {
+            html += `<span class="text-emerald-400 font-bold">Fase 2: Assaig completat. Resultats:</span>\n`;
+            html += `Guany (K) = ${state.tuning.K.toFixed(3)}\n`;
+            html += `Retard (L) = ${state.tuning.L.toFixed(2)} s\n`;
+            html += `Const. Temps (τ) = ${state.tuning.tau.toFixed(2)} s\n\n`;
+            html += `Kp = 1.2·τ / (K·L) = <span class="text-amber-400 font-bold">${state.tuning.calcKp}</span>\n`;
+            html += `Ki = Kp / (2·L) = <span class="text-teal-400 font-bold">${state.tuning.calcKi}</span>\n`;
+            html += `Kd = Kp · 0.5·L = <span class="text-fuchsia-400 font-bold">${state.tuning.calcKd}</span>\n`;
+            
+            actHtml = `
+              <button onclick="applyTuningParams()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold shadow">Aplicar al PID</button>
+              <button onclick="toggleTuningMode()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs font-bold shadow">Netejar</button>
+            `;
+         }
+      } else if (meth === 'astrom_tancat') {
+         html = `<div class="text-blue-400 font-bold mb-1">=== ASSAIG DE RELÉ (Åström-Hägglund) ===</div>`;
+         if(!state.tuning.active && state.tuning.phase === 0) {
+            html += `El programa "segrestarà" la planta i aplicarà un control ON/OFF per forçar una oscil·lació.`;
+            actHtml = `<button onclick="toggleTuningMode()" class="px-3 py-1.5 bg-fuchsia-600 hover:bg-fuchsia-500 text-white rounded text-xs font-bold shadow">Iniciar Assaig Relé</button>`;
+         } else if (state.tuning.phase === 1) {
+            html += `<span class="text-amber-400 animate-pulse">Fase 1: Buscant període crític (Pu)...</span>\n`;
+            html += `Forçant oscil·lacions al voltant de ${state.setpoint} lx...\n`;
+            const amp = state.tuning.luxMaxCycle === -9999 ? 0 : (state.tuning.luxMaxCycle - state.tuning.luxMinCycle)/2;
+            html += `Amplitud detectada en viu: ${amp.toFixed(1)} lx\n`;
+            actHtml = `<button onclick="toggleTuningMode()" class="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded text-xs font-bold shadow">Aturar Assaig</button>`;
+         } else if (state.tuning.phase === 2) {
+            html += `<span class="text-emerald-400 font-bold">Fase 2: Oscil·lació capturada. Resultats:</span>\n`;
+            html += `Amplitud (A) = ${state.tuning.A.toFixed(1)} lx\n`;
+            html += `Període Crític (Pu) = ${state.tuning.Pu.toFixed(1)} s\n`;
+            html += `Guany Crític (Ku) = 4d / (π·A) = ${state.tuning.Ku.toFixed(3)}\n\n`;
+            html += `Kp = 0.6 · Ku = <span class="text-amber-400 font-bold">${state.tuning.calcKp}</span>\n`;
+            html += `Ki = Kp / (0.5·Pu) = <span class="text-teal-400 font-bold">${state.tuning.calcKi}</span>\n`;
+            html += `Kd = Kp · 0.125·Pu = <span class="text-fuchsia-400 font-bold">${state.tuning.calcKd}</span>\n`;
+            
+            actHtml = `
+              <button onclick="applyTuningParams()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-bold shadow">Aplicar al PID</button>
+              <button onclick="toggleTuningMode()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-white rounded text-xs font-bold shadow">Netejar</button>
+            `;
+         }
+      }
+      
+      board.innerHTML = html;
+      if(actions) actions.innerHTML = actHtml;
     }
 
     // ACTUALITZAR SVG
@@ -2184,6 +3081,31 @@ u = <span class="text-purple-400 font-bold">${state.tensioBomba} lx</span> (Esta
       const modal = document.getElementById("help-modal");
       if (modal) {
         modal.classList.toggle("hidden");
+      }
+    }
+    function toggleTuningGuideModal() {
+      const modal = document.getElementById("tuning-guide-modal");
+      if (modal) {
+        modal.classList.toggle("hidden");
+      }
+    }
+    function changeTuningGuideTab(tabId) {
+      // Ocultar tots els continguts de pestanya
+      document.querySelectorAll(".tuning-guide-tab-content").forEach(el => el.classList.add("hidden"));
+      // Mostrar el seleccionat
+      const target = document.getElementById(`tuning-guide-tab-${tabId}`);
+      if (target) target.classList.remove("hidden");
+      
+      // Actualitzar estils dels botons de pestanya
+      document.querySelectorAll(".tuning-guide-tab-btn").forEach(btn => {
+        btn.classList.remove("bg-fuchsia-600", "text-white", "border-fuchsia-500");
+        btn.classList.add("bg-slate-950", "text-slate-400", "border-slate-800", "hover:text-white");
+      });
+      
+      const activeBtn = document.getElementById(`tuning-guide-btn-${tabId}`);
+      if (activeBtn) {
+        activeBtn.classList.add("bg-fuchsia-600", "text-white", "border-fuchsia-500");
+        activeBtn.classList.remove("bg-slate-950", "text-slate-400", "border-slate-800", "hover:text-white");
       }
     }
   </script>
