@@ -517,12 +517,12 @@ service cloud.firestore {
       initFirebase();
     };
 
-    window.resetFirebaseConfig = () => {
+    window.resetFirebaseConfig = async () => {
       localStorage.removeItem('fbConfig');
       document.getElementById('firebase-credentials-form').style.display = 'block';
       document.getElementById('firebase-connected-msg').style.display = 'none';
       document.getElementById('auth-section').style.display = 'none';
-      if(fbAuth && currentUser) window.logoutFirebase();
+      if(fbAuth && currentUser) await window.logoutFirebase();
       fbApp = null; fbAuth = null; fbDb = null;
     };
 
@@ -546,6 +546,8 @@ service cloud.firestore {
           alert("Error: Google Login de Firebase no funciona quan obres el fitxer directament (amb file://).\\n\\nPerquè funcioni, has d'obrir l'aplicació mitjançant un servidor web local (per exemple, usant l'extensió 'Live Server' de VSCode o 'python -m http.server'). Després, assegura't que 'localhost' estigui autoritzat a Firebase.");
         } else if (e.code === 'auth/unauthorized-domain') {
           alert("Error: El domini actual no està autoritzat a Firebase.\\n\\nVes a Firebase Console -> Authentication -> Settings -> Authorized domains i afegeix aquest domini: " + (window.location.hostname || "localhost"));
+        } else if (e.message && e.message.includes('Cross-Origin-Opener-Policy')) {
+          alert("Aquesta vista prèvia (iframe) bloqueja l'inici de sessió amb Google.\\n\\nPer poder utilitzar-lo, si us plau, obre l'aplicació en una nova pestanya o fes servir l'inici de sessió amb correu electrònic.");
         } else {
           alert("Error amb Google: " + e.message);
         }
@@ -600,10 +602,10 @@ service cloud.firestore {
         activeTimers = fbActiveTimers;
         records = fbRecords;
         
-        await db.projects.clear(); if(projects.length) await db.projects.bulkAdd(projects);
-        await db.tasks.clear(); if(tasks.length) await db.tasks.bulkAdd(tasks);
-        await db.activeTimers.clear(); if(activeTimers.length) await db.activeTimers.bulkAdd(activeTimers);
-        await db.records.clear(); if(records.length) await db.records.bulkAdd(records);
+        await db.projects.clear(); if(projects.length) await db.projects.bulkPut(projects);
+        await db.tasks.clear(); if(tasks.length) await db.tasks.bulkPut(tasks);
+        await db.activeTimers.clear(); if(activeTimers.length) await db.activeTimers.bulkPut(activeTimers);
+        await db.records.clear(); if(records.length) await db.records.bulkPut(records);
         
         render();
       } catch(e) {
@@ -613,10 +615,10 @@ service cloud.firestore {
 
     const saveState = async () => {
       // Guardar a Dexie localment primer (síncron/immediat respecte a la UI)
-      await db.projects.clear(); if(projects.length) await db.projects.bulkAdd(projects);
-      await db.tasks.clear(); if(tasks.length) await db.tasks.bulkAdd(tasks);
-      await db.activeTimers.clear(); if(activeTimers.length) await db.activeTimers.bulkAdd(activeTimers);
-      await db.records.clear(); if(records.length) await db.records.bulkAdd(records);
+      await db.projects.clear(); if(projects.length) await db.projects.bulkPut(projects);
+      await db.tasks.clear(); if(tasks.length) await db.tasks.bulkPut(tasks);
+      await db.activeTimers.clear(); if(activeTimers.length) await db.activeTimers.bulkPut(activeTimers);
+      await db.records.clear(); if(records.length) await db.records.bulkPut(records);
       
       // Render síncron a la interfície
       render();
