@@ -476,14 +476,14 @@ service cloud.firestore {
         
         try {
           const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-          const { getAuth, browserSessionPersistence, setPersistence, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+          const { getAuth, browserLocalPersistence, setPersistence, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
           const { getFirestore } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
           
           fbApp = initializeApp(config);
           fbAuth = getAuth(fbApp);
           fbDb = getFirestore(fbApp);
           
-          await setPersistence(fbAuth, browserSessionPersistence);
+          await setPersistence(fbAuth, browserLocalPersistence);
           
           onAuthStateChanged(fbAuth, async (user) => {
             currentUser = user;
@@ -501,8 +501,8 @@ service cloud.firestore {
           });
         } catch(e) {
           console.error("Error initializing Firebase:", e);
-          alert("Error connectant a Firebase. Revisa les credencials.");
-          resetFirebaseConfig();
+          // Do NOT reset credentials automatically, it could be a transient error or adblocker
+          alert("No s'ha pogut inicialitzar Firebase. Comprova la teva connexió i assegura't que l'AdBlock no està bloquejant els scripts de Firebase.\\n\\n" + e.message);
         }
       }
     };
@@ -583,15 +583,29 @@ service cloud.firestore {
       };
 
       try {
-        projects = await loadCol('projects');
-        tasks = await loadCol('tasks');
-        activeTimers = await loadCol('activeTimers');
-        records = await loadCol('records');
+        const fbProjects = await loadCol('projects');
+        const fbTasks = await loadCol('tasks');
+        const fbActiveTimers = await loadCol('activeTimers');
+        const fbRecords = await loadCol('records');
         
-        await db.projects.clear(); await db.projects.bulkAdd(projects);
-        await db.tasks.clear(); await db.tasks.bulkAdd(tasks);
-        await db.activeTimers.clear(); await db.activeTimers.bulkAdd(activeTimers);
-        await db.records.clear(); await db.records.bulkAdd(records);
+        // If Firebase is completely empty but we have local data, we should upload local data to Firebase instead of wiping it.
+        if (fbProjects.length === 0 && fbTasks.length === 0 && fbRecords.length === 0) {
+            if (projects.length > 0 || tasks.length > 0 || records.length > 0) {
+                console.log("Firebase is empty, uploading local data to Firebase...");
+                await saveState();
+                return;
+            }
+        }
+
+        projects = fbProjects;
+        tasks = fbTasks;
+        activeTimers = fbActiveTimers;
+        records = fbRecords;
+        
+        await db.projects.clear(); if(projects.length) await db.projects.bulkAdd(projects);
+        await db.tasks.clear(); if(tasks.length) await db.tasks.bulkAdd(tasks);
+        await db.activeTimers.clear(); if(activeTimers.length) await db.activeTimers.bulkAdd(activeTimers);
+        await db.records.clear(); if(records.length) await db.records.bulkAdd(records);
         
         render();
       } catch(e) {
