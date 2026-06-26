@@ -133,6 +133,7 @@
       .text-xs { font-size: 0.7rem; }
     }
   </style>
+  <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
 </head>
 <body>
   <div class="container">
@@ -148,6 +149,7 @@
       </div>
       <div style="text-align: right;">
         <div id="clock" class="text-muted font-mono font-bold" style="font-size: 1rem;"></div>
+        <div class="text-xs text-muted" style="margin-top: 4px;">Agustí Baubí - abaubi@gmail.com</div>
       </div>
     </header>
 
@@ -156,6 +158,7 @@
       <button class="tab-btn" onclick="switchTab('history')">Historial de Sessions</button>
       <button class="tab-btn" onclick="switchTab('stats')">Estadístiques</button>
       <button class="tab-btn" onclick="switchTab('projects')">Projectes i Tasques</button>
+      <button class="tab-btn" onclick="switchTab('cloud')">Núvol</button>
     </div>
 
     <!-- TIMERS TAB -->
@@ -299,6 +302,101 @@
     </div>
   </div>
 
+
+    <!-- CLOUD TAB -->
+    <div id="cloud-tab" class="tab-content">
+      <div class="flex justify-between items-center mb-4">
+        <h2 style="margin:0">Configuració del Núvol (Firebase)</h2>
+      </div>
+      
+      <div class="flex" style="flex-wrap: wrap; gap: 20px;">
+        <div class="card" style="flex: 1; min-width: 300px;">
+          <h3 id="firebase-form-title">Credencials de Connexió</h3>
+          <div id="firebase-credentials-form">
+            <div class="form-group">
+              <label>API Key</label>
+              <input type="text" id="fb-apiKey" placeholder="AIzaSy...">
+            </div>
+            <div class="form-group">
+              <label>Auth Domain</label>
+              <input type="text" id="fb-authDomain" placeholder="app-id.firebaseapp.com">
+            </div>
+            <div class="form-group">
+              <label>Project ID</label>
+              <input type="text" id="fb-projectId" placeholder="app-id">
+            </div>
+            <button onclick="saveFirebaseConfig()" class="primary">Connectar al Núvol</button>
+          </div>
+          <div id="firebase-connected-msg" style="display: none; text-align: center; padding: 20px;">
+            <div style="color: var(--success); font-size: 3rem; margin-bottom: 10px;">✓</div>
+            <h3 style="color: var(--success);">Connexió al núvol configurada</h3>
+            <button onclick="resetFirebaseConfig()" class="secondary mt-4">Modificar Credencials</button>
+          </div>
+        </div>
+
+        <div class="card" style="flex: 1; min-width: 300px; background: var(--bg);">
+          <h3>Com configurar Firebase?</h3>
+          <ol style="margin-left: 20px; font-size: 0.9rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 10px;">
+            <li>Crea un projecte a <a href="https://console.firebase.google.com/" target="_blank" style="color: var(--primary);">Firebase Console</a>.</li>
+            <li>Afegeix una aplicació Web i copia les claus d'aquí al costat.</li>
+            <li>Ves a <strong>Authentication</strong>, clica "Get Started" i activa <strong>Email/Password</strong> i <strong>Google</strong>.</li>
+            <li>Important per Google Login: A <strong>Authentication &gt; Settings &gt; Authorized domains</strong>, afegeix el domini d'aquesta aplicació:<br><code id="current-domain-display" style="background: var(--bg); padding: 4px; border-radius: 4px; user-select: all; font-size: 0.8rem; margin-top: 4px; display: inline-block;"></code></li>
+            <li>Ves a <strong>Firestore Database</strong> i clica "Create database" (en mode producció).</li>
+            <li>A la pestanya <strong>Rules</strong> de Firestore, esborra-ho tot i enganxa això:</li>
+          </ol>
+          <script>
+            let domainToShow = window.location.hostname;
+            if (window.location.protocol === 'file:') {
+              domainToShow = "ATENCIÓ: Google Login no funciona directament (file://). Usa un servidor local (ex: Live Server) i afegeix 'localhost'.";
+            } else if (!domainToShow) {
+              domainToShow = "localhost";
+            }
+            document.getElementById('current-domain-display').textContent = domainToShow;
+          </script>
+          <pre style="background: var(--bg-card); border: 1px solid var(--border); padding: 10px; border-radius: 8px; font-size: 0.75rem; overflow-x: auto; margin-top: 10px; color: var(--text-main);">
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.userId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.userId;
+    }
+  }
+}</pre>
+        </div>
+      </div>
+
+      <div id="auth-section" class="card mt-4" style="display: none;">
+        <h3>Autenticació</h3>
+        <div id="logged-out-view">
+          <div class="flex" style="gap: 10px; flex-wrap: wrap; margin-bottom: 16px;">
+            <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+              <input type="email" id="auth-email" placeholder="Correu electrònic">
+            </div>
+            <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+              <input type="password" id="auth-pass" placeholder="Contrasenya">
+            </div>
+            <button onclick="loginWithEmail()" class="primary">Inicia Sessió</button>
+          </div>
+          <div style="text-align: center; margin: 16px 0; color: var(--text-muted);">o bé</div>
+          <button onclick="loginWithGoogle()" class="secondary" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 10px;">
+            <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            Inicia sessió amb Google
+          </button>
+        </div>
+        <div id="logged-in-view" style="display: none; align-items: center; justify-content: space-between;">
+          <div class="flex items-center gap-3">
+            <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;" id="user-avatar"></div>
+            <div>
+              <div class="font-bold" id="user-name"></div>
+              <div class="text-sm text-muted" id="user-email"></div>
+            </div>
+          </div>
+          <button onclick="logoutFirebase()" class="danger">Tanca Sessió (Esborrarà dades locals)</button>
+        </div>
+      </div>
+    </div>
+
   <!-- GENERIC MODAL -->
   <div class="modal-overlay" id="modal">
     <div class="modal">
@@ -312,6 +410,17 @@
   </div>
 
   <script>
+
+    window.esc = (str) => {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    };
+
     // --- ESTATS (STATE) ---
     const ICONS = {
       edit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`,
@@ -334,16 +443,221 @@
     let selectedProjectColor = COLORS[0];
     
     // Carregar de LocalStorage o inicialitzar buit
-    let projects = JSON.parse(localStorage.getItem('projects')) || [];
-    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
-    let activeTimers = JSON.parse(localStorage.getItem('activeTimers')) || [];
-    let records = JSON.parse(localStorage.getItem('records')) || [];
+    let projects = [];
+    let tasks = [];
+    let activeTimers = [];
+    let records = [];
 
-    const saveState = () => {
-      localStorage.setItem('projects', JSON.stringify(projects));
-      localStorage.setItem('tasks', JSON.stringify(tasks));
-      localStorage.setItem('activeTimers', JSON.stringify(activeTimers));
-      localStorage.setItem('records', JSON.stringify(records));
+    // --- DEXIE.JS SETUP ---
+    const db = new Dexie("TimeTrackerDB");
+    db.version(1).stores({
+      projects: 'id, name',
+      tasks: 'id, projectId',
+      activeTimers: 'id, projectId',
+      records: 'id, projectId'
+    });
+
+    // --- FIREBASE SETUP ---
+    let fbApp = null;
+    let fbAuth = null;
+    let fbDb = null;
+    let currentUser = null;
+
+    const initFirebase = async () => {
+      const configStr = localStorage.getItem('fbConfig');
+      if (configStr) {
+        const config = JSON.parse(configStr);
+        document.getElementById('fb-apiKey').value = config.apiKey || '';
+        document.getElementById('fb-authDomain').value = config.authDomain || '';
+        document.getElementById('fb-projectId').value = config.projectId || '';
+        document.getElementById('firebase-credentials-form').style.display = 'none';
+        document.getElementById('firebase-connected-msg').style.display = 'block';
+        document.getElementById('auth-section').style.display = 'block';
+        
+        try {
+          const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
+          const { getAuth, browserSessionPersistence, setPersistence, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+          const { getFirestore } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+          
+          fbApp = initializeApp(config);
+          fbAuth = getAuth(fbApp);
+          fbDb = getFirestore(fbApp);
+          
+          await setPersistence(fbAuth, browserSessionPersistence);
+          
+          onAuthStateChanged(fbAuth, async (user) => {
+            currentUser = user;
+            if (user) {
+              document.getElementById('logged-out-view').style.display = 'none';
+              document.getElementById('logged-in-view').style.display = 'flex';
+              document.getElementById('user-avatar').textContent = user.email ? user.email[0].toUpperCase() : 'U';
+              document.getElementById('user-name').textContent = user.displayName || 'Usuari';
+              document.getElementById('user-email').textContent = user.email;
+              await syncFromFirebase();
+            } else {
+              document.getElementById('logged-out-view').style.display = 'block';
+              document.getElementById('logged-in-view').style.display = 'none';
+            }
+          });
+        } catch(e) {
+          console.error("Error initializing Firebase:", e);
+          alert("Error connectant a Firebase. Revisa les credencials.");
+          resetFirebaseConfig();
+        }
+      }
+    };
+
+    window.saveFirebaseConfig = () => {
+      const apiKey = document.getElementById('fb-apiKey').value.trim();
+      const authDomain = document.getElementById('fb-authDomain').value.trim();
+      const projectId = document.getElementById('fb-projectId').value.trim();
+      if (!apiKey || !authDomain || !projectId) {
+        alert("Omple tots els camps.");
+        return;
+      }
+      localStorage.setItem('fbConfig', JSON.stringify({ apiKey, authDomain, projectId }));
+      initFirebase();
+    };
+
+    window.resetFirebaseConfig = () => {
+      localStorage.removeItem('fbConfig');
+      document.getElementById('firebase-credentials-form').style.display = 'block';
+      document.getElementById('firebase-connected-msg').style.display = 'none';
+      document.getElementById('auth-section').style.display = 'none';
+      if(fbAuth && currentUser) window.logoutFirebase();
+      fbApp = null; fbAuth = null; fbDb = null;
+    };
+
+    window.loginWithEmail = async () => {
+      const email = document.getElementById('auth-email').value;
+      const pass = document.getElementById('auth-pass').value;
+      if(!email || !pass) return alert("Introdueix correu i contrasenya");
+      try {
+        const { signInWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+        await signInWithEmailAndPassword(fbAuth, email, pass);
+      } catch(e) { alert("Error d'inici de sessió: " + e.message); }
+    };
+
+    window.loginWithGoogle = async () => {
+      try {
+        const { signInWithPopup, GoogleAuthProvider } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+        const provider = new GoogleAuthProvider();
+        await signInWithPopup(fbAuth, provider);
+      } catch(e) {
+        if (window.location.protocol === 'file:') {
+          alert("Error: Google Login de Firebase no funciona quan obres el fitxer directament (amb file://).\\n\\nPerquè funcioni, has d'obrir l'aplicació mitjançant un servidor web local (per exemple, usant l'extensió 'Live Server' de VSCode o 'python -m http.server'). Després, assegura't que 'localhost' estigui autoritzat a Firebase.");
+        } else if (e.code === 'auth/unauthorized-domain') {
+          alert("Error: El domini actual no està autoritzat a Firebase.\\n\\nVes a Firebase Console -> Authentication -> Settings -> Authorized domains i afegeix aquest domini: " + (window.location.hostname || "localhost"));
+        } else {
+          alert("Error amb Google: " + e.message);
+        }
+      }
+    };
+
+    window.logoutFirebase = async () => {
+      if(fbAuth) {
+        const { signOut } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+        await signOut(fbAuth);
+      }
+      // Purga profunda
+      await db.projects.clear();
+      await db.tasks.clear();
+      await db.activeTimers.clear();
+      await db.records.clear();
+      projects = []; tasks = []; activeTimers = []; records = [];
+      render();
+    };
+
+    const syncFromFirebase = async () => {
+      if(!fbDb || !currentUser) return;
+      const { collection, getDocs, query, where } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+      
+      const loadCol = async (colName) => {
+        const q = query(collection(fbDb, colName), where("userId", "==", currentUser.uid));
+        const snap = await getDocs(q);
+        return snap.docs.map(d => {
+            const data = d.data();
+            delete data.userId;
+            return { id: d.id, ...data };
+        });
+      };
+
+      try {
+        projects = await loadCol('projects');
+        tasks = await loadCol('tasks');
+        activeTimers = await loadCol('activeTimers');
+        records = await loadCol('records');
+        
+        await db.projects.clear(); await db.projects.bulkAdd(projects);
+        await db.tasks.clear(); await db.tasks.bulkAdd(tasks);
+        await db.activeTimers.clear(); await db.activeTimers.bulkAdd(activeTimers);
+        await db.records.clear(); await db.records.bulkAdd(records);
+        
+        render();
+      } catch(e) {
+        console.error("Error sincronitzant des de Firestore", e);
+      }
+    };
+
+    const saveState = async () => {
+      // Guardar a Dexie localment primer (síncron/immediat respecte a la UI)
+      await db.projects.clear(); if(projects.length) await db.projects.bulkAdd(projects);
+      await db.tasks.clear(); if(tasks.length) await db.tasks.bulkAdd(tasks);
+      await db.activeTimers.clear(); if(activeTimers.length) await db.activeTimers.bulkAdd(activeTimers);
+      await db.records.clear(); if(records.length) await db.records.bulkAdd(records);
+      
+      // Render síncron a la interfície
+      render();
+
+      // Sincronitzar a Firebase asíncronament si estem loguejats
+      if(fbDb && currentUser) {
+        const { writeBatch, doc, collection, getDocs, query, where } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
+        const batch = writeBatch(fbDb);
+        
+        const syncCol = async (colName, items) => {
+            const q = query(collection(fbDb, colName), where("userId", "==", currentUser.uid));
+            const snap = await getDocs(q);
+            snap.forEach(d => batch.delete(d.ref));
+            items.forEach(item => {
+                const ref = doc(fbDb, colName, item.id);
+                batch.set(ref, { ...item, userId: currentUser.uid });
+            });
+        };
+
+        try {
+            await syncCol('projects', projects);
+            await syncCol('tasks', tasks);
+            await syncCol('activeTimers', activeTimers);
+            await syncCol('records', records);
+            await batch.commit();
+        } catch(e) {
+            console.error("Error pujant a Firestore:", e);
+        }
+      }
+    };
+
+    // --- INITIAL LOAD ---
+    const loadLocalData = async () => {
+      projects = await db.projects.toArray();
+      tasks = await db.tasks.toArray();
+      activeTimers = await db.activeTimers.toArray();
+      records = await db.records.toArray();
+      
+      // Migrate from localStorage if Dexie is empty
+      if(projects.length === 0 && localStorage.getItem('projects')) {
+          projects = JSON.parse(localStorage.getItem('projects')) || [];
+          tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+          activeTimers = JSON.parse(localStorage.getItem('activeTimers')) || [];
+          records = JSON.parse(localStorage.getItem('records')) || [];
+          if(projects.length) await db.projects.bulkAdd(projects);
+          if(tasks.length) await db.tasks.bulkAdd(tasks);
+          if(activeTimers.length) await db.activeTimers.bulkAdd(activeTimers);
+          if(records.length) await db.records.bulkAdd(records);
+          localStorage.removeItem('projects');
+          localStorage.removeItem('tasks');
+          localStorage.removeItem('activeTimers');
+          localStorage.removeItem('records');
+      }
       render();
     };
 
@@ -377,8 +691,10 @@
     window.switchTab = (tabId) => {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
       document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-      document.getElementById(`${tabId}-tab`).classList.add('active');
-      document.querySelector(`button[onclick="switchTab('${tabId}')"]`).classList.add('active');
+      const tabEl = document.getElementById(`${tabId}-tab`);
+      if (tabEl) tabEl.classList.add('active');
+      const btnEl = document.querySelector(`button[onclick="switchTab('${tabId}')"]`);
+      if (btnEl) btnEl.classList.add('active');
       localStorage.setItem('activeTab', tabId);
       if (tabId === 'stats') {
         renderStats();
@@ -446,8 +762,8 @@
           <div class="card" style="border-left: 6px solid ${p.color}; position: relative; overflow: hidden;">
             <div class="flex justify-between items-center mb-4">
               <div>
-                <h3 style="margin:0">${p.name}</h3>
-                ${p.description ? `<div class="text-sm text-muted mt-1">${p.description}</div>` : ''}
+                <h3 style="margin:0">${esc(p.name)}</h3>
+                ${p.description ? `<div class="text-sm text-muted mt-1">${esc(p.description)}</div>` : ''}
               </div>
               <div class="flex gap-2">
                 <button class="secondary icon-btn icon-only" title="Edita" onclick="editProject('${p.id}')">${ICONS.edit}</button>
@@ -470,7 +786,7 @@
                   <div class="list-item" style="padding: 8px 12px;">
                     <div class="flex items-center">
                       <span class="color-swatch" style="background:${t.color}; width:14px; height:14px; margin-right:10px; border:none;"></span>
-                      <span class="font-bold">${t.name}</span>
+                      <span class="font-bold">${esc(t.name)}</span>
                     </div>
                     <div class="flex gap-2">
                       <button class="secondary icon-btn icon-only" title="Edita" onclick="openTaskModal('${p.id}', '${t.id}')">${ICONS.edit}</button>
@@ -492,7 +808,7 @@
         const lastProjId = localStorage.getItem('lastTimerProjectId') || '';
         const currentVal = pSelect.value || lastProjId;
         pSelect.innerHTML = `<option value="">-- Selecciona Projecte --</option>` + 
-          projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('') +
+          projects.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('') +
           `<option value="NEW_PROJECT">+ Crear Nou Projecte...</option>`;
         if(currentVal && projects.find(p => p.id === currentVal)) pSelect.value = currentVal;
         updateTimerTaskOptions(); // Força actualitzar tasques al repintar
@@ -523,9 +839,9 @@
           <div class="card" style="border-left: 6px solid ${color};">
             <div class="flex justify-between items-center" style="flex-wrap: wrap;">
               <div style="flex: 1; min-width: 200px; margin-bottom: 8px;">
-                <div class="font-bold text-sm text-muted uppercase tracking-wider mb-1">${p ? p.name : 'Projecte eliminat'}</div>
-                <div class="font-bold" style="font-size: 1.1rem;">${t ? t.name : (timer.note || 'Sense Tasca')}</div>
-                ${t && timer.note ? `<div class="text-sm text-muted mt-1">${timer.note}</div>` : ''}
+                <div class="font-bold text-sm text-muted uppercase tracking-wider mb-1">${esc(p ? p.name : 'Projecte eliminat')}</div>
+                <div class="font-bold" style="font-size: 1.1rem;">${esc(t ? t.name : (timer.note || 'Sense Tasca'))}</div>
+                ${t && timer.note ? `<div class="text-sm text-muted mt-1">${esc(timer.note)}</div>` : ''}
                 ${timer.status === 'paused' ? '<span style="display:inline-block; margin-top:4px; font-size:0.75rem; padding:2px 6px; background:var(--bg); border:1px solid var(--border); border-radius:4px; color:var(--text-muted);">Pausat</span>' : ''}
               </div>
               <div class="flex items-center gap-4">
@@ -580,7 +896,7 @@
       
       const pTasks = tasks.filter(t => t.projectId === pId);
       tSelect.innerHTML = '<option value="">-- Sense tasca específica --</option>' + 
-        pTasks.map(t => `<option value="${t.id}">${t.name}</option>`).join('') +
+        pTasks.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('') +
         '<option value="NEW_TASK">+ Crear Nova Tasca...</option>';
         
       if(currentTaskVal && pTasks.find(t => t.id === currentTaskVal)) {
@@ -602,11 +918,11 @@
       const html = `
         <div class="form-group">
           <label>Nom del Projecte</label>
-          <input type="text" id="modal-project-name" value="${p ? p.name : ''}" placeholder="Ex: Desenvolupament Web">
+          <input type="text" id="modal-project-name" value="${esc(p ? p.name : '')}" placeholder="Ex: Desenvolupament Web">
         </div>
         <div class="form-group">
           <label>Descripció</label>
-          <input type="text" id="modal-project-desc" value="${p ? p.description || '' : ''}" placeholder="Descripció breu...">
+          <input type="text" id="modal-project-desc" value="${esc(p ? p.description || '' : '')}" placeholder="Descripció breu...">
         </div>
         <div class="form-group">
           <label>Color</label>
@@ -649,7 +965,7 @@
       const html = `
         <div class="form-group">
           <label>Nom de la Tasca</label>
-          <input type="text" id="modal-task-name" value="${t ? t.name : ''}" placeholder="Ex: Disseny UI">
+          <input type="text" id="modal-task-name" value="${esc(t ? t.name : '')}" placeholder="Ex: Disseny UI">
         </div>
         <div class="form-group">
           <label>Color</label>
@@ -739,10 +1055,10 @@
       const timer = activeTimers.find(t => t.id === id);
       if(!timer) return;
       
-      let pOptions = `<option value="">-- Selecciona Projecte --</option>` + projects.map(p => `<option value="${p.id}" ${p.id===timer.projectId?'selected':''}>${p.name}</option>`).join('');
+      let pOptions = `<option value="">-- Selecciona Projecte --</option>` + projects.map(p => `<option value="${p.id}" ${p.id===timer.projectId?'selected':''}>${esc(p.name)}</option>`).join('');
       
       const pTasks = timer.projectId ? tasks.filter(t => t.projectId === timer.projectId) : [];
-      let tOptions = '<option value="">-- Sense tasca específica --</option>' + pTasks.map(t => `<option value="${t.id}" ${t.id===timer.taskId?'selected':''}>${t.name}</option>`).join('');
+      let tOptions = '<option value="">-- Sense tasca específica --</option>' + pTasks.map(t => `<option value="${t.id}" ${t.id===timer.taskId?'selected':''}>${esc(t.name)}</option>`).join('');
       
       const now = Date.now();
       const currentDuration = (timer.elapsed || 0) + (timer.status === 'running' ? now - timer.startTime : 0);
@@ -759,7 +1075,7 @@
             const tSelect = document.getElementById('edit-timer-task');
             if(!pid) { tSelect.innerHTML = '<option value=\\'\\'>-- Selecciona Projecte Primer --</option>'; return; }
             const myTasks = window.tasks.filter(t => t.projectId === pid);
-            tSelect.innerHTML = '<option value=\\'\\'>-- Sense tasca específica --</option>' + myTasks.map(t => '<option value=\\''+t.id+'\\'>'+t.name+'</option>').join('');
+            tSelect.innerHTML = '<option value=\\'\\'>-- Sense tasca específica --</option>' + myTasks.map(t => '<option value=\\''+t.id+'\\'>'+window.esc(t.name)+'</option>').join('');
           ">${pOptions}</select>
         </div>
         <div class="form-group">
@@ -778,7 +1094,7 @@
         </div>
         <div class="form-group">
           <label>Anotació (Opcional)</label>
-          <input type="text" id="edit-timer-note" value="${timer.note || ''}">
+          <input type="text" id="edit-timer-note" value="${esc(timer.note || '')}">
         </div>
       `;
       
@@ -869,7 +1185,7 @@
       if (projSelect) {
         const curProj = projSelect.value;
         projSelect.innerHTML = '<option value="all">Tots els projectes</option>' + 
-          projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+          projects.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
         if(curProj && (curProj === 'all' || projects.find(p=>p.id===curProj))) projSelect.value = curProj;
       }
       
@@ -933,8 +1249,8 @@
           <div class="card" style="border-left: 4px solid ${color}; padding: 16px; margin-bottom: 16px; background: var(--bg-card);">
             <div class="flex justify-between items-center mb-3">
               <div style="min-width: 0; flex: 1; margin-right: 12px;">
-                <div class="font-bold text-sm" style="color: ${p ? p.color : 'var(--text-muted)'}; word-break: break-word;">${p ? p.name : 'Projecte eliminat'}</div>
-                <div class="font-bold" style="font-size: 1.1rem; color: ${t ? t.color : 'var(--text-main)'}; word-break: break-word;">${t ? t.name : 'Sense Tasca'}</div>
+                <div class="font-bold text-sm" style="color: ${p ? p.color : 'var(--text-muted)'}; word-break: break-word;">${p ? esc(p.name) : 'Projecte eliminat'}</div>
+                <div class="font-bold" style="font-size: 1.1rem; color: ${t ? t.color : 'var(--text-main)'}; word-break: break-word;">${t ? esc(t.name) : 'Sense Tasca'}</div>
                 <div class="text-xs text-muted mt-1">${g.recordList.length} sessió(ns) enregistrada(es)</div>
               </div>
               <div class="font-mono font-bold" style="font-size: 1.25rem; flex-shrink: 0;">${formatTime(g.totalDuration)}</div>
@@ -943,7 +1259,7 @@
               ${sortedSessions.map(record => `
                 <div class="flex justify-between items-center" style="background: var(--bg); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);">
                   <div style="min-width: 0; flex: 1; margin-right: 12px;">
-                    ${record.note ? `<div class="text-sm italic mb-1" style="word-break: break-word;">${record.note}</div>` : ''}
+                    ${record.note ? `<div class="text-sm italic mb-1" style="word-break: break-word;">${esc(record.note)}</div>` : ''}
                     <div class="text-xs text-muted" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
                       <div style="display: flex; align-items: center; gap: 4px;">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px; height:12px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
@@ -974,8 +1290,8 @@
       const r = records.find(x => x.id === id);
       if(!r) return;
       
-      const pOptions = projects.map(p => `<option value="${p.id}" ${p.id===r.projectId?'selected':''}>${p.name}</option>`).join('');
-      const tOptions = '<option value="">Sense tasca específica</option>' + tasks.filter(t=>t.projectId===r.projectId).map(t => `<option value="${t.id}" ${t.id===r.taskId?'selected':''}>${t.name}</option>`).join('');
+      const pOptions = projects.map(p => `<option value="${p.id}" ${p.id===r.projectId?'selected':''}>${esc(p.name)}</option>`).join('');
+      const tOptions = '<option value="">Sense tasca específica</option>' + tasks.filter(t=>t.projectId===r.projectId).map(t => `<option value="${t.id}" ${t.id===r.taskId?'selected':''}>${esc(t.name)}</option>`).join('');
       
       const html = `
         <div class="form-group">
@@ -998,13 +1314,13 @@
         </div>
         <div class="form-group">
           <label>Anotació (Opcional)</label>
-          <input type="text" id="modal-record-note" value="${r.note || ''}">
+          <input type="text" id="modal-record-note" value="${esc(r.note || '')}">
         </div>
       `;
       
       window.updateModalRecordTasks = () => {
         const pid = document.getElementById('modal-record-project').value;
-        document.getElementById('modal-record-task').innerHTML = '<option value="">Sense tasca específica</option>' + tasks.filter(t=>t.projectId===pid).map(t => `<option value="${t.id}">${t.name}</option>`).join('');
+        document.getElementById('modal-record-task').innerHTML = '<option value="">Sense tasca específica</option>' + tasks.filter(t=>t.projectId===pid).map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
       };
       
       openModal('Edita Sessió', html, () => {
@@ -1252,7 +1568,7 @@
       const projSelect = document.getElementById('stats-project');
       const curProj = projSelect.value;
       projSelect.innerHTML = '<option value="all">Tots els projectes</option>' + 
-        projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+        projects.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
       if(curProj && (curProj === 'all' || projects.find(p=>p.id===curProj))) projSelect.value = curProj;
 
       const period = document.getElementById('stats-period').value;
@@ -1321,7 +1637,7 @@
           res += `
             <div style="margin-bottom:8px;">
               <div class="flex justify-between items-end mb-1">
-                <div class="font-bold text-sm" style="color:${info.color}">${info.name}</div>
+                <div class="font-bold text-sm" style="color:${info.color}">${esc(info.name)}</div>
                 <div class="text-xs text-muted font-mono font-bold">${formatTime(e.duration)}</div>
               </div>
               <div style="height:12px; background:var(--border); border-radius:6px; overflow:hidden;">
