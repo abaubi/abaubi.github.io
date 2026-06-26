@@ -358,8 +358,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /{document=**} {
-      allow read, delete: if request.auth != null && request.auth.uid == resource.data.userId;
-      allow create, update: if request.auth != null && request.auth.uid == request.resource.data.userId;
+      allow read, write: if request.auth != null;
     }
   }
 }</pre>
@@ -538,6 +537,11 @@ service cloud.firestore {
 
     window.loginWithGoogle = async () => {
       try {
+        if (window.self !== window.top) {
+            alert("⚠️ Estàs veient l'aplicació dins d'una vista prèvia (iframe).\\n\\nPer qüestions de seguretat del navegador (Cross-Origin-Opener-Policy), l'inici de sessió amb Google està bloquejat a les vistes prèvies.\\n\\nSOLUCIÓ:\\nFes clic a la icona d'obrir en una nova pestanya a la part superior dreta de l'editor per sortir de l'iframe, o utilitza l'inici de sessió amb correu electrònic i contrasenya.");
+            return;
+        }
+        
         const { signInWithPopup, GoogleAuthProvider } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
         const provider = new GoogleAuthProvider();
         await signInWithPopup(fbAuth, provider);
@@ -556,8 +560,12 @@ service cloud.firestore {
 
     window.logoutFirebase = async () => {
       if(fbAuth) {
-        const { signOut } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
-        await signOut(fbAuth);
+        try {
+            const { signOut } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+            await signOut(fbAuth);
+        } catch (e) {
+            console.warn("Avís al tancar sessió a Firebase:", e);
+        }
       }
       // Purga profunda
       await db.projects.clear();
@@ -657,14 +665,19 @@ service cloud.firestore {
             
             if (operacionsBatch > 0) {
                 console.log(`Fent commit del batch amb ${operacionsBatch} operacions...`);
-                await batch.commit();
+                
+                const commitPromise = batch.commit();
+                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("S'ha superat el temps d'espera (Timeout). No s'ha pogut connectar a Firestore. Verifica les credencials o les regles.")), 10000));
+                
+                await Promise.race([commitPromise, timeoutPromise]);
+                
                 console.log("Sincronitzat a Firestore correctament");
             } else {
                 console.log("Cap canvi per pujar a Firestore.");
             }
         } catch(e) {
             console.error("Error pujant a Firestore:", e);
-            alert("Error pujant a Firestore: " + e.message);
+            alert("Error pujant a Firestore:\\n" + e.message + "\\n\\nSi el temps d'espera s'ha esgotat, verifica que les credencials són correctes i que les 'Rules' de Firestore permeten l'escriptura.");
         }
       } else {
          console.log("No es pot sincronitzar: fbDb o currentUser no estan definits", {fbDb: !!fbDb, currentUser: !!currentUser});
