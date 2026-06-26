@@ -1710,7 +1710,8 @@ service cloud.firestore {
     applyTheme(currentTheme);
     const savedTab = localStorage.getItem('activeTab');
     if (savedTab) switchTab(savedTab);
-    render();
+    loadLocalData();
+    initFirebase();
     document.getElementById('clock').textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
   </script>
 </body>
