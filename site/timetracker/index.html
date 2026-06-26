@@ -623,16 +623,27 @@ service cloud.firestore {
 
       // Sincronitzar a Firebase asíncronament si estem loguejats
       if(fbDb && currentUser) {
+        console.log("Iniciant sincronització a Firestore...");
         const { writeBatch, doc, collection, getDocs, query, where } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
         const batch = writeBatch(fbDb);
+        let operacionsBatch = 0;
         
         const syncCol = async (colName, items) => {
             const q = query(collection(fbDb, colName), where("userId", "==", currentUser.uid));
             const snap = await getDocs(q);
-            snap.forEach(d => batch.delete(d.ref));
+            const localIds = new Set(items.map(i => i.id));
+            
+            snap.forEach(d => {
+                if (!localIds.has(d.id)) {
+                    batch.delete(d.ref);
+                    operacionsBatch++;
+                }
+            });
+            
             items.forEach(item => {
                 const ref = doc(fbDb, colName, item.id);
                 batch.set(ref, { ...item, userId: currentUser.uid });
+                operacionsBatch++;
             });
         };
 
@@ -641,12 +652,20 @@ service cloud.firestore {
             await syncCol('tasks', tasks);
             await syncCol('activeTimers', activeTimers);
             await syncCol('records', records);
-            await batch.commit();
-            console.log("Sincronitzat a Firestore correctament");
+            
+            if (operacionsBatch > 0) {
+                console.log(`Fent commit del batch amb ${operacionsBatch} operacions...`);
+                await batch.commit();
+                console.log("Sincronitzat a Firestore correctament");
+            } else {
+                console.log("Cap canvi per pujar a Firestore.");
+            }
         } catch(e) {
             console.error("Error pujant a Firestore:", e);
             alert("Error pujant a Firestore: " + e.message);
         }
+      } else {
+         console.log("No es pot sincronitzar: fbDb o currentUser no estan definits", {fbDb: !!fbDb, currentUser: !!currentUser});
       }
     };
 
