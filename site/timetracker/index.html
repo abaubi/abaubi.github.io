@@ -478,12 +478,26 @@ service cloud.firestore {
         
         try {
           const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-          const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+          const { getAuth, onAuthStateChanged, getRedirectResult } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
           const { getFirestore } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
           
           fbApp = initializeApp(config);
           fbAuth = getAuth(fbApp);
           fbDb = getFirestore(fbApp);
+          
+          try {
+            const redirectResult = await getRedirectResult(fbAuth);
+            if (redirectResult) {
+                console.log("Inici de sessió completat via redirect");
+            }
+          } catch (err) {
+            console.error("Error al retornar de la redirecció de login:", err);
+            if (err.code === 'auth/unauthorized-domain') {
+              alert("Error: El domini actual no està autoritzat a Firebase.\\n\\nVes a Firebase Console -> Authentication -> Settings -> Authorized domains i afegeix aquest domini: " + (window.location.hostname || "localhost"));
+            } else {
+              alert("Error d'autenticació amb Google: " + err.message);
+            }
+          }
           
           onAuthStateChanged(fbAuth, async (user) => {
             currentUser = user;
@@ -545,9 +559,9 @@ service cloud.firestore {
             return;
         }
         
-        const { signInWithPopup, GoogleAuthProvider } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+        const { signInWithRedirect, GoogleAuthProvider } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
         const provider = new GoogleAuthProvider();
-        await signInWithPopup(fbAuth, provider);
+        await signInWithRedirect(fbAuth, provider);
       } catch(e) {
         if (window.location.protocol === 'file:') {
           alert("Error: Google Login de Firebase no funciona quan obres el fitxer directament (amb file://).\\n\\nPerquè funcioni, has d'obrir l'aplicació mitjançant un servidor web local (per exemple, usant l'extensió 'Live Server' de VSCode o 'python -m http.server'). Després, assegura't que 'localhost' estigui autoritzat a Firebase.");
