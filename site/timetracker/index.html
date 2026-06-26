@@ -476,14 +476,12 @@ service cloud.firestore {
         
         try {
           const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-          const { getAuth, browserLocalPersistence, setPersistence, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+          const { getAuth, onAuthStateChanged } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
           const { getFirestore } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
           
           fbApp = initializeApp(config);
           fbAuth = getAuth(fbApp);
           fbDb = getFirestore(fbApp);
-          
-          await setPersistence(fbAuth, browserLocalPersistence);
           
           onAuthStateChanged(fbAuth, async (user) => {
             currentUser = user;
@@ -1710,8 +1708,9 @@ service cloud.firestore {
     applyTheme(currentTheme);
     const savedTab = localStorage.getItem('activeTab');
     if (savedTab) switchTab(savedTab);
-    loadLocalData();
-    initFirebase();
+    loadLocalData().then(() => {
+      initFirebase();
+    });
     document.getElementById('clock').textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
   </script>
 </body>
