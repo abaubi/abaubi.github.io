@@ -45,8 +45,16 @@
     * { box-sizing: border-box; font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 0; }
     body { background-color: var(--bg); color: var(--text-main); line-height: 1.5; padding: 20px; transition: background-color 0.3s; }
     
-    .container { max-width: 800px; margin: 0 auto; }
+    .container { max-width: 800px; margin: 0 auto; display: none; }
     
+    /* Login Screen */
+    .login-container { max-width: 400px; margin: 100px auto; text-align: center; padding: 40px 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+    .login-container h1 { margin-bottom: 12px; }
+    .login-container p { color: var(--text-muted); margin-bottom: 24px; }
+    .btn-google { display: inline-flex; align-items: center; justify-content: center; gap: 10px; background: white; color: #333; border: 1px solid #ccc; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: background 0.2s; width: 100%; }
+    .btn-google:hover { background: #f8f9fa; }
+    .btn-google img { width: 20px; height: 20px; }
+
     header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
     h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.025em; }
     h2 { font-size: 1.25rem; margin-bottom: 16px; font-weight: 600; }
@@ -133,10 +141,21 @@
       .text-xs { font-size: 0.7rem; }
     }
   </style>
-  <script src="https://unpkg.com/dexie@latest/dist/dexie.js"></script>
 </head>
 <body>
-  <div class="container">
+  <div class="login-container" id="login-screen">
+    <div style="margin-bottom: 20px;">
+      <svg viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 48px; height: 48px; margin: 0 auto;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+    </div>
+    <h1>TimeTracker</h1>
+    <p>Inicia sessió per gestionar el teu temps i projectes.</p>
+    <button id="login-btn" class="btn-google">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      Inicia sessió amb Google
+    </button>
+  </div>
+
+  <div class="container" id="main-app">
     <header>
       <div>
         <div style="display: flex; align-items: center; gap: 8px;">
@@ -149,16 +168,20 @@
       </div>
       <div style="text-align: right;">
         <div id="clock" class="text-muted font-mono font-bold" style="font-size: 1rem;"></div>
-        <div class="text-xs text-muted" style="margin-top: 4px;">Agustí Baubí - abaubi@gmail.com</div>
+        <div class="text-xs text-muted" style="margin-top: 4px; display: flex; align-items: center; justify-content: flex-end; gap: 8px;">
+          <span id="user-info">Carregant...</span>
+          <button id="logout-btn" class="secondary icon-btn icon-only" style="padding: 2px; border: none; background: transparent;" title="Tancar Sessió">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          </button>
+        </div>
       </div>
     </header>
 
     <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab('timers')">Cronòmetre</button>
-      <button class="tab-btn" onclick="switchTab('history')">Historial de Sessions</button>
-      <button class="tab-btn" onclick="switchTab('stats')">Estadístiques</button>
-      <button class="tab-btn" onclick="switchTab('projects')">Projectes i Tasques</button>
-      <button class="tab-btn" onclick="switchTab('cloud')">Núvol</button>
+      <button class="tab-btn active" onclick="window.switchTab('timers')">Cronòmetre</button>
+      <button class="tab-btn" onclick="window.switchTab('history')">Historial de Sessions</button>
+      <button class="tab-btn" onclick="window.switchTab('stats')">Estadístiques</button>
+      <button class="tab-btn" onclick="window.switchTab('projects')">Projectes i Tasques</button>
     </div>
 
     <!-- TIMERS TAB -->
@@ -171,14 +194,14 @@
       <div class="card mt-4">
         <div class="flex justify-between items-center" style="margin-bottom: 16px;">
           <h2 style="margin: 0;">Nou Cronòmetre</h2>
-          <button onclick="startTimer()" class="icon-btn" style="padding: 8px 16px;">
+          <button onclick="window.startTimer()" class="icon-btn" style="padding: 8px 16px;">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg> Iniciar
           </button>
         </div>
         <div class="flex" style="flex-wrap: wrap;">
           <div class="form-group" style="flex: 1; min-width: 200px;">
             <label>Projecte</label>
-            <select id="new-timer-project" onchange="updateTimerTaskOptions()"></select>
+            <select id="new-timer-project" onchange="window.updateTimerTaskOptions()"></select>
           </div>
           <div class="form-group" style="flex: 1; min-width: 200px;">
             <label>Tasca</label>
@@ -196,7 +219,7 @@
     <div id="projects-tab" class="tab-content">
       <div class="flex justify-between items-center" style="margin-top: 8px; margin-bottom: 24px;">
         <h2 style="margin:0">Els Teus Projectes</h2>
-        <button class="primary icon-btn icon-only" style="border-radius:50%;" title="Nou Projecte" onclick="openProjectModal()">
+        <button class="primary icon-btn icon-only" style="border-radius:50%;" title="Nou Projecte" onclick="window.openProjectModal()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         </button>
       </div>
@@ -209,21 +232,21 @@
         <div class="flex justify-between items-center" style="margin-bottom: 16px;">
           <h2>Sessions Registrades</h2>
           <div class="flex gap-2" style="flex-wrap: wrap;">
-            <input type="file" id="import-csv-file" accept=".csv" style="display: none;" onchange="handleCSVImport(event)">
-            <input type="file" id="import-json-file" accept=".json" style="display: none;" onchange="handleJSONImport(event)">
+            <input type="file" id="import-csv-file" accept=".csv" style="display: none;" onchange="window.handleCSVImport(event)">
+            <input type="file" id="import-json-file" accept=".json" style="display: none;" onchange="window.handleJSONImport(event)">
             <button class="secondary icon-btn" onclick="document.getElementById('import-csv-file').click()" title="Importar CSV">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px; height:16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Imp. CSV
             </button>
             <button class="secondary icon-btn" onclick="document.getElementById('import-json-file').click()" title="Importar JSON">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px; height:16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg> Imp. JSON
             </button>
-            <button class="secondary icon-btn" onclick="exportCSV()">
+            <button class="secondary icon-btn" onclick="window.exportCSV()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px; height:16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> CSV
             </button>
-            <button class="secondary icon-btn" onclick="exportJSON()">
+            <button class="secondary icon-btn" onclick="window.exportJSON()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px; height:16px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> JSON
             </button>
-            <button class="danger icon-btn icon-only" title="Netejar Tot" onclick="clearHistory()">
+            <button class="danger icon-btn icon-only" title="Netejar Tot" onclick="window.clearHistory()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
             </button>
           </div>
@@ -232,7 +255,7 @@
         <div class="flex" style="flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
           <div class="form-group" style="flex: 1; min-width: 150px;">
             <label>Període</label>
-            <select id="history-period" onchange="updateHistoryFilters()">
+            <select id="history-period" onchange="window.updateHistoryFilters()">
               <option value="all">Sempre</option>
               <option value="today">Avui</option>
               <option value="week">Aquesta setmana</option>
@@ -242,7 +265,7 @@
           </div>
           <div class="form-group" style="flex: 1; min-width: 150px;">
             <label>Projecte</label>
-            <select id="history-project" onchange="updateHistoryFilters()">
+            <select id="history-project" onchange="window.updateHistoryFilters()">
               <option value="all">Tots els projectes</option>
             </select>
           </div>
@@ -251,11 +274,11 @@
         <div id="history-custom-dates" class="flex" style="gap: 12px; margin-bottom: 20px; display: none;">
           <div class="form-group" style="flex: 1;">
             <label>Data Inici</label>
-            <input type="date" id="history-date-start" onchange="updateHistoryFilters()">
+            <input type="date" id="history-date-start" onchange="window.updateHistoryFilters()">
           </div>
           <div class="form-group" style="flex: 1;">
             <label>Data Fi</label>
-            <input type="date" id="history-date-end" onchange="updateHistoryFilters()">
+            <input type="date" id="history-date-end" onchange="window.updateHistoryFilters()">
           </div>
         </div>
         
@@ -270,7 +293,7 @@
         <div class="flex" style="flex-wrap: wrap; gap: 12px; margin-bottom: 20px;">
           <div class="form-group" style="flex: 1; min-width: 150px;">
             <label>Període</label>
-            <select id="stats-period" onchange="updateStatsView()">
+            <select id="stats-period" onchange="window.updateStatsView()">
               <option value="all">Sempre</option>
               <option value="today">Avui</option>
               <option value="week">Aquesta setmana</option>
@@ -280,7 +303,7 @@
           </div>
           <div class="form-group" style="flex: 1; min-width: 150px;">
             <label>Projecte</label>
-            <select id="stats-project" onchange="updateStatsView()">
+            <select id="stats-project" onchange="window.updateStatsView()">
               <option value="all">Tots els projectes</option>
             </select>
           </div>
@@ -289,11 +312,11 @@
         <div id="stats-custom-dates" class="flex" style="gap: 12px; margin-bottom: 20px; display: none;">
           <div class="form-group" style="flex: 1;">
             <label>Data Inici</label>
-            <input type="date" id="stats-date-start" onchange="updateStatsView()">
+            <input type="date" id="stats-date-start" onchange="window.updateStatsView()">
           </div>
           <div class="form-group" style="flex: 1;">
             <label>Data Fi</label>
-            <input type="date" id="stats-date-end" onchange="updateStatsView()">
+            <input type="date" id="stats-date-end" onchange="window.updateStatsView()">
           </div>
         </div>
 
@@ -302,1483 +325,19 @@
     </div>
   </div>
 
-
-    <!-- CLOUD TAB -->
-    <div id="cloud-tab" class="tab-content">
-      <div class="flex justify-between items-center mb-4">
-        <h2 style="margin:0">Configuració del Núvol (Firebase)</h2>
-      </div>
-      
-      <div class="flex" style="flex-wrap: wrap; gap: 20px;">
-        <div class="card" style="flex: 1; min-width: 300px;">
-          <h3 id="firebase-form-title">Credencials de Connexió</h3>
-          <div id="firebase-credentials-form">
-            <div class="form-group">
-              <label>API Key</label>
-              <input type="text" id="fb-apiKey" placeholder="AIzaSy...">
-            </div>
-            <div class="form-group">
-              <label>Auth Domain</label>
-              <input type="text" id="fb-authDomain" placeholder="app-id.firebaseapp.com">
-            </div>
-            <div class="form-group">
-              <label>Project ID</label>
-              <input type="text" id="fb-projectId" placeholder="app-id">
-            </div>
-            <button onclick="saveFirebaseConfig()" class="primary">Connectar al Núvol</button>
-          </div>
-          <div id="firebase-connected-msg" style="display: none; text-align: center; padding: 20px;">
-            <div style="color: var(--success); font-size: 3rem; margin-bottom: 10px;">✓</div>
-            <h3 style="color: var(--success);">Connexió al núvol configurada</h3>
-            <button onclick="resetFirebaseConfig()" class="secondary mt-4">Modificar Credencials</button>
-          </div>
-        </div>
-
-        <div class="card" style="flex: 1; min-width: 300px; background: var(--bg);">
-          <h3>Com configurar Firebase?</h3>
-          <ol style="margin-left: 20px; font-size: 0.9rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 10px;">
-            <li>Crea un projecte a <a href="https://console.firebase.google.com/" target="_blank" style="color: var(--primary);">Firebase Console</a>.</li>
-            <li>Afegeix una aplicació Web i copia les claus d'aquí al costat.</li>
-            <li>Ves a <strong>Authentication</strong>, clica "Get Started" i activa <strong>Email/Password</strong> i <strong>Google</strong>.</li>
-            <li>Important per Google Login: A <strong>Authentication &gt; Settings &gt; Authorized domains</strong>, afegeix el domini d'aquesta aplicació:<br><code id="current-domain-display" style="background: var(--bg); padding: 4px; border-radius: 4px; user-select: all; font-size: 0.8rem; margin-top: 4px; display: inline-block;"></code></li>
-            <li>Ves a <strong>Firestore Database</strong> i clica "Create database" (en mode producció).</li>
-            <li>A la pestanya <strong>Rules</strong> de Firestore, esborra-ho tot i enganxa això:</li>
-          </ol>
-          <script>
-            let domainToShow = window.location.hostname;
-            if (window.location.protocol === 'file:') {
-              domainToShow = "ATENCIÓ: Google Login no funciona directament (file://). Usa un servidor local (ex: Live Server) i afegeix 'localhost'.";
-            } else if (!domainToShow) {
-              domainToShow = "localhost";
-            }
-            document.getElementById('current-domain-display').textContent = domainToShow;
-          </script>
-          <pre style="background: var(--bg-card); border: 1px solid var(--border); padding: 10px; border-radius: 8px; font-size: 0.75rem; overflow-x: auto; margin-top: 10px; color: var(--text-main);">
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
-    }
-  }
-}</pre>
-        </div>
-      </div>
-
-      <div id="auth-section" class="card mt-4" style="display: none;">
-        <h3>Autenticació</h3>
-        <div id="logged-out-view">
-          <div class="flex" style="gap: 10px; flex-wrap: wrap; margin-bottom: 16px;">
-            <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
-              <input type="email" id="auth-email" placeholder="Correu electrònic">
-            </div>
-            <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
-              <input type="password" id="auth-pass" placeholder="Contrasenya">
-            </div>
-            <button onclick="loginWithEmail()" class="primary">Inicia Sessió</button>
-          </div>
-          <div style="text-align: center; margin: 16px 0; color: var(--text-muted);">o bé</div>
-          <button onclick="loginWithGoogle()" class="secondary" style="width: 100%; display: flex; justify-content: center; align-items: center; gap: 10px;">
-            <svg viewBox="0 0 24 24" width="18" height="18" xmlns="http://www.w3.org/2000/svg"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
-            Inicia sessió amb Google
-          </button>
-          <p style="font-size: 0.8rem; color: var(--text-muted); text-align: center; margin-top: 10px;">
-            ⚠️ Si fas servir Google, <strong style="color: var(--primary);">obre l'app en una nova pestanya</strong> (icona a dalt a la dreta).
-          </p>
-        </div>
-        <div id="logged-in-view" style="display: none; align-items: center; justify-content: space-between;">
-          <div class="flex items-center gap-3">
-            <div style="width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: white; display: flex; align-items: center; justify-content: center; font-weight: bold;" id="user-avatar"></div>
-            <div>
-              <div class="font-bold" id="user-name"></div>
-              <div class="text-sm text-muted" id="user-email"></div>
-            </div>
-          </div>
-          <button onclick="logoutFirebase()" class="danger">Tanca Sessió (Esborrarà dades locals)</button>
-        </div>
-      </div>
-    </div>
-
   <!-- GENERIC MODAL -->
   <div class="modal-overlay" id="modal">
     <div class="modal">
       <h2 id="modal-title" style="margin-bottom: 20px;"></h2>
       <div id="modal-body"></div>
       <div class="flex justify-end mt-4">
-        <button class="secondary" onclick="closeModal()">Cancel·la</button>
+        <button class="secondary" onclick="window.closeModal()">Cancel·la</button>
         <button id="modal-save-btn">Desar Canvis</button>
       </div>
     </div>
   </div>
 
-  <script>
-
-    window.esc = (str) => {
-      if (!str) return '';
-      return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    };
-
-    // --- ESTATS (STATE) ---
-    const ICONS = {
-      edit: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`,
-      trash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`,
-      pause: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>`,
-      play: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>`,
-      stop: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>`,
-      check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
-      download: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>`,
-      save: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`,
-      sun: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
-      moon: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`,
-      monitor: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>`
-    };
-    const COLORS = [
-      '#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', 
-      '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1', 
-      '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e', '#64748b'
-    ];
-    let selectedProjectColor = COLORS[0];
-    
-    // Carregar de LocalStorage o inicialitzar buit
-    let projects = [];
-    let tasks = [];
-    let activeTimers = [];
-    let records = [];
-
-    // --- DEXIE.JS SETUP ---
-    const db = new Dexie("TimeTrackerDB");
-    db.version(1).stores({
-      projects: 'id, name',
-      tasks: 'id, projectId',
-      activeTimers: 'id, projectId',
-      records: 'id, projectId'
-    });
-
-    // --- FIREBASE SETUP ---
-    let fbApp = null;
-    let fbAuth = null;
-    let fbDb = null;
-    let currentUser = null;
-
-    const initFirebase = async () => {
-      const configStr = localStorage.getItem('fbConfig');
-      if (configStr) {
-        const config = JSON.parse(configStr);
-        document.getElementById('fb-apiKey').value = config.apiKey || '';
-        document.getElementById('fb-authDomain').value = config.authDomain || '';
-        document.getElementById('fb-projectId').value = config.projectId || '';
-        document.getElementById('firebase-credentials-form').style.display = 'none';
-        document.getElementById('firebase-connected-msg').style.display = 'block';
-        document.getElementById('auth-section').style.display = 'block';
-        
-        try {
-          const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js");
-          const { getAuth, onAuthStateChanged, getRedirectResult } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
-          const { getFirestore } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-          
-          fbApp = initializeApp(config);
-          fbAuth = getAuth(fbApp);
-          fbDb = getFirestore(fbApp);
-          
-          try {
-            const redirectResult = await getRedirectResult(fbAuth);
-            if (redirectResult) {
-                console.log("Inici de sessió completat via redirect");
-            }
-          } catch (err) {
-            console.error("Error al retornar de la redirecció de login:", err);
-            if (err.code === 'auth/unauthorized-domain') {
-              alert("Error: El domini actual no està autoritzat a Firebase.\\n\\nVes a Firebase Console -> Authentication -> Settings -> Authorized domains i afegeix aquest domini: " + (window.location.hostname || "localhost"));
-            } else {
-              alert("Error d'autenticació amb Google: " + err.message);
-            }
-          }
-          
-          onAuthStateChanged(fbAuth, async (user) => {
-            currentUser = user;
-            if (user) {
-              document.getElementById('logged-out-view').style.display = 'none';
-              document.getElementById('logged-in-view').style.display = 'flex';
-              document.getElementById('user-avatar').textContent = user.email ? user.email[0].toUpperCase() : 'U';
-              document.getElementById('user-name').textContent = user.displayName || 'Usuari';
-              document.getElementById('user-email').textContent = user.email;
-              await syncFromFirebase();
-            } else {
-              document.getElementById('logged-out-view').style.display = 'block';
-              document.getElementById('logged-in-view').style.display = 'none';
-            }
-          });
-        } catch(e) {
-          console.error("Error initializing Firebase:", e);
-          // Do NOT reset credentials automatically, it could be a transient error or adblocker
-          alert("No s'ha pogut inicialitzar Firebase. Comprova la teva connexió i assegura't que l'AdBlock no està bloquejant els scripts de Firebase.\\n\\n" + e.message);
-        }
-      }
-    };
-
-    window.saveFirebaseConfig = () => {
-      const apiKey = document.getElementById('fb-apiKey').value.trim();
-      const authDomain = document.getElementById('fb-authDomain').value.trim();
-      const projectId = document.getElementById('fb-projectId').value.trim();
-      if (!apiKey || !authDomain || !projectId) {
-        alert("Omple tots els camps.");
-        return;
-      }
-      localStorage.setItem('fbConfig', JSON.stringify({ apiKey, authDomain, projectId }));
-      initFirebase();
-    };
-
-    window.resetFirebaseConfig = async () => {
-      localStorage.removeItem('fbConfig');
-      document.getElementById('firebase-credentials-form').style.display = 'block';
-      document.getElementById('firebase-connected-msg').style.display = 'none';
-      document.getElementById('auth-section').style.display = 'none';
-      if(fbAuth && currentUser) await window.logoutFirebase();
-      fbApp = null; fbAuth = null; fbDb = null;
-    };
-
-    window.loginWithEmail = async () => {
-      const email = document.getElementById('auth-email').value;
-      const pass = document.getElementById('auth-pass').value;
-      if(!email || !pass) return alert("Introdueix correu i contrasenya");
-      try {
-        const { signInWithEmailAndPassword, createUserWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
-        try {
-            await signInWithEmailAndPassword(fbAuth, email, pass);
-        } catch (e) {
-            if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
-                await createUserWithEmailAndPassword(fbAuth, email, pass);
-                alert("Compte creat correctament amb aquest correu.");
-            } else {
-                throw e;
-            }
-        }
-      } catch(e) { alert("Error d'inici de sessió: " + e.message); }
-    };
-
-    window.loginWithGoogle = async () => {
-      try {
-        if (window.self !== window.top) {
-            alert("⚠️ Estàs veient l'aplicació dins d'una vista prèvia (iframe).\\n\\nPer qüestions de seguretat del navegador (Cross-Origin-Opener-Policy), l'inici de sessió amb Google està bloquejat a les vistes prèvies.\\n\\nSOLUCIÓ:\\nFes clic a la icona d'obrir en una nova pestanya a la part superior dreta de l'editor per sortir de l'iframe, o utilitza l'inici de sessió amb correu electrònic i contrasenya.");
-            return;
-        }
-        
-        const { signInWithPopup, GoogleAuthProvider } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
-        const provider = new GoogleAuthProvider();
-        await signInWithPopup(fbAuth, provider);
-      } catch(e) {
-        if (window.location.protocol === 'file:') {
-          alert("Error: Google Login de Firebase no funciona quan obres el fitxer directament (amb file://).\\n\\nPerquè funcioni, has d'obrir l'aplicació mitjançant un servidor web local (per exemple, usant l'extensió 'Live Server' de VSCode o 'python -m http.server'). Després, assegura't que 'localhost' estigui autoritzat a Firebase.");
-        } else if (e.code === 'auth/unauthorized-domain') {
-          alert("Error: El domini actual no està autoritzat a Firebase.\\n\\nVes a Firebase Console -> Authentication -> Settings -> Authorized domains i afegeix aquest domini: " + (window.location.hostname || "localhost"));
-        } else if (e.message && e.message.includes('Cross-Origin-Opener-Policy')) {
-          alert("Aquesta vista prèvia (iframe) bloqueja l'inici de sessió amb Google.\\n\\nPer poder utilitzar-lo, si us plau, obre l'aplicació en una nova pestanya o fes servir l'inici de sessió amb correu electrònic.");
-        } else {
-          alert("Error amb Google: " + e.message);
-        }
-      }
-    };
-
-    window.logoutFirebase = async () => {
-      if(fbAuth) {
-        try {
-            const { signOut } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
-            await signOut(fbAuth);
-        } catch (e) {
-            console.warn("Avís al tancar sessió a Firebase:", e);
-        }
-      }
-      // Purga profunda
-      await db.projects.clear();
-      await db.tasks.clear();
-      await db.activeTimers.clear();
-      await db.records.clear();
-      projects = []; tasks = []; activeTimers = []; records = [];
-      render();
-    };
-
-    const syncFromFirebase = async () => {
-      if(!fbDb || !currentUser) return;
-      const { collection, getDocs, query, where } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-      
-      const loadCol = async (colName) => {
-        const q = query(collection(fbDb, colName), where("userId", "==", currentUser.uid));
-        const snap = await getDocs(q);
-        return snap.docs.map(d => {
-            const data = d.data();
-            delete data.userId;
-            return { id: d.id, ...data };
-        });
-      };
-
-      try {
-        const fbProjects = await loadCol('projects');
-        const fbTasks = await loadCol('tasks');
-        const fbActiveTimers = await loadCol('activeTimers');
-        const fbRecords = await loadCol('records');
-        
-        // If Firebase is completely empty but we have local data, we should upload local data to Firebase instead of wiping it.
-        if (fbProjects.length === 0 && fbTasks.length === 0 && fbRecords.length === 0) {
-            if (projects.length > 0 || tasks.length > 0 || records.length > 0) {
-                console.log("Firebase is empty, uploading local data to Firebase...");
-                await saveState();
-                return;
-            }
-        }
-
-        projects = fbProjects;
-        tasks = fbTasks;
-        activeTimers = fbActiveTimers;
-        records = fbRecords;
-        
-        await db.projects.clear(); if(projects.length) await db.projects.bulkPut(projects);
-        await db.tasks.clear(); if(tasks.length) await db.tasks.bulkPut(tasks);
-        await db.activeTimers.clear(); if(activeTimers.length) await db.activeTimers.bulkPut(activeTimers);
-        await db.records.clear(); if(records.length) await db.records.bulkPut(records);
-        
-        render();
-      } catch(e) {
-        console.error("Error sincronitzant des de Firestore", e);
-      }
-    };
-
-    const saveState = async () => {
-      // Guardar a Dexie localment primer (síncron/immediat respecte a la UI)
-      await db.projects.clear(); if(projects.length) await db.projects.bulkPut(projects);
-      await db.tasks.clear(); if(tasks.length) await db.tasks.bulkPut(tasks);
-      await db.activeTimers.clear(); if(activeTimers.length) await db.activeTimers.bulkPut(activeTimers);
-      await db.records.clear(); if(records.length) await db.records.bulkPut(records);
-      
-      // Render síncron a la interfície
-      render();
-
-      // Sincronitzar a Firebase asíncronament si estem loguejats
-      if(fbDb && currentUser) {
-        console.log("Iniciant sincronització a Firestore...");
-        const { writeBatch, doc, collection, getDocs, query, where } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js");
-        const batch = writeBatch(fbDb);
-        let operacionsBatch = 0;
-        
-        const syncCol = async (colName, items) => {
-            console.log(`Sincronitzant col·lecció: ${colName}... Obtenint dades de Firestore...`);
-            const q = query(collection(fbDb, colName), where("userId", "==", currentUser.uid));
-            try {
-                const snap = await getDocs(q);
-                console.log(`Dades obtingudes de ${colName}. Total: ${snap.size}`);
-                const localIds = new Set(items.map(i => i.id));
-                
-                snap.forEach(d => {
-                    if (!localIds.has(d.id)) {
-                        batch.delete(d.ref);
-                        operacionsBatch++;
-                    }
-                });
-                
-                items.forEach(item => {
-                    const ref = doc(fbDb, colName, item.id);
-                    batch.set(ref, { ...item, userId: currentUser.uid });
-                    operacionsBatch++;
-                });
-            } catch (err) {
-                console.error(`Error a l'obtenir documents de la col·lecció ${colName}:`, err);
-                throw err;
-            }
-        };
-
-        try {
-            await syncCol('projects', projects);
-            await syncCol('tasks', tasks);
-            await syncCol('activeTimers', activeTimers);
-            await syncCol('records', records);
-            
-            if (operacionsBatch > 0) {
-                console.log(`Fent commit del batch amb ${operacionsBatch} operacions...`);
-                
-                const commitPromise = batch.commit();
-                const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("S'ha superat el temps d'espera (Timeout). No s'ha pogut connectar a Firestore. Verifica les credencials o les regles.")), 10000));
-                
-                await Promise.race([commitPromise, timeoutPromise]);
-                
-                console.log("Sincronitzat a Firestore correctament");
-            } else {
-                console.log("Cap canvi per pujar a Firestore.");
-            }
-        } catch(e) {
-            console.error("Error pujant a Firestore:", e);
-            alert("Error pujant a Firestore:\\n" + e.message + "\\n\\nSi el temps d'espera s'ha esgotat, verifica que les credencials són correctes i que les 'Rules' de Firestore permeten l'escriptura.");
-        }
-      }
-    };
-
-    // --- INITIAL LOAD ---
-    const loadLocalData = async () => {
-      projects = await db.projects.toArray();
-      tasks = await db.tasks.toArray();
-      activeTimers = await db.activeTimers.toArray();
-      records = await db.records.toArray();
-      
-      // Migrate from localStorage if Dexie is empty
-      if(projects.length === 0 && localStorage.getItem('projects')) {
-          projects = JSON.parse(localStorage.getItem('projects')) || [];
-          tasks = JSON.parse(localStorage.getItem('tasks')) || [];
-          activeTimers = JSON.parse(localStorage.getItem('activeTimers')) || [];
-          records = JSON.parse(localStorage.getItem('records')) || [];
-          if(projects.length) await db.projects.bulkAdd(projects);
-          if(tasks.length) await db.tasks.bulkAdd(tasks);
-          if(activeTimers.length) await db.activeTimers.bulkAdd(activeTimers);
-          if(records.length) await db.records.bulkAdd(records);
-          localStorage.removeItem('projects');
-          localStorage.removeItem('tasks');
-          localStorage.removeItem('activeTimers');
-          localStorage.removeItem('records');
-      }
-      render();
-    };
-
-    // --- FUNCIONS D'UTILITAT ---
-    const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
-    
-    const formatTime = (ms) => {
-      const totalSeconds = Math.floor(ms / 1000);
-      const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-      const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-      const s = String(totalSeconds % 60).padStart(2, '0');
-      return `${h}:${m}:${s}`;
-    };
-    
-    const formatDatetimeLocal = (timestamp) => {
-      const d = new Date(timestamp);
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      const hh = String(d.getHours()).padStart(2, '0');
-      const mm = String(d.getMinutes()).padStart(2, '0');
-      return `${y}-${m}-${day}T${hh}:${mm}`;
-    };
-    
-    const formatDateObj = (timestamp) => {
-      const d = new Date(timestamp);
-      return d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    };
-
-    // --- NAVEGACIÓ (TABS) ---
-    window.switchTab = (tabId) => {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-      const tabEl = document.getElementById(`${tabId}-tab`);
-      if (tabEl) tabEl.classList.add('active');
-      const btnEl = document.querySelector(`button[onclick="switchTab('${tabId}')"]`);
-      if (btnEl) btnEl.classList.add('active');
-      localStorage.setItem('activeTab', tabId);
-      if (tabId === 'stats') {
-        renderStats();
-      }
-    };
-
-    // --- MODALS ---
-    const openModal = (title, html, onSave) => {
-      document.getElementById('modal-title').textContent = title;
-      document.getElementById('modal-body').innerHTML = html;
-      document.getElementById('modal').classList.add('active');
-      document.getElementById('modal-save-btn').onclick = () => {
-        if(onSave() !== false) closeModal();
-      };
-    };
-    window.closeModal = () => {
-      document.getElementById('modal').classList.remove('active');
-    };
-
-    const openConfirmModal = (message, onConfirm) => {
-      document.getElementById('modal-title').textContent = 'Confirmació';
-      document.getElementById('modal-body').innerHTML = `<p>${message}</p>`;
-      document.getElementById('modal').classList.add('active');
-      const saveBtn = document.getElementById('modal-save-btn');
-      saveBtn.textContent = 'Confirmar';
-      saveBtn.classList.add('danger');
-      saveBtn.onclick = () => {
-        onConfirm();
-        closeModal();
-      };
-      // Reset after closing
-      const originalClose = window.closeModal;
-      window.closeModal = () => {
-        saveBtn.textContent = 'Desar Canvis';
-        saveBtn.classList.remove('danger');
-        originalClose();
-        window.closeModal = originalClose; // Restore original
-      };
-    };
-
-    // --- RENDERITZAT ---
-    const renderColorPicker = (containerId, selectedColor, onSelectFuncName) => {
-      const container = document.getElementById(containerId);
-      if(!container) return;
-      container.innerHTML = COLORS.map(c => 
-        `<div class="color-swatch ${c === selectedColor ? 'selected' : ''}" style="background-color: ${c}" onclick="${onSelectFuncName}('${c}')"></div>`
-      ).join('');
-    };
-
-    window.selectProjectColor = (c) => { selectedProjectColor = c; renderColorPicker('project-color-picker', selectedProjectColor, 'selectProjectColor'); };
-    window.selectModalColor = (c) => { window.currentModalColor = c; renderColorPicker('modal-color-picker', c, 'selectModalColor'); };
-
-    const renderProjects = () => {
-      const list = document.getElementById('projects-list');
-      if(!list) return;
-      
-      if(projects.length === 0) {
-        list.innerHTML = `<div class="empty-state">Encara no tens cap projecte. Crea el primer projecte a dalt.</div>`;
-        return;
-      }
-      
-      list.innerHTML = projects.map(p => {
-        const pTasks = tasks.filter(t => t.projectId === p.id);
-        return `
-          <div class="card" style="border-left: 6px solid ${p.color}; position: relative; overflow: hidden;">
-            <div class="flex justify-between items-center mb-4">
-              <div>
-                <h3 style="margin:0">${esc(p.name)}</h3>
-                ${p.description ? `<div class="text-sm text-muted mt-1">${esc(p.description)}</div>` : ''}
-              </div>
-              <div class="flex gap-2">
-                <button class="secondary icon-btn icon-only" title="Edita" onclick="editProject('${p.id}')">${ICONS.edit}</button>
-                <button class="danger icon-btn icon-only" title="Elimina" onclick="deleteProject('${p.id}')">${ICONS.trash}</button>
-              </div>
-            </div>
-            
-            <div style="background: var(--bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border);">
-              <div class="flex justify-between items-center mb-3">
-                <h4 style="margin:0; font-size:0.95rem; text-transform:uppercase; color:var(--text-muted); letter-spacing:0.05em;">Tasques</h4>
-                <button class="small icon-btn icon-only primary" style="border-radius:50%; width:24px; height:24px; padding:0;" onclick="openTaskModal('${p.id}')">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;margin:auto;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                </button>
-              </div>
-              
-              ${pTasks.length === 0 ? '<div class="text-sm text-muted text-center py-2">Cap tasca definida.</div>' : ''}
-              
-              <div class="flex-col" style="gap: 8px;">
-                ${pTasks.map(t => `
-                  <div class="list-item" style="padding: 8px 12px;">
-                    <div class="flex items-center">
-                      <span class="color-swatch" style="background:${t.color}; width:14px; height:14px; margin-right:10px; border:none;"></span>
-                      <span class="font-bold">${esc(t.name)}</span>
-                    </div>
-                    <div class="flex gap-2">
-                      <button class="secondary icon-btn icon-only" title="Edita" onclick="openTaskModal('${p.id}', '${t.id}')">${ICONS.edit}</button>
-                      <button class="danger icon-btn icon-only" title="Elimina" onclick="deleteTask('${t.id}')">${ICONS.trash}</button>
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    };
-
-    const updateTimerFormOptions = () => {
-      // Actualitzar selects de formulari de nou cronòmetre
-      const pSelect = document.getElementById('new-timer-project');
-      if(pSelect) {
-        const lastProjId = localStorage.getItem('lastTimerProjectId') || '';
-        const currentVal = pSelect.value || lastProjId;
-        pSelect.innerHTML = `<option value="">-- Selecciona Projecte --</option>` + 
-          projects.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('') +
-          `<option value="NEW_PROJECT">+ Crear Nou Projecte...</option>`;
-        if(currentVal && projects.find(p => p.id === currentVal)) pSelect.value = currentVal;
-        updateTimerTaskOptions(); // Força actualitzar tasques al repintar
-      }
-    };
-
-    const renderTimers = () => {
-      // Actualitzar llista de cronòmetres
-      const list = document.getElementById('active-timers-list');
-      if(!list) return;
-      
-      if(activeTimers.length === 0) {
-        list.innerHTML = `<div class="empty-state">No hi ha cronòmetres actius.</div>`;
-        return;
-      }
-      
-      const now = Date.now();
-      list.innerHTML = activeTimers.map(timer => {
-        const p = projects.find(x => x.id === timer.projectId);
-        const t = tasks.find(x => x.id === timer.taskId);
-        const color = t ? t.color : (p ? p.color : 'gray');
-        
-        // Calcular durada: acumulat + (si està corrent, temps des de l'inici, sinó 0)
-        const currentSessionDuration = timer.status === 'running' ? (now - timer.startTime) : 0;
-        const duration = (timer.elapsed || 0) + currentSessionDuration;
-        
-        return `
-          <div class="card" style="border-left: 6px solid ${color};">
-            <div class="flex justify-between items-center" style="flex-wrap: wrap;">
-              <div style="flex: 1; min-width: 200px; margin-bottom: 8px;">
-                <div class="font-bold text-sm text-muted uppercase tracking-wider mb-1">${esc(p ? p.name : 'Projecte eliminat')}</div>
-                <div class="font-bold" style="font-size: 1.1rem;">${esc(t ? t.name : (timer.note || 'Sense Tasca'))}</div>
-                ${t && timer.note ? `<div class="text-sm text-muted mt-1">${esc(timer.note)}</div>` : ''}
-                ${timer.status === 'paused' ? '<span style="display:inline-block; margin-top:4px; font-size:0.75rem; padding:2px 6px; background:var(--bg); border:1px solid var(--border); border-radius:4px; color:var(--text-muted);">Pausat</span>' : ''}
-              </div>
-              <div class="flex items-center gap-4">
-                <div class="font-mono" style="font-size: 2rem; font-weight: bold; min-width: 130px; text-align:right;">${formatTime(duration)}</div>
-                <div class="flex gap-2">
-                  <button class="secondary icon-btn icon-only" title="Edita Cronòmetre" onclick="editActiveTimer('${timer.id}')">${ICONS.edit}</button>
-                  ${timer.status === 'running' ? 
-                    `<button class="secondary icon-btn icon-only" title="Pausar" onclick="pauseTimer('${timer.id}')">${ICONS.pause}</button>` :
-                    `<button class="secondary icon-btn icon-only" title="Reprendre" onclick="resumeTimer('${timer.id}')" style="color:var(--primary); border-color:var(--primary);">${ICONS.play}</button>`
-                  }
-                  <button onclick="stopTimer('${timer.id}')" class="icon-btn icon-only" style="background:var(--success); color:white; border:none;" title="Desar">${ICONS.save}</button>
-                  <button class="danger icon-btn icon-only" title="Descartar" onclick="deleteTimer('${timer.id}')">${ICONS.stop}</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-    };
-
-
-
-    const render = () => {
-      renderProjects();
-      updateTimerFormOptions();
-      renderTimers();
-      renderHistory();
-      renderColorPicker('project-color-picker', selectedProjectColor, 'selectProjectColor');
-      if (document.getElementById('stats-tab').classList.contains('active')) {
-        renderStats();
-      }
-    };
-
-    // --- ACCIONS: PROJECTES I TASQUES ---
-    window.updateTimerTaskOptions = () => {
-      const pId = document.getElementById('new-timer-project').value;
-      if(pId && pId !== 'NEW_PROJECT') localStorage.setItem('lastTimerProjectId', pId);
-      
-      if(pId === 'NEW_PROJECT') {
-        document.getElementById('new-timer-project').value = '';
-        openProjectModal();
-        return;
-      }
-      
-      const tSelect = document.getElementById('new-timer-task');
-      const currentTaskVal = tSelect.value;
-      
-      if(!pId) { 
-        tSelect.innerHTML = '<option value="">-- Selecciona Projecte Primer --</option>'; 
-        return; 
-      }
-      
-      const pTasks = tasks.filter(t => t.projectId === pId);
-      tSelect.innerHTML = '<option value="">-- Sense tasca específica --</option>' + 
-        pTasks.map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('') +
-        '<option value="NEW_TASK">+ Crear Nova Tasca...</option>';
-        
-      if(currentTaskVal && pTasks.find(t => t.id === currentTaskVal)) {
-        tSelect.value = currentTaskVal;
-      }
-        
-      tSelect.onchange = () => {
-        if(tSelect.value === 'NEW_TASK') {
-          tSelect.value = '';
-          openTaskModal(pId);
-        }
-      };
-    };
-
-    window.openProjectModal = (projectId = null) => {
-      const p = projectId ? projects.find(x => x.id === projectId) : null;
-      window.currentModalColor = p ? p.color : COLORS[0];
-      
-      const html = `
-        <div class="form-group">
-          <label>Nom del Projecte</label>
-          <input type="text" id="modal-project-name" value="${esc(p ? p.name : '')}" placeholder="Ex: Desenvolupament Web">
-        </div>
-        <div class="form-group">
-          <label>Descripció</label>
-          <input type="text" id="modal-project-desc" value="${esc(p ? p.description || '' : '')}" placeholder="Descripció breu...">
-        </div>
-        <div class="form-group">
-          <label>Color</label>
-          <div class="color-picker" id="modal-color-picker"></div>
-        </div>
-      `;
-      
-      openModal(p ? 'Edita Projecte' : 'Nou Projecte', html, () => {
-        const name = document.getElementById('modal-project-name').value.trim();
-        const desc = document.getElementById('modal-project-desc').value.trim();
-        if(!name) { alert("El nom del projecte és obligatori."); return false; }
-        if(p) {
-          p.name = name;
-          p.description = desc;
-          p.color = window.currentModalColor;
-        } else {
-          projects.push({ id: generateId(), name, description: desc, color: window.currentModalColor });
-        }
-        saveState();
-        return true;
-      });
-      renderColorPicker('modal-color-picker', window.currentModalColor, 'selectModalColor');
-      setTimeout(() => document.getElementById('modal-project-name').focus(), 10);
-    };
-
-    window.editProject = (id) => openProjectModal(id);
-
-    window.deleteProject = (id) => {
-      openConfirmModal('Segur que vols eliminar aquest projecte? Es perdran totes les tasques associades.', () => {
-        projects = projects.filter(p => p.id !== id);
-        tasks = tasks.filter(t => t.projectId !== id);
-        saveState();
-      });
-    };
-
-    window.openTaskModal = (projectId, taskId = null) => {
-      const t = taskId ? tasks.find(x => x.id === taskId) : null;
-      window.currentModalColor = t ? t.color : COLORS[0];
-      
-      const html = `
-        <div class="form-group">
-          <label>Nom de la Tasca</label>
-          <input type="text" id="modal-task-name" value="${esc(t ? t.name : '')}" placeholder="Ex: Disseny UI">
-        </div>
-        <div class="form-group">
-          <label>Color</label>
-          <div class="color-picker" id="modal-color-picker"></div>
-        </div>
-      `;
-      
-      openModal(t ? 'Edita Tasca' : 'Nova Tasca', html, () => {
-        const name = document.getElementById('modal-task-name').value.trim();
-        if(!name) { alert("El nom de la tasca és obligatori."); return false; }
-        if(t) {
-          t.name = name;
-          t.color = window.currentModalColor;
-        } else {
-          const existing = tasks.find(x => x.projectId === projectId && x.name.toLowerCase() === name.toLowerCase());
-          if (existing) {
-             existing.color = window.currentModalColor;
-          } else {
-             tasks.push({ id: generateId(), projectId, name, color: window.currentModalColor });
-          }
-        }
-        saveState();
-        updateTimerTaskOptions();
-        return true;
-      });
-      renderColorPicker('modal-color-picker', window.currentModalColor, 'selectModalColor');
-      
-      // Auto-focus input
-      setTimeout(() => document.getElementById('modal-task-name').focus(), 10);
-    };
-
-    window.deleteTask = (id) => {
-      openConfirmModal('Segur que vols eliminar aquesta tasca?', () => {
-        tasks = tasks.filter(t => t.id !== id);
-        saveState();
-      });
-    };
-
-    // --- ACCIONS: CRONÒMETRES ---
-    window.startTimer = () => {
-      let projectId = document.getElementById('new-timer-project').value;
-      let taskId = document.getElementById('new-timer-task').value;
-      const note = document.getElementById('new-timer-note').value.trim();
-      
-      if(projectId === 'NEW_PROJECT' || taskId === 'NEW_TASK') return;
-      
-      if(!projectId) {
-        const lastRecord = [...records].sort((a,b) => b.endTime - a.endTime).find(r => r.projectId);
-        if (lastRecord && projects.find(p => p.id === lastRecord.projectId)) {
-          projectId = lastRecord.projectId;
-        } else if (projects.length > 0) {
-          projectId = projects[0].id;
-        } else {
-          projectId = generateId();
-          projects.push({ id: projectId, name: 'Projecte General', description: 'Creat automàticament', color: COLORS[0] });
-        }
-      }
-      
-      if(!taskId) {
-        let genericTask = tasks.find(t => t.projectId === projectId && t.name === 'Tasca Genèrica');
-        if (!genericTask) {
-          genericTask = { id: generateId(), projectId, name: 'Tasca Genèrica', color: COLORS[1] };
-          tasks.push(genericTask);
-        }
-        taskId = genericTask.id;
-      }
-      
-      activeTimers.push({ 
-        id: generateId(), 
-        projectId, 
-        taskId, 
-        note, 
-        startTime: Date.now(), 
-        elapsed: 0, 
-        status: 'running' 
-      });
-      
-      // Reiniciar formulari
-      document.getElementById('new-timer-project').value = '';
-      updateTimerTaskOptions();
-      document.getElementById('new-timer-note').value = '';
-      
-      saveState();
-    };
-
-    window.editActiveTimer = (id) => {
-      const timer = activeTimers.find(t => t.id === id);
-      if(!timer) return;
-      
-      let pOptions = `<option value="">-- Selecciona Projecte --</option>` + projects.map(p => `<option value="${p.id}" ${p.id===timer.projectId?'selected':''}>${esc(p.name)}</option>`).join('');
-      
-      const pTasks = timer.projectId ? tasks.filter(t => t.projectId === timer.projectId) : [];
-      let tOptions = '<option value="">-- Sense tasca específica --</option>' + pTasks.map(t => `<option value="${t.id}" ${t.id===timer.taskId?'selected':''}>${esc(t.name)}</option>`).join('');
-      
-      const now = Date.now();
-      const currentDuration = (timer.elapsed || 0) + (timer.status === 'running' ? now - timer.startTime : 0);
-      const totalSec = Math.floor(currentDuration / 1000);
-      const curH = Math.floor(totalSec / 3600);
-      const curM = Math.floor((totalSec % 3600) / 60);
-      const curS = totalSec % 60;
-
-      const html = `
-        <div class="form-group">
-          <label>Projecte</label>
-          <select id="edit-timer-project" onchange="
-            const pid = this.value;
-            const tSelect = document.getElementById('edit-timer-task');
-            if(!pid) { tSelect.innerHTML = '<option value=\\'\\'>-- Selecciona Projecte Primer --</option>'; return; }
-            const myTasks = window.tasks.filter(t => t.projectId === pid);
-            tSelect.innerHTML = '<option value=\\'\\'>-- Sense tasca específica --</option>' + myTasks.map(t => '<option value=\\''+t.id+'\\'>'+window.esc(t.name)+'</option>').join('');
-          ">${pOptions}</select>
-        </div>
-        <div class="form-group">
-          <label>Tasca</label>
-          <select id="edit-timer-task">${tOptions}</select>
-        </div>
-        <div class="form-group">
-          <label>Temps transcurregut (h : m : s)</label>
-          <div class="flex" style="gap: 8px;">
-            <div style="flex:1;"><input type="number" id="edit-timer-hours" min="0" value="${curH}" placeholder="h"></div>
-            <span style="align-self: center; font-weight: bold;">:</span>
-            <div style="flex:1;"><input type="number" id="edit-timer-minutes" min="0" max="59" value="${curM}" placeholder="m"></div>
-            <span style="align-self: center; font-weight: bold;">:</span>
-            <div style="flex:1;"><input type="number" id="edit-timer-seconds" min="0" max="59" value="${curS}" placeholder="s"></div>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Anotació (Opcional)</label>
-          <input type="text" id="edit-timer-note" value="${esc(timer.note || '')}">
-        </div>
-      `;
-      
-      openModal('Edita Cronòmetre Actiu', html, () => {
-        timer.projectId = document.getElementById('edit-timer-project').value;
-        timer.taskId = document.getElementById('edit-timer-task').value;
-        timer.note = document.getElementById('edit-timer-note').value.trim();
-        
-        const h = parseInt(document.getElementById('edit-timer-hours').value, 10) || 0;
-        const m = parseInt(document.getElementById('edit-timer-minutes').value, 10) || 0;
-        const s = parseInt(document.getElementById('edit-timer-seconds').value, 10) || 0;
-        const newTotalMs = ((h * 3600) + (m * 60) + s) * 1000;
-
-        if (timer.status === 'running') {
-          timer.elapsed = newTotalMs;
-          timer.startTime = Date.now();
-        } else {
-          timer.elapsed = newTotalMs;
-        }
-
-        saveState();
-        return true;
-      });
-    };
-
-    window.pauseTimer = (id) => {
-      const t = activeTimers.find(x => x.id === id);
-      if(t && t.status === 'running') {
-        t.elapsed += (Date.now() - t.startTime);
-        t.status = 'paused';
-        saveState();
-      }
-    };
-
-    window.resumeTimer = (id) => {
-      const t = activeTimers.find(x => x.id === id);
-      if(t && t.status === 'paused') {
-        t.startTime = Date.now();
-        t.status = 'running';
-        saveState();
-      }
-    };
-
-    window.stopTimer = (id) => {
-      const idx = activeTimers.findIndex(x => x.id === id);
-      if(idx === -1) return;
-      const t = activeTimers[idx];
-      activeTimers.splice(idx, 1);
-      
-      const endTime = Date.now();
-      const finalDuration = t.elapsed + (t.status === 'running' ? (endTime - t.startTime) : 0);
-      
-      records.push({
-        id: generateId(),
-        projectId: t.projectId,
-        taskId: t.taskId,
-        note: t.note,
-        startTime: endTime - finalDuration, // estimem inici segons la durada total
-        endTime: endTime,
-        duration: finalDuration
-      });
-      saveState();
-    };
-
-    window.deleteTimer = (id) => {
-      openConfirmModal('Segur que vols descartar aquest cronòmetre sense desar-ne el temps?', () => {
-        activeTimers = activeTimers.filter(x => x.id !== id);
-        saveState();
-      });
-    };
-
-    // --- ACCIONS: HISTORIAL ---
-    window.updateHistoryFilters = () => {
-      const period = document.getElementById('history-period').value;
-      if(period === 'custom') {
-        document.getElementById('history-custom-dates').style.display = 'flex';
-      } else {
-        document.getElementById('history-custom-dates').style.display = 'none';
-      }
-      renderHistory();
-    };
-
-    const renderHistory = () => {
-      const list = document.getElementById('history-list');
-      if(!list) return;
-      
-      const projSelect = document.getElementById('history-project');
-      if (projSelect) {
-        const curProj = projSelect.value;
-        projSelect.innerHTML = '<option value="all">Tots els projectes</option>' + 
-          projects.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
-        if(curProj && (curProj === 'all' || projects.find(p=>p.id===curProj))) projSelect.value = curProj;
-      }
-      
-      if(records.length === 0) {
-        list.innerHTML = `<div class="empty-state">Encara no s'ha registrat cap sessió de treball.</div>`;
-        return;
-      }
-
-      const period = document.getElementById('history-period') ? document.getElementById('history-period').value : 'all';
-      const pid = projSelect ? projSelect.value : 'all';
-      let startFilter = 0;
-      let endFilter = Infinity;
-      
-      const now = new Date();
-      if(period === 'today') {
-        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        startFilter = d.getTime();
-      } else if(period === 'week') {
-        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + (now.getDay()===0?-6:1));
-        startFilter = d.getTime();
-      } else if(period === 'month') {
-        const d = new Date(now.getFullYear(), now.getMonth(), 1);
-        startFilter = d.getTime();
-      } else if(period === 'custom') {
-        const s = document.getElementById('history-date-start').value;
-        const e = document.getElementById('history-date-end').value;
-        if(s) startFilter = new Date(s).getTime();
-        if(e) endFilter = new Date(e).getTime() + 86399999;
-      }
-
-      const filtered = records.filter(r => {
-        if(r.startTime < startFilter || r.startTime > endFilter) return false;
-        if(pid !== 'all' && r.projectId !== pid) return false;
-        return true;
-      });
-      
-      if(filtered.length === 0) {
-        list.innerHTML = `<div class="empty-state">No hi ha dades per mostrar en els filtres seleccionats.</div>`;
-        return;
-      }
-
-      // Group by task
-      const grouped = {};
-      filtered.forEach(r => {
-        const key = r.projectId + '_' + (r.taskId || 'none');
-        if(!grouped[key]) grouped[key] = { projectId: r.projectId, taskId: r.taskId, totalDuration: 0, recordList: [] };
-        grouped[key].totalDuration += r.duration;
-        grouped[key].recordList.push(r);
-      });
-
-      const sortedGroups = Object.values(grouped).sort((a,b) => b.totalDuration - a.totalDuration);
-
-      list.innerHTML = sortedGroups.map(g => {
-        const p = projects.find(x => x.id === g.projectId);
-        const t = tasks.find(x => x.id === g.taskId);
-        const color = t ? t.color : (p ? p.color : 'gray');
-        
-        const sortedSessions = g.recordList.sort((a,b) => b.endTime - a.endTime);
-        
-        return `
-          <div class="card" style="border-left: 4px solid ${color}; padding: 16px; margin-bottom: 16px; background: var(--bg-card);">
-            <div class="flex justify-between items-center mb-3">
-              <div style="min-width: 0; flex: 1; margin-right: 12px;">
-                <div class="font-bold text-sm" style="color: ${p ? p.color : 'var(--text-muted)'}; word-break: break-word;">${p ? esc(p.name) : 'Projecte eliminat'}</div>
-                <div class="font-bold" style="font-size: 1.1rem; color: ${t ? t.color : 'var(--text-main)'}; word-break: break-word;">${t ? esc(t.name) : 'Sense Tasca'}</div>
-                <div class="text-xs text-muted mt-1">${g.recordList.length} sessió(ns) enregistrada(es)</div>
-              </div>
-              <div class="font-mono font-bold" style="font-size: 1.25rem; flex-shrink: 0;">${formatTime(g.totalDuration)}</div>
-            </div>
-            <div class="flex-col" style="gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px;">
-              ${sortedSessions.map(record => `
-                <div class="flex justify-between items-center" style="background: var(--bg); padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border);">
-                  <div style="min-width: 0; flex: 1; margin-right: 12px;">
-                    ${record.note ? `<div class="text-sm italic mb-1" style="word-break: break-word;">${esc(record.note)}</div>` : ''}
-                    <div class="text-xs text-muted" style="display: flex; flex-direction: column; gap: 4px; margin-top: 4px;">
-                      <div style="display: flex; align-items: center; gap: 4px;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px; height:12px;"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
-                        <span>${formatDateObj(record.startTime)}</span>
-                      </div>
-                      <div style="display: flex; align-items: center; gap: 4px;">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px; height:12px;"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
-                        <span>${formatDateObj(record.endTime)}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="flex items-center gap-4" style="flex-shrink: 0;">
-                    <div class="font-mono font-bold text-sm" style="flex-shrink: 0;">${formatTime(record.duration)}</div>
-                    <div class="flex gap-2" style="flex-shrink: 0;">
-                      <button class="secondary icon-btn icon-only" title="Edita" onclick="editRecord('${record.id}')">${ICONS.edit}</button>
-                      <button class="danger icon-btn icon-only" title="Elimina" onclick="deleteRecord('${record.id}')">${ICONS.trash}</button>
-                    </div>
-                  </div>
-                </div>
-              `).join('')}
-            </div>
-          </div>
-        `;
-      }).join('');
-    };
-
-    window.editRecord = (id) => {
-      const r = records.find(x => x.id === id);
-      if(!r) return;
-      
-      const pOptions = projects.map(p => `<option value="${p.id}" ${p.id===r.projectId?'selected':''}>${esc(p.name)}</option>`).join('');
-      const tOptions = '<option value="">Sense tasca específica</option>' + tasks.filter(t=>t.projectId===r.projectId).map(t => `<option value="${t.id}" ${t.id===r.taskId?'selected':''}>${esc(t.name)}</option>`).join('');
-      
-      const html = `
-        <div class="form-group">
-          <label>Projecte</label>
-          <select id="modal-record-project" onchange="updateModalRecordTasks()">${pOptions}</select>
-        </div>
-        <div class="form-group">
-          <label>Tasca</label>
-          <select id="modal-record-task">${tOptions}</select>
-        </div>
-        <div class="flex" style="gap: 12px;">
-          <div class="form-group" style="flex:1;">
-            <label>Inici</label>
-            <input type="datetime-local" id="modal-record-start" value="${formatDatetimeLocal(r.startTime)}">
-          </div>
-          <div class="form-group" style="flex:1;">
-            <label>Fi</label>
-            <input type="datetime-local" id="modal-record-end" value="${formatDatetimeLocal(r.endTime)}">
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Anotació (Opcional)</label>
-          <input type="text" id="modal-record-note" value="${esc(r.note || '')}">
-        </div>
-      `;
-      
-      window.updateModalRecordTasks = () => {
-        const pid = document.getElementById('modal-record-project').value;
-        document.getElementById('modal-record-task').innerHTML = '<option value="">Sense tasca específica</option>' + tasks.filter(t=>t.projectId===pid).map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join('');
-      };
-      
-      openModal('Edita Sessió', html, () => {
-        const st = new Date(document.getElementById('modal-record-start').value).getTime();
-        const et = new Date(document.getElementById('modal-record-end').value).getTime();
-        if(et < st) { alert("Error: L'hora de fi no pot ser anterior a l'hora d'inici."); return false; }
-        
-        r.projectId = document.getElementById('modal-record-project').value;
-        r.taskId = document.getElementById('modal-record-task').value || null;
-        r.startTime = st;
-        r.endTime = et;
-        r.duration = et - st;
-        r.note = document.getElementById('modal-record-note').value.trim();
-        saveState();
-        return true;
-      });
-    };
-
-    window.deleteRecord = (id) => {
-      openConfirmModal('Segur que vols eliminar aquesta sessió del registre?', () => {
-        records = records.filter(x => x.id !== id);
-        saveState();
-      });
-    };
-
-    window.exportCSV = () => {
-      if(records.length === 0) return alert('No hi ha dades per exportar.');
-      let csv = 'Projecte,Tasca,Inici,Fi,Durada_Minuts,Anotacions\n';
-      records.forEach(r => {
-        const p = projects.find(x => x.id === r.projectId);
-        const t = tasks.find(x => x.id === r.taskId);
-        const pName = p ? `"${p.name.replace(/"/g, '""')}"` : 'Desconegut';
-        const tName = t ? `"${t.name.replace(/"/g, '""')}"` : '';
-        const startStr = new Date(r.startTime).toISOString();
-        const endStr = new Date(r.endTime).toISOString();
-        const durMin = (r.duration / 60000).toFixed(2);
-        const notes = r.note ? `"${r.note.replace(/"/g, '""')}"` : '';
-        csv += `${pName},${tName},${startStr},${endStr},${durMin},${notes}\n`;
-      });
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `export_sessions_${new Date().toISOString().slice(0,10)}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    };
-
-    window.exportJSON = () => {
-      if(records.length === 0 && projects.length === 0) return alert('No hi ha dades per exportar.');
-      const backup = {
-        projects: projects,
-        tasks: tasks,
-        records: records.map(r => {
-          const p = projects.find(x => x.id === r.projectId);
-          const t = tasks.find(x => x.id === r.taskId);
-          return {
-            ...r,
-            projectName: p ? p.name : 'Desconegut',
-            taskName: t ? t.name : null
-          };
-        })
-      };
-      const jsonStr = JSON.stringify(backup, null, 2);
-      const blob = new Blob([jsonStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `export_sessions_${new Date().toISOString().slice(0,10)}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    };
-
-    window.handleJSONImport = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const data = JSON.parse(event.target.result);
-          let importedCount = 0;
-
-          if (data.projects && Array.isArray(data.projects)) {
-            data.projects.forEach(p => {
-              if (!projects.some(ex => ex.id === p.id || ex.name.toLowerCase() === p.name.toLowerCase())) {
-                projects.push(p);
-              }
-            });
-          }
-          if (data.tasks && Array.isArray(data.tasks)) {
-            data.tasks.forEach(t => {
-              if (!tasks.some(ex => ex.id === t.id || (ex.projectId === t.projectId && ex.name.toLowerCase() === t.name.toLowerCase()))) {
-                tasks.push(t);
-              }
-            });
-          }
-
-          const items = Array.isArray(data) ? data : (data.records || []);
-          items.forEach(item => {
-            let projName = item.projectName || 'Projecte Importat';
-            let p = projects.find(x => x.id === item.projectId || x.name.toLowerCase() === projName.toLowerCase());
-            if (!p) {
-              p = { id: item.projectId || generateId(), name: projName, description: 'Importat', color: COLORS[projects.length % COLORS.length] };
-              projects.push(p);
-            }
-
-            let t = null;
-            if (item.taskName || item.taskId) {
-              t = tasks.find(x => x.id === item.taskId || (x.projectId === p.id && x.name.toLowerCase() === (item.taskName||'').toLowerCase()));
-              if (!t && item.taskName) {
-                t = { id: item.taskId || generateId(), projectId: p.id, name: item.taskName, color: COLORS[tasks.length % COLORS.length] };
-                tasks.push(t);
-              }
-            }
-
-            if (!records.some(r => r.startTime === item.startTime && r.endTime === item.endTime && r.note === item.note)) {
-              records.push({
-                id: item.id || generateId(),
-                projectId: p.id,
-                taskId: t ? t.id : null,
-                note: item.note || '',
-                startTime: item.startTime || Date.now(),
-                endTime: item.endTime || Date.now(),
-                duration: item.duration || ((item.endTime || 0) - (item.startTime || 0))
-              });
-              importedCount++;
-            }
-          });
-
-          saveState();
-          alert(`S'han importat ${importedCount} sessions del JSON amb els seus projectes i tasques.`);
-        } catch (err) {
-          alert('Error en processar el fitxer JSON: ' + err.message);
-        }
-        e.target.value = '';
-      };
-      reader.readAsText(file);
-    };
-
-    const parseCSVLine = (str) => {
-      const arr = [];
-      let quote = false;
-      let col = '';
-      for (let i = 0; i < str.length; i++) {
-        const c = str[i];
-        if (c === '"') {
-          if (quote && str[i+1] === '"') { col += '"'; i++; }
-          else { quote = !quote; }
-        } else if (c === ',' && !quote) {
-          arr.push(col); col = '';
-        } else { col += c; }
-      }
-      arr.push(col);
-      return arr;
-    };
-
-    window.handleCSVImport = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        try {
-          const lines = event.target.result.split(/\r?\n/).filter(l => l.trim().length > 0);
-          if (lines.length <= 1) { alert('El fitxer CSV no conté registres.'); return; }
-          let importedCount = 0;
-          for (let i = 1; i < lines.length; i++) {
-            const cols = parseCSVLine(lines[i]);
-            if (cols.length < 4) continue;
-            const projName = cols[0].replace(/^"|"$/g, '').trim() || 'Projecte CSV';
-            const taskName = cols[1].replace(/^"|"$/g, '').trim();
-            const startStr = cols[2].replace(/^"|"$/g, '').trim();
-            const endStr = cols[3].replace(/^"|"$/g, '').trim();
-            const durMin = parseFloat(cols[4]) || 0;
-            const note = cols[5] !== undefined ? cols[5].replace(/^"|"$/g, '').trim() : '';
-
-            const st = new Date(startStr).getTime();
-            const et = new Date(endStr).getTime();
-            if (isNaN(st) || isNaN(et)) continue;
-            const duration = (et - st > 0) ? (et - st) : Math.round(durMin * 60000);
-
-            let p = projects.find(x => x.name.toLowerCase() === projName.toLowerCase());
-            if (!p) {
-              p = { id: generateId(), name: projName, description: 'Importat de CSV', color: COLORS[projects.length % COLORS.length] };
-              projects.push(p);
-            }
-
-            let t = null;
-            if (taskName) {
-              t = tasks.find(x => x.projectId === p.id && x.name.toLowerCase() === taskName.toLowerCase());
-              if (!t) {
-                t = { id: generateId(), projectId: p.id, name: taskName, color: COLORS[tasks.length % COLORS.length] };
-                tasks.push(t);
-              }
-            }
-
-            if (!records.some(r => r.startTime === st && r.endTime === et && r.note === note)) {
-              records.push({
-                id: generateId(),
-                projectId: p.id,
-                taskId: t ? t.id : null,
-                note: note,
-                startTime: st,
-                endTime: et,
-                duration: duration
-              });
-              importedCount++;
-            }
-          }
-          saveState();
-          alert(`S'han importat ${importedCount} sessions del CSV amb els seus projectes i tasques.`);
-        } catch (err) {
-          alert('Error en processar el fitxer CSV: ' + err.message);
-        }
-        e.target.value = '';
-      };
-      reader.readAsText(file);
-    };
-
-    window.clearHistory = () => {
-      openConfirmModal("Vols eliminar TOT l'historial de sessions? Aquesta acció no es pot desfer.", () => {
-        records.length = 0;
-        saveState();
-        if (document.getElementById('history-tab').classList.contains('active')) {
-          renderHistory();
-        }
-      });
-    };
-
-    // --- ACCIONS: ESTADÍSTIQUES ---
-    window.updateStatsView = () => {
-      const period = document.getElementById('stats-period').value;
-      if(period === 'custom') {
-        document.getElementById('stats-custom-dates').style.display = 'flex';
-      } else {
-        document.getElementById('stats-custom-dates').style.display = 'none';
-      }
-      renderStats();
-    };
-
-    window.renderStats = () => {
-      const projSelect = document.getElementById('stats-project');
-      const curProj = projSelect.value;
-      projSelect.innerHTML = '<option value="all">Tots els projectes</option>' + 
-        projects.map(p => `<option value="${p.id}">${esc(p.name)}</option>`).join('');
-      if(curProj && (curProj === 'all' || projects.find(p=>p.id===curProj))) projSelect.value = curProj;
-
-      const period = document.getElementById('stats-period').value;
-      const pid = projSelect.value;
-      let startFilter = 0;
-      let endFilter = Infinity;
-      
-      const now = new Date();
-      if(period === 'today') {
-        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-        startFilter = d.getTime();
-      } else if(period === 'week') {
-        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay() + (now.getDay()===0?-6:1));
-        startFilter = d.getTime();
-      } else if(period === 'month') {
-        const d = new Date(now.getFullYear(), now.getMonth(), 1);
-        startFilter = d.getTime();
-      } else if(period === 'custom') {
-        const s = document.getElementById('stats-date-start').value;
-        const e = document.getElementById('stats-date-end').value;
-        if(s) startFilter = new Date(s).getTime();
-        if(e) endFilter = new Date(e).getTime() + 86399999;
-      }
-
-      const filtered = records.filter(r => {
-        if(r.startTime < startFilter || r.startTime > endFilter) return false;
-        if(pid !== 'all' && r.projectId !== pid) return false;
-        return true;
-      });
-
-      let totalDuration = 0;
-      const projectTotals = {};
-      const taskTotals = {};
-
-      filtered.forEach(r => {
-        totalDuration += r.duration;
-        if(!projectTotals[r.projectId]) projectTotals[r.projectId] = 0;
-        projectTotals[r.projectId] += r.duration;
-        
-        if(pid !== 'all') {
-          const tid = r.taskId || 'none';
-          if(!taskTotals[tid]) taskTotals[tid] = 0;
-          taskTotals[tid] += r.duration;
-        }
-      });
-
-      const container = document.getElementById('stats-content');
-      if(filtered.length === 0) {
-        container.innerHTML = `<div class="empty-state">No hi ha dades per mostrar en els filtres seleccionats.</div>`;
-        return;
-      }
-
-      let html = `<div class="card mb-4" style="background:var(--primary); color:white; text-align:center;">
-        <div style="font-size:0.9rem; text-transform:uppercase; font-weight:bold; opacity:0.8;">Temps Total</div>
-        <div style="font-size:2.5rem; font-weight:bold; font-family:monospace;">${formatTime(totalDuration)}</div>
-      </div>`;
-
-      const renderBars = (dataMap, idResolver, title) => {
-        const entries = Object.keys(dataMap).map(k => ({id: k, duration: dataMap[k]})).sort((a,b)=>b.duration-a.duration);
-        if(entries.length === 0) return '';
-        const max = entries[0].duration;
-        let res = `<h3 class="mt-4 mb-4">${title}</h3><div class="flex-col">`;
-        entries.forEach(e => {
-          const info = idResolver(e.id);
-          const percent = Math.max(2, (e.duration / max) * 100);
-          res += `
-            <div style="margin-bottom:8px;">
-              <div class="flex justify-between items-end mb-1">
-                <div class="font-bold text-sm" style="color:${info.color}">${esc(info.name)}</div>
-                <div class="text-xs text-muted font-mono font-bold">${formatTime(e.duration)}</div>
-              </div>
-              <div style="height:12px; background:var(--border); border-radius:6px; overflow:hidden;">
-                <div style="height:100%; width:${percent}%; background:${info.color}; border-radius:6px;"></div>
-              </div>
-            </div>
-          `;
-        });
-        res += `</div>`;
-        return res;
-      };
-
-      if(pid === 'all') {
-        html += renderBars(projectTotals, id => {
-          const p = projects.find(x=>x.id===id);
-          return p ? {name: p.name, color: p.color} : {name:'Eliminat', color:'gray'};
-        }, 'Temps per Projecte');
-      } else {
-        html += renderBars(taskTotals, id => {
-          const t = tasks.find(x=>x.id===id);
-          return t ? {name: t.name, color: t.color} : {name:'Sense tasca', color:'gray'};
-        }, 'Temps per Tasca');
-      }
-
-      container.innerHTML = html;
-    };
-
-    // --- GLOBAL TICKS ---
-    setInterval(() => {
-      // Repintar cronòmetres actius cada segon si la pestanya és visible
-      if(activeTimers.length > 0 && document.getElementById('timers-tab').classList.contains('active')) {
-        renderTimers();
-      }
-      // Rellotge principal
-      document.getElementById('clock').textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-    }, 1000);
-
-    // --- THEME ---
-    const themes = ['auto', 'light', 'dark'];
-    let currentTheme = localStorage.getItem('theme') || 'auto';
-    const applyTheme = (theme) => {
-      document.documentElement.setAttribute('data-theme', theme);
-      const btn = document.getElementById('theme-toggle');
-      if(theme === 'dark') btn.innerHTML = ICONS.moon;
-      else if(theme === 'light') btn.innerHTML = ICONS.sun;
-      else btn.innerHTML = ICONS.monitor;
-    };
-    document.getElementById('theme-toggle').onclick = () => {
-      const nextIdx = (themes.indexOf(currentTheme) + 1) % themes.length;
-      currentTheme = themes[nextIdx];
-      localStorage.setItem('theme', currentTheme);
-      applyTheme(currentTheme);
-    };
-
-    // Inicialització al carregar
-    applyTheme(currentTheme);
-    const savedTab = localStorage.getItem('activeTab');
-    if (savedTab) switchTab(savedTab);
-    loadLocalData().then(() => {
-      initFirebase();
-    });
-    document.getElementById('clock').textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
-  </script>
+  <script type="module" src="/src/app.ts"></script>
 </body>
 </html>
+
