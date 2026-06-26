@@ -547,8 +547,17 @@ service cloud.firestore {
       const pass = document.getElementById('auth-pass').value;
       if(!email || !pass) return alert("Introdueix correu i contrasenya");
       try {
-        const { signInWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
-        await signInWithEmailAndPassword(fbAuth, email, pass);
+        const { signInWithEmailAndPassword, createUserWithEmailAndPassword } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+        try {
+            await signInWithEmailAndPassword(fbAuth, email, pass);
+        } catch (e) {
+            if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+                await createUserWithEmailAndPassword(fbAuth, email, pass);
+                alert("Compte creat correctament amb aquest correu.");
+            } else {
+                throw e;
+            }
+        }
       } catch(e) { alert("Error d'inici de sessió: " + e.message); }
     };
 
@@ -559,9 +568,9 @@ service cloud.firestore {
             return;
         }
         
-        const { signInWithRedirect, GoogleAuthProvider } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
+        const { signInWithPopup, GoogleAuthProvider } = await import("https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js");
         const provider = new GoogleAuthProvider();
-        await signInWithRedirect(fbAuth, provider);
+        await signInWithPopup(fbAuth, provider);
       } catch(e) {
         if (window.location.protocol === 'file:') {
           alert("Error: Google Login de Firebase no funciona quan obres el fitxer directament (amb file://).\\n\\nPerquè funcioni, has d'obrir l'aplicació mitjançant un servidor web local (per exemple, usant l'extensió 'Live Server' de VSCode o 'python -m http.server'). Després, assegura't que 'localhost' estigui autoritzat a Firebase.");
@@ -703,8 +712,6 @@ service cloud.firestore {
             console.error("Error pujant a Firestore:", e);
             alert("Error pujant a Firestore:\\n" + e.message + "\\n\\nSi el temps d'espera s'ha esgotat, verifica que les credencials són correctes i que les 'Rules' de Firestore permeten l'escriptura.");
         }
-      } else {
-         console.log("No es pot sincronitzar: fbDb o currentUser no estan definits", {fbDb: !!fbDb, currentUser: !!currentUser});
       }
     };
 
