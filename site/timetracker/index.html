@@ -3,7 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <title>Cronòmetre i Gestor de Tasques</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#4f46e5">
+  <title>TimeTracker - Cronòmetre i Gestor de Tasques</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="apple-touch-icon" href="/icon.jpg">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('Service Worker registrat amb èxit!', reg))
+          .catch(err => console.error('Error registrant el Service Worker:', err));
+      });
+    }
+  </script>
   <style>
     :root {
       --primary: #4f46e5;
@@ -88,7 +103,7 @@
     button.secondary { background: var(--bg); color: var(--text-main); border: 1px solid var(--border); }
     button.secondary:hover { background: var(--border); }
     button.small { padding: 6px 12px; font-size: 0.8rem; }
-    button.icon-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 10px; font-size: 0.9rem; }
+    button.icon-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 6px 10px; font-size: 0.9rem; font-weight: 600; transition: background-color 0.2s, transform 0.1s; }
     button.icon-btn.icon-only { padding: 8px; }
     button.icon-btn svg { width: 16px; height: 16px; flex-shrink: 0; }
     
@@ -192,6 +207,13 @@
         document.getElementById("app-container").style.display = "block";
         document.getElementById("user-email").textContent = user.email;
         
+        const savedTab = localStorage.getItem('activeTab');
+        if (savedTab === 'firebaseconfig') {
+          window.switchTab('timers');
+        } else if (savedTab) {
+          window.switchTab(savedTab);
+        }
+        
         await window.loadFirebaseData();
       } else {
         window.currentUser = null;
@@ -211,18 +233,32 @@
   window.syncToFirebase = async (collectionName, dataArray) => {
     if (!window.currentUser || !db) return;
     try {
-      const batch = writeBatch(db);
       const q = query(collection(db, collectionName), where("uid", "==", window.currentUser.uid));
       const snapshot = await getDocs(q);
+      
+      const ops = [];
       snapshot.forEach(docSnap => {
-        batch.delete(docSnap.ref);
+        ops.push({ type: 'delete', ref: docSnap.ref });
       });
       for (const item of dataArray) {
         const docData = { ...item, uid: window.currentUser.uid };
         const docRef = doc(db, collectionName, item.id || Math.random().toString(36).substr(2, 9));
-        batch.set(docRef, docData);
+        ops.push({ type: 'set', ref: docRef, data: docData });
       }
-      await batch.commit();
+      
+      const chunkSize = 400;
+      for (let i = 0; i < ops.length; i += chunkSize) {
+        const chunk = ops.slice(i, i + chunkSize);
+        const batch = writeBatch(db);
+        for (const op of chunk) {
+          if (op.type === 'delete') {
+            batch.delete(op.ref);
+          } else if (op.type === 'set') {
+            batch.set(op.ref, op.data);
+          }
+        }
+        await batch.commit();
+      }
     } catch(e) {
       console.error("Error syncing " + collectionName + " to Firebase:", e);
       if ((e.code === 'permission-denied' || (e.message && e.message.includes('permission'))) && !window._rulesAlerted) {
@@ -264,7 +300,7 @@
 </script>
 </head>
 <body>
-  <div id="login-screen" style="display:flex; height:100vh; align-items:center; justify-content:center; flex-direction:column; text-align:center;">
+  <div id="login-screen" style="display:none; height:100vh; align-items:center; justify-content:center; flex-direction:column; text-align:center;">
     <h1>TimeTracker</h1>
     <p style="margin-bottom:20px;">Inicia sessió per continuar</p>
     <div style="display: flex; flex-direction: column; gap: 12px; align-items: center;">
@@ -298,7 +334,6 @@
       <button class="tab-btn" onclick="switchTab('history')">Historial de Sessions</button>
       <button class="tab-btn" onclick="switchTab('stats')">Estadístiques</button>
       <button class="tab-btn" onclick="switchTab('projects')">Projectes i Tasques</button>
-      <button class="tab-btn" onclick="switchTab('firebaseconfig')">⚙️ Configurar Firebase</button>
     </div>
 
     <!-- TIMERS TAB -->
@@ -482,6 +517,15 @@ service cloud.firestore {
               <option value="all">Tots els projectes</option>
             </select>
           </div>
+          <div class="form-group" style="flex: 1; min-width: 150px;">
+            <label>Ordenar per</label>
+            <select id="history-sort" onchange="updateHistoryFilters()">
+              <option value="date-desc">Data (més recent primer)</option>
+              <option value="date-asc">Data (més antic primer)</option>
+              <option value="duration-desc">Duració (més llarga primer)</option>
+              <option value="duration-asc">Duració (més curta primer)</option>
+            </select>
+          </div>
         </div>
         
         <div id="history-custom-dates" class="flex" style="gap: 12px; margin-bottom: 20px; display: none;">
@@ -579,26 +623,27 @@ service cloud.firestore {
     let records = JSON.parse(localStorage.getItem('records')) || [];
 
     const saveState = () => {
-  if(window.syncToFirebase && window.currentUser) {
-    window.syncToFirebase("projects", projects);
-    window.syncToFirebase("tasks", tasks);
-    window.syncToFirebase("activeTimers", activeTimers);
-    window.syncToFirebase("records", records);
-  } else {
-    localStorage.setItem("projects", JSON.stringify(projects));
-    localStorage.setItem("tasks", JSON.stringify(tasks));
-    localStorage.setItem("activeTimers", JSON.stringify(activeTimers));
-    localStorage.setItem("records", JSON.stringify(records));
-  }
-  if(typeof render !== "undefined") render();
-};
+      // Desar sempre a LocalStorage com a robust recurs local i fallback instantani
+      localStorage.setItem("projects", JSON.stringify(projects));
+      localStorage.setItem("tasks", JSON.stringify(tasks));
+      localStorage.setItem("activeTimers", JSON.stringify(activeTimers));
+      localStorage.setItem("records", JSON.stringify(records));
 
-window.updateLocalVariables = (p, t, a, r) => {
-  projects = p;
-  tasks = t;
-  activeTimers = a;
-  records = r;
-};
+      if(window.syncToFirebase && window.currentUser) {
+        window.syncToFirebase("projects", projects);
+        window.syncToFirebase("tasks", tasks);
+        window.syncToFirebase("activeTimers", activeTimers);
+        window.syncToFirebase("records", records);
+      }
+      if(typeof render !== "undefined") render();
+    };
+
+    window.updateLocalVariables = (p, t, a, r) => {
+      projects = p;
+      tasks = t;
+      activeTimers = a;
+      records = r;
+    };
 
     // --- FUNCIONS D'UTILITAT ---
     const generateId = () => '_' + Math.random().toString(36).substr(2, 9);
@@ -793,7 +838,6 @@ window.updateLocalVariables = (p, t, a, r) => {
     };
 
     const updateTimerFormOptions = () => {
-      // Actualitzar selects de formulari de nou cronòmetre
       const pSelect = document.getElementById('new-timer-project');
       if(pSelect) {
         const lastProjId = localStorage.getItem('lastTimerProjectId') || '';
@@ -802,12 +846,11 @@ window.updateLocalVariables = (p, t, a, r) => {
           projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('') +
           `<option value="NEW_PROJECT">+ Crear Nou Projecte...</option>`;
         if(currentVal && projects.find(p => p.id === currentVal)) pSelect.value = currentVal;
-        updateTimerTaskOptions(); // Força actualitzar tasques al repintar
+        updateTimerTaskOptions();
       }
     };
 
     const renderTimers = () => {
-      // Actualitzar llista de cronòmetres
       const list = document.getElementById('active-timers-list');
       if(!list) return;
       
@@ -822,7 +865,6 @@ window.updateLocalVariables = (p, t, a, r) => {
         const t = tasks.find(x => x.id === timer.taskId);
         const color = t ? t.color : (p ? p.color : 'gray');
         
-        // Calcular durada: acumulat + (si està corrent, temps des de l'inici, sinó 0)
         const currentSessionDuration = timer.status === 'running' ? (now - timer.startTime) : 0;
         const duration = (timer.elapsed || 0) + currentSessionDuration;
         
@@ -852,8 +894,6 @@ window.updateLocalVariables = (p, t, a, r) => {
         `;
       }).join('');
     };
-
-
 
     const render = () => {
       renderProjects();
@@ -885,6 +925,7 @@ window.updateLocalVariables = (p, t, a, r) => {
       }
       
       const tSelect = document.getElementById('new-timer-task');
+      if(!tSelect) return;
       const currentTaskVal = tSelect.value;
       
       if(!pId) { 
@@ -1009,7 +1050,6 @@ window.updateLocalVariables = (p, t, a, r) => {
       });
       renderColorPicker('modal-color-picker', window.currentModalColor, 'selectModalColor');
       
-      // Auto-focus input
       setTimeout(() => document.getElementById('modal-task-name').focus(), 10);
     };
 
@@ -1059,7 +1099,6 @@ window.updateLocalVariables = (p, t, a, r) => {
         status: 'running' 
       });
       
-      // Reiniciar formulari
       document.getElementById('new-timer-project').value = '';
       updateTimerTaskOptions();
       document.getElementById('new-timer-note').value = '';
@@ -1168,7 +1207,7 @@ window.updateLocalVariables = (p, t, a, r) => {
         projectId: t.projectId,
         taskId: t.taskId,
         note: t.note,
-        startTime: endTime - finalDuration, // estimem inici segons la durada total
+        startTime: endTime - finalDuration, 
         endTime: endTime,
         duration: finalDuration
       });
@@ -1190,6 +1229,8 @@ window.updateLocalVariables = (p, t, a, r) => {
       } else {
         document.getElementById('history-custom-dates').style.display = 'none';
       }
+      const sort = document.getElementById('history-sort') ? document.getElementById('history-sort').value : 'date-desc';
+      localStorage.setItem('historySort', sort);
       renderHistory();
     };
 
@@ -1204,6 +1245,15 @@ window.updateLocalVariables = (p, t, a, r) => {
           projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
         if(curProj && (curProj === 'all' || projects.find(p=>p.id===curProj))) projSelect.value = curProj;
       }
+
+      // Initialize sort select from localStorage if present
+      const sortSelect = document.getElementById('history-sort');
+      if (sortSelect) {
+        const savedSort = localStorage.getItem('historySort') || 'date-desc';
+        if (sortSelect.value !== savedSort) {
+          sortSelect.value = savedSort;
+        }
+      }
       
       if(records.length === 0) {
         list.innerHTML = `<div class="empty-state">Encara no s'ha registrat cap sessió de treball.</div>`;
@@ -1212,6 +1262,7 @@ window.updateLocalVariables = (p, t, a, r) => {
 
       const period = document.getElementById('history-period') ? document.getElementById('history-period').value : 'all';
       const pid = projSelect ? projSelect.value : 'all';
+      const sortVal = sortSelect ? sortSelect.value : (localStorage.getItem('historySort') || 'date-desc');
       let startFilter = 0;
       let endFilter = Infinity;
       
@@ -1243,23 +1294,55 @@ window.updateLocalVariables = (p, t, a, r) => {
         return;
       }
 
-      // Group by task
       const grouped = {};
       filtered.forEach(r => {
         const key = r.projectId + '_' + (r.taskId || 'none');
-        if(!grouped[key]) grouped[key] = { projectId: r.projectId, taskId: r.taskId, totalDuration: 0, recordList: [] };
+        if(!grouped[key]) {
+          grouped[key] = { 
+            projectId: r.projectId, 
+            taskId: r.taskId, 
+            totalDuration: 0, 
+            maxEndTime: 0,
+            minEndTime: Infinity,
+            recordList: [] 
+          };
+        }
         grouped[key].totalDuration += r.duration;
+        if (r.endTime > grouped[key].maxEndTime) grouped[key].maxEndTime = r.endTime;
+        if (r.endTime < grouped[key].minEndTime) grouped[key].minEndTime = r.endTime;
         grouped[key].recordList.push(r);
       });
 
-      const sortedGroups = Object.values(grouped).sort((a,b) => b.totalDuration - a.totalDuration);
+      const sortedGroups = Object.values(grouped).sort((a, b) => {
+        if (sortVal === 'date-desc') {
+          return b.maxEndTime - a.maxEndTime;
+        } else if (sortVal === 'date-asc') {
+          return a.minEndTime - b.minEndTime;
+        } else if (sortVal === 'duration-desc') {
+          return b.totalDuration - a.totalDuration;
+        } else if (sortVal === 'duration-asc') {
+          return a.totalDuration - b.totalDuration;
+        }
+        return b.maxEndTime - a.maxEndTime;
+      });
 
       list.innerHTML = sortedGroups.map(g => {
         const p = projects.find(x => x.id === g.projectId);
         const t = tasks.find(x => x.id === g.taskId);
         const color = t ? t.color : (p ? p.color : 'gray');
         
-        const sortedSessions = g.recordList.sort((a,b) => b.endTime - a.endTime);
+        const sortedSessions = g.recordList.sort((a, b) => {
+          if (sortVal === 'date-desc') {
+            return b.endTime - a.endTime;
+          } else if (sortVal === 'date-asc') {
+            return a.endTime - b.endTime;
+          } else if (sortVal === 'duration-desc') {
+            return b.duration - a.duration;
+          } else if (sortVal === 'duration-asc') {
+            return a.duration - b.duration;
+          }
+          return b.endTime - a.endTime;
+        });
         
         return `
           <div class="card" style="border-left: 4px solid ${color}; padding: 16px; margin-bottom: 16px; background: var(--bg-card);">
@@ -1582,6 +1665,7 @@ window.updateLocalVariables = (p, t, a, r) => {
 
     window.renderStats = () => {
       const projSelect = document.getElementById('stats-project');
+      if (!projSelect) return;
       const curProj = projSelect.value;
       projSelect.innerHTML = '<option value="all">Tots els projectes</option>' + 
         projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
@@ -1683,11 +1767,9 @@ window.updateLocalVariables = (p, t, a, r) => {
 
     // --- GLOBAL TICKS ---
     setInterval(() => {
-      // Repintar cronòmetres actius cada segon si la pestanya és visible
       if(activeTimers.length > 0 && document.getElementById('timers-tab').classList.contains('active')) {
         renderTimers();
       }
-      // Rellotge principal
       document.getElementById('clock').textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
     }, 1000);
 
@@ -1708,10 +1790,15 @@ window.updateLocalVariables = (p, t, a, r) => {
       applyTheme(currentTheme);
     };
 
-    // Inicialització al carregar
     applyTheme(currentTheme);
     const savedTab = localStorage.getItem('activeTab');
-    if (savedTab) window.switchTab(savedTab);
+    if (savedTab) {
+      if (savedTab === 'firebaseconfig' && window.currentUser) {
+        window.switchTab('timers');
+      } else {
+        window.switchTab(savedTab);
+      }
+    }
     render();
     window.render = render;
     document.getElementById('clock').textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
