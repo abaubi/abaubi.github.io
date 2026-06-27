@@ -1,0 +1,59 @@
+{
+  "rules": {
+    "projects": {
+      "path": "/projects/{projectId}",
+      "schema": {
+        "uid": "string",
+        "name": "string",
+        "color": "string"
+      },
+      "permissions": {
+        "read": "request.auth != null && request.auth.uid == resource.data.uid",
+        "write": "request.auth != null && request.auth.uid == request.resource.data.uid"
+      }
+    },
+    "tasks": {
+      "path": "/tasks/{taskId}",
+      "schema": {
+        "uid": "string",
+        "projectId": "string",
+        "name": "string",
+        "completed": "boolean"
+      },
+      "permissions": {
+        "read": "request.auth != null && request.auth.uid == resource.data.uid",
+        "write": "request.auth != null && request.auth.uid == request.resource.data.uid"
+      }
+    },
+    "activeTimers": {
+      "path": "/activeTimers/{timerId}",
+      "schema": {
+        "uid": "string",
+        "projectId": "string",
+        "taskId": "string",
+        "note": "string",
+        "startTime": "number"
+      },
+      "permissions": {
+        "read": "request.auth != null && request.auth.uid == resource.data.uid",
+        "write": "request.auth != null && request.auth.uid == request.resource.data.uid"
+      }
+    },
+    "records": {
+      "path": "/records/{recordId}",
+      "schema": {
+        "uid": "string",
+        "projectId": "string",
+        "taskId": "string",
+        "note": "string",
+        "startTime": "number",
+        "endTime": "number",
+        "duration": "number"
+      },
+      "permissions": {
+        "read": "request.auth != null && request.auth.uid == resource.data.uid",
+        "write": "request.auth != null && request.auth.uid == request.resource.data.uid"
+      }
+    }
+  }
+}

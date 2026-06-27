@@ -1,0 +1,8 @@
+{
+  "name": "Remix3: Time Tracker",
+  "description": "Aplicació web per controlar el temps dels projectes i tasques.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
