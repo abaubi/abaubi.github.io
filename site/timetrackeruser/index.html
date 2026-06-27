@@ -435,13 +435,53 @@
           <div style="border-left: 4px solid var(--primary); padding-left: 12px;">
             <h4>Pas 4: Configurar les Regles de Seguretat (MOLT IMPORTANT!)</h4>
             <p class="text-sm text-muted mb-4">
-              A la pestanya <strong>Regles (Rules)</strong> de Firestore, esborra el codi que hi hagi i enganxa exactament això (com que el projecte és teu privat, només tu que t'identifiques amb el teu Google pots escriure-hi):
+              A la pestanya <strong>Regles (Rules)</strong> de Firestore, esborra el codi que hi hagi i enganxa exactament aquestes regles de seguretat avançades. Són <strong>molt més segures</strong> perquè garanteixen un aïllament total (només tu pots llegir i escriure les teves pròpies dades) i bloquegen qualsevol col·lecció no permesa:
             </p>
-            <textarea readonly rows="8" class="font-mono text-xs" style="background: var(--bg); padding: 10px; border-radius: 6px; width: 100%; border: 1px solid var(--border);" onclick="this.select()">rules_version = '2';
+            <textarea readonly rows="22" class="font-mono text-xs" style="background: var(--bg); padding: 10px; border-radius: 6px; width: 100%; border: 1px solid var(--border);" onclick="this.select()">rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // 1. Tancament universal preventiu
     match /{document=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
+    }
+
+    // 2. Funcions globals de comprovació d'identitat
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner() {
+      return resource.data.uid == request.auth.uid;
+    }
+
+    function willBeOwner() {
+      return request.resource.data.uid == request.auth.uid;
+    }
+
+    // 3. Regles d'aïllament per usuari per a col·leccions específiques
+    match /{collectionId}/{documentId} {
+      
+      // Valida que la col·lecció sigui una de les quatre permeses
+      function isAllowedCollection() {
+        return collectionId in ['projects', 'tasks', 'activeTimers', 'records'];
+      }
+      
+      // Operacions de lectura i eliminació sobre documents existents
+      allow read, delete: if isAllowedCollection() 
+                          && isSignedIn() 
+                          && isOwner();
+      
+      // Operacions de creació de nous documents
+      allow create: if isAllowedCollection() 
+                    && isSignedIn() 
+                    && willBeOwner();
+                    
+      // Operacions d'actualització de documents existents
+      allow update: if isAllowedCollection() 
+                    && isSignedIn() 
+                    && isOwner() 
+                    && willBeOwner();
     }
   }
 }</textarea>
