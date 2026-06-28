@@ -1,0 +1,2184 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mesura i regulació - Centrifugadora</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #1e293b;
+      height: 5px;
+      border-radius: 9999px;
+      outline: none;
+      transition: background-color 0.15s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 12px;
+      height: 12px;
+      border-radius: 9999px;
+      background: currentColor;
+      cursor: pointer;
+      transition: transform 0.1s ease;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.25);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 flex flex-col justify-between selection:bg-emerald-500/30">
+
+  <div class="max-w-7xl mx-auto w-full space-y-4">
+    <!-- HEADER PRINCIPAL -->
+    <header class="bg-slate-900/90 rounded-xl p-3 border border-slate-800 shadow-md flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <div class="bg-emerald-500/10 p-1.5 rounded-lg border border-emerald-500/20">
+          <svg class="w-5 h-5 text-emerald-400 animate-pulse" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
+        </div>
+        <div>
+          <h1 class="text-sm font-black tracking-tight bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">Mesura i regulació - Centrifugadora</h1>
+          <span class="text-[9.5px] text-slate-400 block -mt-0.5 font-medium">Institut de l'Ebre - Agustí Baubí - abaubi@xtec.cat</span>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3 bg-slate-950/50 p-1.5 rounded-lg border border-slate-800/80 grow justify-between md:justify-end">
+        <div class="flex items-center gap-1.5">
+          <span class="text-[9.5px] font-black text-slate-400 uppercase tracking-wider">Estat Lògic:</span>
+          <span id="process-state" class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-900 text-emerald-400 border border-slate-800 shadow">IDLE</span>
+        </div>
+        <div class="hidden md:block w-px h-5 bg-slate-800"></div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[9.5px] font-black text-slate-400 uppercase tracking-wider">Presets PID:</span>
+          <div class="flex gap-1">
+            <button onclick="applyPreset('estable')" class="px-1.5 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-bold text-slate-300 transition">Estable</button>
+            <button onclick="applyPreset('p')" class="px-1.5 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-bold text-slate-300 transition">Només P</button>
+            <button onclick="applyPreset('inestable')" class="px-1.5 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-bold text-slate-300 transition">Inestable</button>
+          </div>
+        </div>
+        <div class="hidden md:block w-px h-5 bg-slate-800"></div>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[9px] font-bold text-slate-300">AW Posició</span>
+            <button id="btn-aw-pos" onclick="toggleAW('pos')" class="w-8 h-4.5 flex items-center border rounded-full p-0.5 transition-all bg-rose-950/80 border-rose-800">
+              <span class="bg-white w-3.5 h-3.5 rounded-full shadow transform transition-transform"></span>
+            </button>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[9px] font-bold text-slate-300">AW Velocitat</span>
+            <button id="btn-aw-rpm" onclick="toggleAW('rpm')" class="w-8 h-4.5 flex items-center border rounded-full p-0.5 transition-all bg-rose-950/80 border-rose-800">
+              <span class="bg-white w-3.5 h-3.5 rounded-full shadow transform transition-transform"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- GRID CENTRAL PRINCIPAL -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <!-- COLUMNA ESQUERRA: MQTT + PLANTA + CHARTS -->
+      <div class="lg:col-span-7 flex flex-col gap-4">
+        <!-- MQTT PANEL -->
+        <div class="bg-slate-900/95 rounded-xl p-3 border border-slate-800 shadow-lg">
+          <div class="flex items-center justify-between border-b border-slate-850 pb-2 mb-2">
+            <div class="flex items-center gap-2">
+              <span id="mqtt-dot" class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+              <span class="text-[10px] font-black text-slate-200 uppercase tracking-wider">MQTT SCADA CONTROL (Bi-direccional)</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              <button id="btn-mqtt-config" onclick="toggleTelemetryWindow()" class="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[9px] font-bold rounded transition flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Telemetria
+              </button>
+              <button id="btn-mqtt-help" onclick="toggleHelpWindow()" class="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[9px] font-bold rounded transition flex items-center gap-1">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Ajuda
+              </button>
+              <span id="mqtt-status" class="text-[9px] font-bold text-rose-400">DESCONNECTAT</span>
+              <button id="btn-mqtt-toggle" onclick="toggleMqtt()" class="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 transition">Connectar</button>
+            </div>
+          </div>
+          <div class="flex flex-col sm:flex-row gap-2">
+            <div class="flex-grow">
+              <label class="text-[8.5px] font-bold text-slate-500 block mb-0.5">BROKER WEBSOCKET MQTT:</label>
+              <input type="text" id="mqtt-broker" value="wss://test.mosquitto.org:8081/mqtt" class="w-full bg-slate-950 border border-slate-800 text-slate-300 rounded px-2 py-1 text-[10px] outline-none focus:border-emerald-500 font-mono">
+            </div>
+            <div class="sm:w-1/3">
+              <label class="text-[8.5px] font-bold text-slate-500 block mb-0.5">TÒPIC BASE:</label>
+              <input type="text" id="mqtt-topic" value="iesebre/centrifugadora/" class="w-full bg-slate-950 border border-slate-800 text-slate-300 rounded px-2 py-1 text-[10px] outline-none focus:border-emerald-500 font-mono">
+            </div>
+          </div>
+          <div class="text-[8.5px] text-slate-400 mt-1.5 flex justify-between">
+            <span>Pub: <code id="lbl-pub-topic" class="text-slate-200 font-mono">iesebre/centrifugadora/telemetria</code></span>
+            <span>Sub: <code id="lbl-sub-topic" class="text-emerald-300 font-mono">iesebre/centrifugadora/cmd</code></span>
+          </div>
+        </div>
+
+        <!-- PHYSICAL PLANT SECTION -->
+        <div class="bg-slate-900/90 rounded-xl p-4 border border-slate-800 shadow-lg space-y-4">
+          <div class="border-b border-slate-850 pb-2 flex justify-between items-center">
+            <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 bg-indigo-500 rounded-full"></span> PLANTA DE REGULACIÓ (SCADA)
+            </h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+            <!-- CONTROLS REGULADORS -->
+            <div class="md:col-span-6 flex flex-col gap-2">
+              <!-- POSITION BLOCK -->
+              <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-850 relative flex flex-col justify-between min-h-[250px]">
+                <span class="absolute top-1 left-2 text-[9px] font-bold text-slate-500">POSICIÓ CINTA</span>
+                <div class="absolute top-1 right-2 flex items-center gap-1 bg-slate-900 rounded px-1.5 py-0.5 border border-slate-800">
+                  <span class="text-[8px] font-bold text-slate-400">Mode:</span>
+                  <select id="pos-mode" onchange="setConfig('posControlMode', this.value)" class="bg-transparent text-emerald-400 font-bold font-mono text-[9px] outline-none cursor-pointer">
+                    <option value="PID" class="bg-slate-900 text-slate-100">PID</option>
+                    <option value="ON_OFF" class="bg-slate-900 text-slate-100">On-Off</option>
+                    <option value="HYSTERESIS" class="bg-slate-900 text-slate-100">Histeresi</option>
+                  </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-x-4 gap-y-3 pt-6 mb-2">
+                  <div id="sld-pos-sp" class="flex flex-col gap-0.5"></div>
+                  <div id="sld-pos-kp" class="flex flex-col gap-0.5"></div>
+                  <div id="sld-pos-inertia" class="flex flex-col gap-0.5"></div>
+                  <div id="sld-pos-ki" class="flex flex-col gap-0.5"></div>
+                  <div id="sld-pos-pert" class="flex flex-col gap-0.5"></div>
+                  <div id="sld-pos-kd" class="flex flex-col gap-0.5"></div>
+                </div>
+
+                <div class="mt-2 pt-2 border-t border-slate-800">
+                  <div class="flex justify-between items-center mb-1 text-[9px]">
+                    <span class="font-bold text-slate-500">CONTROL MOTOR (U)</span>
+                    <span id="txt-pos-out" class="text-fuchsia-400 font-mono">0.0%</span>
+                  </div>
+                  <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden relative">
+                    <div class="absolute top-0 bottom-0 left-1/2 w-[1px] bg-slate-600 z-10"></div>
+                    <div id="bar-pos-out" class="absolute top-0 bottom-0 bg-fuchsia-500 transition-all duration-75" style="left:50%; width:0%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- RPM BLOCK -->
+              <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-850 relative flex flex-col justify-between min-h-[250px]">
+                <span class="absolute top-1 left-2 text-[9px] font-bold text-slate-500">VELOCITAT CENTRÍFUGA</span>
+                <div class="absolute top-1 right-2 flex items-center gap-1 bg-slate-900 rounded px-1.5 py-0.5 border border-slate-800">
+                  <span class="text-[8px] font-bold text-slate-400">Mode:</span>
+                  <select id="rpm-mode" onchange="setConfig('rpmControlMode', this.value)" class="bg-transparent text-emerald-400 font-bold font-mono text-[9px] outline-none cursor-pointer">
+                    <option value="PID" class="bg-slate-900 text-slate-100">PID</option>
+                    <option value="ON_OFF" class="bg-slate-900 text-slate-100">On-Off</option>
+                    <option value="HYSTERESIS" class="bg-slate-900 text-slate-100">Histeresi</option>
+                  </select>
+                </div>
+
+                <div class="grid grid-cols-2 gap-x-4 gap-y-3 pt-6 mb-2">
+                  <div id="sld-rpm-sp" class="flex flex-col gap-0.5"></div>
+                  <div id="sld-rpm-kp" class="flex flex-col gap-0.5"></div>
+                  <div id="sld-rpm-inertia" class="flex flex-col gap-0.5"></div>
+                  <div id="sld-rpm-ki" class="flex flex-col gap-0.5"></div>
+                  <div id="sld-rpm-pert" class="flex flex-col gap-0.5"></div>
+                  <div id="sld-rpm-kd" class="flex flex-col gap-0.5"></div>
+                </div>
+
+                <div class="mt-2 pt-2 border-t border-slate-800">
+                  <div class="flex justify-between items-center mb-1 text-[9px]">
+                    <span class="font-bold text-slate-500">CONTROL MOTOR (U)</span>
+                    <span id="txt-rpm-out" class="text-fuchsia-400 font-mono">0.0%</span>
+                  </div>
+                  <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden relative">
+                    <div id="bar-rpm-out" class="absolute top-0 bottom-0 left-0 bg-fuchsia-500 transition-all duration-75" style="width:0%"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- VISUAL PLANT CANVAS -->
+            <div class="md:col-span-6 relative min-h-[340px] flex flex-col bg-slate-950/60 rounded-xl border border-slate-800/80 p-2 items-center justify-center overflow-hidden">
+              <!-- Conveyor Belt Background -->
+              <div class="absolute top-1/2 left-0 w-full h-28 -mt-14 flex flex-col justify-center">
+                <div class="absolute top-0 left-0 w-full h-full bg-slate-900/40 border-y border-slate-800"></div>
+                <div class="relative w-full h-20 bg-slate-900/80 border-y-4 border-slate-850 shadow-[inset_0_5px_10px_rgba(0,0,0,0.6)] overflow-hidden flex items-center">
+                  <div id="belt-roller-lines" class="flex w-[300%] opacity-20 transform transition-transform duration-75 ease-linear">
+                    <!-- Javascript will populate lines -->
+                  </div>
+                </div>
+                <div class="absolute bottom-[-6px] left-0 w-full flex justify-around px-4" id="belt-wheels"></div>
+              </div>
+
+              <!-- Dynamic Interactive Container -->
+              <div class="absolute top-0 left-0 w-full h-full pointer-events-none">
+                <!-- Target position indicator -->
+                <div id="plant-target" class="absolute top-1/2 w-[110px] h-[110px] -mt-[55px] -ml-[55px] flex items-center justify-center">
+                  <svg viewBox="0 0 110 110" class="w-full h-full absolute">
+                    <circle cx="55" cy="55" r="50" fill="none" stroke="#334155" stroke-width="1.5" stroke-dasharray="3 3" />
+                    <circle cx="55" cy="55" r="42" fill="none" stroke="#1e293b" stroke-width="1" />
+                    <rect id="clamp-top" x="51" y="-5" width="8" height="25" fill="#475569" rx="3" class="transition-transform duration-300" />
+                    <rect id="clamp-bottom" x="51" y="90" width="8" height="25" fill="#475569" rx="3" class="transition-transform duration-300" />
+                    <line x1="55" y1="20" x2="55" y2="90" stroke="#ef4444" stroke-width="1" stroke-dasharray="2 2" opacity="0.4" />
+                    <line x1="20" y1="55" x2="90" y2="55" stroke="#ef4444" stroke-width="1" stroke-dasharray="2 2" opacity="0.4" />
+                  </svg>
+                  <div id="plant-target-lbl" class="absolute -top-6 text-[8px] font-bold text-sky-400 bg-slate-900/95 px-1.5 py-0.5 rounded shadow border border-slate-800 whitespace-nowrap">SP: 300</div>
+                </div>
+
+                <!-- The Paint Can -->
+                <div id="paint-can" class="absolute top-1/2 w-[84px] h-[84px] -mt-[42px] -ml-[42px] rounded-full border-[5px] border-slate-300 shadow-[0_8px_16px_rgba(0,0,0,0.6)] flex items-center justify-center overflow-hidden transition-transform duration-75 ease-linear">
+                  <!-- Liquids -->
+                  <div id="paint-liquids" class="absolute w-[140%] h-[140%] rounded-full opacity-90 transition-transform duration-75 ease-linear">
+                    <div class="absolute top-2 left-1/2 -ml-3.5 w-7 h-7 bg-yellow-400 rounded-full blur-[5px]"></div>
+                    <div class="absolute bottom-2 left-1/2 -ml-3.5 w-7 h-7 bg-blue-500 rounded-full blur-[5px]"></div>
+                    <div class="absolute left-2 top-1/2 -mt-3.5 w-7 h-7 bg-red-500 rounded-full blur-[5px]"></div>
+                  </div>
+                  <div class="w-9 h-9 rounded-full bg-slate-950/20 border-2 border-white/30 z-10"></div>
+                  <!-- Rim markers -->
+                  <div class="absolute top-0 left-1/2 w-2 h-3.5 bg-slate-850 -ml-1"></div>
+                  <div class="absolute bottom-0 left-1/2 w-2 h-3.5 bg-slate-850 -ml-1"></div>
+                  <div class="absolute left-0 top-1/2 w-3.5 h-2 bg-slate-850 -mt-1"></div>
+                  <div class="absolute right-0 top-1/2 w-3.5 h-2 bg-slate-850 -mt-1"></div>
+                </div>
+              </div>
+
+              <!-- Encoders Live Diagnostics Overlay -->
+              <div class="absolute top-2 left-2 flex flex-col gap-1 bg-slate-950/90 p-1.5 rounded border border-slate-800/80">
+                <span class="text-[8px] font-bold text-slate-500">Encoder Cinta</span>
+                <div class="flex items-center gap-1.5">
+                  <div id="enc-pos-a" class="w-2.5 h-2.5 rounded-full bg-slate-800 transition"></div>
+                  <span class="text-[7.5px] text-slate-500 font-mono">A</span>
+                  <div id="enc-pos-b" class="w-2.5 h-2.5 rounded-full bg-slate-800 transition"></div>
+                  <span class="text-[7.5px] text-slate-500 font-mono">B</span>
+                </div>
+                <div class="text-[9px] font-mono border-t border-slate-900 pt-1 mt-0.5 flex justify-between gap-2 text-slate-300">
+                  <span id="enc-pos-val">0.0mm</span>
+                  <span id="enc-pos-out" class="text-fuchsia-400">0.0%</span>
+                </div>
+              </div>
+
+              <div class="absolute top-2 right-2 flex flex-col gap-1 bg-slate-950/90 p-1.5 rounded border border-slate-800/80 items-end">
+                <span class="text-[8px] font-bold text-slate-500">Encoder Motor</span>
+                <div class="flex items-center gap-1.5">
+                  <span class="text-[7.5px] text-slate-500 font-mono">A</span>
+                  <div id="enc-rpm-a" class="w-2.5 h-2.5 rounded-full bg-slate-800 transition"></div>
+                  <span class="text-[7.5px] text-slate-500 font-mono">B</span>
+                  <div id="enc-rpm-b" class="w-2.5 h-2.5 rounded-full bg-slate-800 transition"></div>
+                </div>
+                <div class="text-[9px] font-mono border-t border-slate-900 pt-1 mt-0.5 flex justify-between gap-2 text-slate-300 w-full">
+                  <span id="enc-rpm-out" class="text-fuchsia-400">0.0%</span>
+                  <span id="enc-rpm-val">0 RPM</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- PROFILE TIMINGS AND ACTION CONTROLS -->
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="bg-slate-950 p-2 rounded-xl border border-slate-850 flex items-center justify-between gap-2 px-3">
+              <span class="text-[9.5px] font-black text-slate-400 uppercase tracking-wider">Perfil Temporal (s):</span>
+              <div class="flex gap-1.5 text-[9.5px] font-mono text-slate-300">
+                <div class="flex flex-col items-center"><label class="text-[8px] text-slate-500">Wait</label><input type="number" id="inp-waitTime" value="3" onchange="setConfig('waitTime', Number(this.value))" class="w-8 bg-slate-900 border border-slate-800 rounded text-center outline-none"></div>
+                <div class="flex flex-col items-center"><label class="text-[8px] text-slate-500">Acc</label><input type="number" id="inp-accelTime" value="5" onchange="setConfig('accelTime', Number(this.value))" class="w-8 bg-slate-900 border border-slate-800 rounded text-center outline-none"></div>
+                <div class="flex flex-col items-center"><label class="text-[8px] text-slate-500">Mix</label><input type="number" id="inp-mixTime" value="10" onchange="setConfig('mixTime', Number(this.value))" class="w-8 bg-slate-900 border border-slate-800 rounded text-center outline-none"></div>
+                <div class="flex flex-col items-center"><label class="text-[8px] text-slate-500">Dec</label><input type="number" id="inp-decelTime" value="5" onchange="setConfig('decelTime', Number(this.value))" class="w-8 bg-slate-900 border border-slate-800 rounded text-center outline-none"></div>
+              </div>
+            </div>
+
+            <div class="bg-slate-950 p-2 rounded-xl border border-slate-850 flex items-center justify-end gap-2 px-3">
+              <button id="btn-play" onclick="toggleRunning()" class="px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> <span>Iniciar</span>
+              </button>
+              <button onclick="stepSim()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 transition">Pas a Pas</button>
+              <button onclick="resetSim()" class="px-3 py-1.5 bg-rose-950/40 hover:bg-rose-900/40 text-rose-300 rounded-lg text-xs font-semibold border border-rose-500/20 transition flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg> Reset
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- REALTIME CHARTS CANVAS -->
+        <div class="bg-slate-900/90 rounded-xl p-3 border border-slate-800 shadow-lg flex flex-col h-[380px] relative">
+          <div class="flex justify-between items-center mb-1.5 border-b border-slate-850 pb-2">
+            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span class="w-2.5 h-2.5 bg-sky-500 rounded-full"></span> Historial de Regulació en Temps Real
+            </h3>
+            <button onclick="downloadCsv()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-[9px] font-bold px-2 py-1 rounded transition flex items-center gap-1 shadow">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg> Descarregar CSV
+            </button>
+          </div>
+          <div class="flex-grow grid grid-rows-2 gap-4 min-h-0 relative pt-3">
+            <div class="relative w-full h-full">
+              <span class="absolute -top-2.5 left-10 z-10 text-[8.5px] font-black uppercase tracking-wider text-slate-400 bg-slate-950/90 px-1.5 py-0.5 rounded border border-slate-800/80 shadow-md">Posició (mm)</span>
+              <canvas id="canvas-pos" class="w-full h-full block bg-slate-950/20 rounded"></canvas>
+            </div>
+            <div class="relative w-full h-full">
+              <span class="absolute -top-2.5 left-10 z-10 text-[8.5px] font-black uppercase tracking-wider text-slate-400 bg-slate-950/90 px-1.5 py-0.5 rounded border border-slate-800/80 shadow-md">Velocitat (RPM)</span>
+              <canvas id="canvas-rpm" class="w-full h-full block bg-slate-950/20 rounded"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- COLUMNA DRETA: EQUATIONS + Study Guide + SERIAL MONITOR -->
+      <div class="lg:col-span-5 flex flex-col gap-4">
+        <!-- REALTIME MATHEMATICS AND DISCRETE EQUATIONS -->
+        <div class="bg-slate-900/90 rounded-xl p-4 border border-slate-800 shadow-lg flex flex-col justify-between">
+          <div class="border-b border-slate-850 pb-2 mb-3 flex items-center gap-2">
+            <span class="w-2.5 h-2.5 bg-amber-500 rounded-full"></span>
+            <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider">CÀLCULS I EQUACIONS DE CONTROL</h2>
+          </div>
+
+          <div class="space-y-3 text-[10.5px] font-mono leading-tight">
+            <!-- POSITION CALCS -->
+            <div class="bg-slate-950 p-2 rounded border border-slate-900">
+              <div class="flex justify-between items-center border-b border-slate-900 pb-1 mb-1">
+                <span id="lbl-math-pos-title" class="text-blue-400 font-bold block uppercase tracking-wide">Posició (Cinta)</span>
+                <span id="lbl-math-pos-mode" class="text-[9px] bg-blue-950 text-blue-300 px-1 py-0.5 rounded border border-blue-900 font-bold">PID</span>
+              </div>
+              <div id="panel-math-pos" class="text-slate-300 space-y-1"></div>
+            </div>
+
+            <!-- RPM CALCS -->
+            <div class="bg-slate-950 p-2 rounded border border-slate-900">
+              <div class="flex justify-between items-center border-b border-slate-900 pb-1 mb-1">
+                <span id="lbl-math-rpm-title" class="text-indigo-400 font-bold block uppercase tracking-wide">Velocitat (Centrífuga)</span>
+                <span id="lbl-math-rpm-mode" class="text-[9px] bg-indigo-950 text-indigo-300 px-1 py-0.5 rounded border border-indigo-900 font-bold">PID</span>
+              </div>
+              <div id="panel-math-rpm" class="text-slate-300 space-y-1"></div>
+            </div>
+
+            <!-- LECTURA ENCODERS -->
+            <div class="bg-slate-950 p-2.5 rounded border border-slate-900">
+              <span class="text-slate-400 font-bold block uppercase tracking-wide border-b border-slate-900 pb-1 mb-1">Lectura d'Encoders en Temps Real</span>
+              <div class="flex gap-4">
+                <div class="flex-1 bg-slate-900/60 p-2 rounded border border-slate-850">
+                  <span class="text-slate-500 text-[9px] block">Motor Cinta (Lineal):</span>
+                  <span id="lbl-pulses-pos" class="text-white font-mono text-[11px] font-black">0 pulses</span>
+                  <span class="text-slate-500 text-[8px] block font-sans mt-0.5">Factor: 1 pulse = 1 mm</span>
+                </div>
+                <div class="flex-1 bg-slate-900/60 p-2 rounded border border-slate-850">
+                  <span class="text-slate-500 text-[9px] block">Motor Gir (Rotatiu):</span>
+                  <span id="lbl-pulses-rpm" class="text-white font-mono text-[11px] font-black">0 pulses</span>
+                  <span id="lbl-rpm-under" class="text-slate-500 text-[8px] block font-sans mt-0.5">Velocitat: 0 RPM</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- STUDY AND STUDY MANUAL -->
+        <div class="bg-slate-900/90 rounded-xl p-3 border border-slate-800 shadow-md">
+          <button onclick="toggleGuia()" class="w-full flex justify-between items-center text-xs font-bold text-slate-300 uppercase tracking-wider text-left hover:text-white transition">
+            <span class="flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
+              Guia d'Estudi i Pràctica SCADA
+            </span>
+            <span id="txt-guia-toggle" class="text-[10px] text-slate-500">Amagar</span>
+          </button>
+          <div id="panel-guia" class="mt-2.5 text-[9.5px] text-slate-300 space-y-2.5 leading-relaxed border-t border-slate-850 pt-2.5 transition-all">
+            <div>
+              <h4 class="font-bold text-emerald-400 uppercase text-[10px]">1. PID (Proporcional, Integral, Derivatiu)</h4>
+              <p class="text-slate-400">És el control de bucle tancat més precís. El motor rep una senyal proporcional al valor d'error, evitant frenades o arrencades brusques i eliminant l'error estàtic mitjançant l'acció integral.</p>
+              <p class="mt-1 text-[8.5px] italic text-slate-500">- Prova d'establir <code class="text-slate-300 font-mono">Kp=10</code>, <code class="text-slate-300 font-mono">Ki=0.1</code> i <code class="text-slate-300 font-mono">Kd=4</code> per veure com la cinta es posiciona ràpid i estable.</p>
+            </div>
+            <div>
+              <h4 class="font-bold text-amber-400 uppercase text-[10px]">2. On-Off (Tot o Res)</h4>
+              <p class="text-slate-400">Aplica 100% de potència si l'error és positiu o -100% si és negatiu. Com que la cinta té inèrcia física, el sistema comença a oscil·lar frenèticament al voltant del punt consigna (chattering). Això destrueix els relés físics en la indústria real.</p>
+            </div>
+            <div>
+              <h4 class="font-bold text-sky-400 uppercase text-[10px]">3. Control amb Histeresi</h4>
+              <p class="text-slate-400">Introdueix una finestra de tolerància (banda morta). Quan el can de pintura arriba a la banda, el motor s'apaga totalment (0%) en lloc de canviar de sentit. D'aquesta manera s'allarga la vida útil de la mecànica.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONSOLE SERIAL MONITOR -->
+        <div class="bg-slate-900/90 rounded-xl p-3 border border-slate-800 shadow-md flex flex-col flex-grow min-h-[250px]">
+          <div class="flex justify-between items-center border-b border-slate-850 pb-1.5 mb-2">
+            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span id="log-dot" class="w-2.5 h-2.5 bg-emerald-500 shadow-sm rounded-full"></span> MONITOR SÈRIE
+            </h3>
+            <div class="flex items-center gap-1.5">
+              <button onclick="toggleLogging()" id="btn-log-toggle" class="text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded border bg-emerald-700/85 hover:bg-emerald-600 text-white border-emerald-500/20 transition">Registre: ON</button>
+              <button onclick="clearLogs()" class="text-[9px] text-slate-400 hover:text-slate-200 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">Esborrar</button>
+            </div>
+          </div>
+          <div id="serial-logs" class="flex-grow bg-slate-950 rounded-lg p-3 font-mono text-emerald-400 overflow-y-auto space-y-1 border border-slate-900 text-[10.5px] max-h-[300px]">
+            <!-- Dynamic logs will appear here -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- 1. Polyfill de Temporitzadors amb Web Worker ---
+    const timerWorkerCode = `
+      const activeTimers = new Map();
+      self.onmessage = function(e) {
+        const { type, id, delay, isInterval } = e.data;
+        if (type === 'setInterval' || type === 'setTimeout') {
+          const cb = () => {
+            self.postMessage({ id, isInterval });
+            if (!isInterval) activeTimers.delete(id);
+          };
+          const timerId = isInterval ? setInterval(cb, delay) : setTimeout(cb, delay);
+          activeTimers.set(id, { timerId, isInterval });
+        } else if (type === 'clearInterval' || type === 'clearTimeout') {
+          const timer = activeTimers.get(id);
+          if (timer) {
+            timer.isInterval ? clearInterval(timer.timerId) : clearTimeout(timer.timerId);
+            activeTimers.delete(id);
+          }
+        }
+      };
+    `;
+    const timerBlob = new Blob([timerWorkerCode], { type: 'application/javascript' });
+    const timerWorker = new Worker(URL.createObjectURL(timerBlob));
+    const activeCallbacks = new Map();
+    let timerIdCounter = 0;
+
+    timerWorker.onmessage = (e) => {
+      const { id, isInterval } = e.data;
+      const cb = activeCallbacks.get(id);
+      if (cb) {
+        cb();
+        if (!isInterval) activeCallbacks.delete(id);
+      }
+    };
+
+    window.setTimeout = (cb, delay) => {
+      const id = ++timerIdCounter;
+      activeCallbacks.set(id, cb);
+      timerWorker.postMessage({ type: 'setTimeout', id, delay, isInterval: false });
+      return id;
+    };
+    window.clearTimeout = (id) => {
+      activeCallbacks.delete(id);
+      timerWorker.postMessage({ type: 'clearTimeout', id });
+    };
+    window.setInterval = (cb, delay) => {
+      const id = ++timerIdCounter;
+      activeCallbacks.set(id, cb);
+      timerWorker.postMessage({ type: 'setInterval', id, delay, isInterval: true });
+      return id;
+    };
+    window.clearInterval = (id) => {
+      activeCallbacks.delete(id);
+      timerWorker.postMessage({ type: 'clearInterval', id });
+    };
+
+    // --- 2. WakeLock amb AudioContext ---
+    let audioCtx = null;
+    function initWakeLock() {
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const oscillator = audioCtx.createOscillator();
+          const gainNode = audioCtx.createGain();
+          gainNode.gain.value = 0; // silenci absolut
+          oscillator.connect(gainNode);
+          gainNode.connect(audioCtx.destination);
+          oscillator.start();
+        }
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume();
+        }
+      } catch (err) {
+        console.warn("AudioContext no suportat per WakeLock", err);
+      }
+    }
+
+    // INITIALIZATION STATE ENGINE
+    const INITIAL_STATE = {
+      processState: 'IDLE',
+      pos: 0,
+      posVelocity: 0,
+      posSetpoint: 0,
+      posInertia: 10,
+      posPerturbation: 0,
+      posIntegral: 0,
+      posLastError: 0,
+      posOutput: 0,
+      posOutputRaw: 0,
+      posWindupActive: false,
+      posPValue: 0,
+      posIValue: 0,
+      posDValue: 0,
+      posPrevError: 0,
+
+      rpm: 0,
+      rpmVelocity: 0,
+      rpmSetpoint: 0,
+      targetRpm: 1000,
+      rpmInertia: 10,
+      rpmPerturbation: 0,
+      rpmIntegral: 0,
+      rpmLastError: 0,
+      rpmOutput: 0,
+      rpmOutputRaw: 0,
+      rpmWindupActive: false,
+      rpmFeedforward: 0,
+      rpmPValue: 0,
+      rpmIValue: 0,
+      rpmDValue: 0,
+      rpmPrevError: 0,
+
+      accelTime: 5,
+      mixTime: 10,
+      decelTime: 5,
+      waitTime: 3,
+      timer: 0,
+
+      mixPos: 300,
+      mixRpm: 1000,
+      mixProgress: 0,
+
+      posTime: 0,
+      rpmTime: 0,
+
+      posPulses: 0,
+      rpmPulses: 0,
+      vfdSpeed: 0,
+
+      running: false,
+      posControlMode: 'PID',
+      rpmControlMode: 'PID',
+      posHysteresis: 8,
+      rpmHysteresis: 120,
+      posPid: { kp: 6.0, ki: 0.2, kd: 8.0, antiWindup: false },
+      rpmPid: { kp: 0.3, ki: 0.15, kd: 0, antiWindup: false },
+      logs: ['[SISTEMA] Simulador inicialitzat correctament.'],
+      telemetry: {
+        posicio: { enabled: true, deadbandAbs: 0.5, minInterval: 250, lastValue: null, lastPublishTime: 0 },
+        velocitat: { enabled: true, deadbandAbs: 10.0, minInterval: 250, lastValue: null, lastPublishTime: 0 },
+        polsos_cinta: { enabled: true, deadbandAbs: 1.0, minInterval: 500, lastValue: null, lastPublishTime: 0 },
+        polsos_gir: { enabled: true, deadbandAbs: 10.0, minInterval: 500, lastValue: null, lastPublishTime: 0 },
+        sortida_pos: { enabled: true, deadbandAbs: 1.0, minInterval: 250, lastValue: null, lastPublishTime: 0 },
+        sortida_rpm: { enabled: true, deadbandAbs: 1.0, minInterval: 250, lastValue: null, lastPublishTime: 0 }
+      }
+    };
+
+    let state = JSON.parse(JSON.stringify(INITIAL_STATE));
+    let loggingEnabled = true;
+    let mqttEnabled = false;
+    let mqttClient = null;
+    let lastSendTime = 0;
+
+    let posData = [];
+    let rpmData = [];
+    let lastPosTime = -1;
+    let lastRpmTime = -1;
+
+    let guiaOberta = true;
+
+    // SCADA SLIDER DEFINE PARAMETERS
+    const sliderConfigs = [
+      // Position Regulator Sliders
+      { id: 'sld-pos-sp', label: 'SP (Pos)', min: 0, max: 600, step: 5, color: 'blue', valuePath: 'mixPos', callback: (v) => setConfig('mixPos', v) },
+      { id: 'sld-pos-kp', label: 'Kp', min: 0, max: 20, step: 0.1, color: 'amber', valuePath: 'posPid.kp', callback: (v) => { if (state.posControlMode === 'HYSTERESIS') { state.posHysteresis = v; } else { state.posPid.kp = v; } } },
+      { id: 'sld-pos-ki', label: 'Ki', min: 0, max: 2.0, step: 0.01, color: 'teal', valuePath: 'posPid.ki', callback: (v) => { state.posPid.ki = v; } },
+      { id: 'sld-pos-kd', label: 'Kd', min: 0, max: 20, step: 0.1, color: 'fuchsia', valuePath: 'posPid.kd', callback: (v) => { state.posPid.kd = v; } },
+      { id: 'sld-pos-inertia', label: 'Inèrcia', min: 1, max: 50, step: 1, color: 'slate', valuePath: 'posInertia', callback: (v) => setConfig('posInertia', v) },
+      { id: 'sld-pos-pert', label: 'Pert.', min: -150, max: 150, step: 5, color: 'violet', valuePath: 'posPerturbation', callback: (v) => setConfig('posPerturbation', v) },
+
+      // Speed Regulator Sliders
+      { id: 'sld-rpm-sp', label: 'SP (RPM)', min: 0, max: 3000, step: 50, color: 'blue', valuePath: 'mixRpm', callback: (v) => setConfig('mixRpm', v) },
+      { id: 'sld-rpm-kp', label: 'Kp', min: 0, max: 3.0, step: 0.01, color: 'amber', valuePath: 'rpmPid.kp', callback: (v) => { if (state.rpmControlMode === 'HYSTERESIS') { state.rpmHysteresis = v; } else { state.rpmPid.kp = v; } } },
+      { id: 'sld-rpm-ki', label: 'Ki', min: 0, max: 1.5, step: 0.005, color: 'teal', valuePath: 'rpmPid.ki', callback: (v) => { state.rpmPid.ki = v; } },
+      { id: 'sld-rpm-kd', label: 'Kd', min: 0, max: 2.0, step: 0.01, color: 'fuchsia', valuePath: 'rpmPid.kd', callback: (v) => { state.rpmPid.kd = v; } },
+      { id: 'sld-rpm-inertia', label: 'Inèrcia', min: 1, max: 30, step: 0.5, color: 'slate', valuePath: 'rpmInertia', callback: (v) => setConfig('rpmInertia', v) },
+      { id: 'sld-rpm-pert', label: 'Pert.', min: -150, max: 150, step: 5, color: 'violet', valuePath: 'rpmPerturbation', callback: (v) => setConfig('rpmPerturbation', v) }
+    ];
+
+    const colorMaps = {
+      blue: 'text-blue-400 accent-blue-500 bg-blue-950/80 text-blue-300 border-blue-500/20',
+      amber: 'text-amber-400 accent-amber-500 bg-amber-950/80 text-amber-300 border-amber-500/20',
+      teal: 'text-teal-400 accent-teal-500 bg-teal-950/80 text-teal-300 border-teal-500/20',
+      fuchsia: 'text-fuchsia-400 accent-fuchsia-500 bg-fuchsia-950/80 text-fuchsia-300 border-fuchsia-500/20',
+      slate: 'text-slate-400 accent-slate-300 bg-slate-800 text-slate-300 border-slate-700/20',
+      violet: 'text-violet-400 accent-violet-500 bg-violet-950/80 text-violet-300 border-violet-500/20'
+    };
+
+    function getValueByPath(path) {
+      const parts = path.split('.');
+      let current = state;
+      for (const p of parts) {
+        if (current === undefined || current === null) return undefined;
+        current = current[p];
+      }
+      return current;
+    }
+
+    function generateSliderMarkup(cfg) {
+      const currentVal = getValueByPath(cfg.valuePath);
+      const isPidParam = ['kp', 'ki', 'kd'].some(param => cfg.valuePath.includes(param));
+      const isPosSlider = cfg.id.includes('pos');
+      const isRpmSlider = cfg.id.includes('rpm');
+      
+      const currentMode = isPosSlider ? state.posControlMode : state.rpmControlMode;
+      const isHysteresisParam = cfg.label === 'Hist.';
+      const isSliderDisabled = (isPidParam && currentMode !== 'PID') || (isHysteresisParam && currentMode !== 'HYSTERESIS');
+
+      const cl = colorMaps[cfg.color] || colorMaps.slate;
+      const [labelColor, accent, bg, valColor, border] = cl.split(' ');
+
+      const decimals = cfg.step < 1 ? (cfg.step < 0.1 ? 2 : 1) : 0;
+      const valStr = isSliderDisabled ? '-' : currentVal.toFixed(decimals);
+      const disabledAttr = isSliderDisabled ? 'disabled' : '';
+      const opacityClass = isSliderDisabled ? 'opacity-30 pointer-events-none' : '';
+
+      return `
+        <div class="flex justify-between items-center text-[9.5px] font-bold ${opacityClass}">
+          <span class="${labelColor}">${cfg.label}</span>
+          <span class="val-display font-mono ${valColor} px-1 rounded text-[8.5px] font-black min-w-[28px] text-center bg-slate-950 border ${border} shadow-sm">
+            ${valStr}
+          </span>
+        </div>
+        <div class="flex items-center mt-1 ${opacityClass}">
+          <input 
+            type="range" 
+            min="${cfg.min}" 
+            max="${cfg.max}" 
+            step="${cfg.step}" 
+            value="${isSliderDisabled ? cfg.min : currentVal}" 
+            oninput="sliderOnInput('${cfg.id}', this.value)"
+            class="w-full h-1 cursor-pointer outline-none ${accent}"
+            ${disabledAttr}
+          >
+        </div>
+      `;
+    }
+
+    function updateSliderValueInDOM(cfg) {
+      const currentVal = getValueByPath(cfg.valuePath);
+      const isPidParam = ['kp', 'ki', 'kd'].some(param => cfg.valuePath.includes(param));
+      const isPosSlider = cfg.id.includes('pos');
+      const isRpmSlider = cfg.id.includes('rpm');
+      
+      const currentMode = isPosSlider ? state.posControlMode : state.rpmControlMode;
+      const isHysteresisParam = cfg.label === 'Hist.';
+      const isSliderDisabled = (isPidParam && currentMode !== 'PID') || (isHysteresisParam && currentMode !== 'HYSTERESIS');
+
+      const container = document.getElementById(cfg.id);
+      if (!container) return;
+
+      const input = container.querySelector('input[type="range"]');
+      const valSpan = container.querySelector('.val-display');
+
+      if (isSliderDisabled) {
+        if (input) input.disabled = true;
+        if (valSpan) valSpan.textContent = '-';
+        container.classList.add('opacity-30', 'pointer-events-none');
+        return;
+      }
+
+      container.classList.remove('opacity-30', 'pointer-events-none');
+      if (input) {
+        input.disabled = false;
+        if (Number(input.value) !== currentVal) {
+          input.value = currentVal;
+        }
+      }
+      if (valSpan) {
+        const decimals = cfg.step < 1 ? (cfg.step < 0.1 ? 2 : 1) : 0;
+        valSpan.textContent = currentVal.toFixed(decimals);
+      }
+    }
+
+    function sliderOnInput(id, value) {
+      const cfg = sliderConfigs.find(c => c.id === id);
+      if (cfg) {
+        cfg.callback(Number(value));
+        updateSliderValueInDOM(cfg);
+      }
+    }
+
+    function renderSliders() {
+      // Modify position slider list based on selected control mode
+      const posKpCfg = sliderConfigs.find(c => c.id === 'sld-pos-kp');
+
+      if (state.posControlMode === 'HYSTERESIS') {
+        posKpCfg.label = 'Hist.';
+        posKpCfg.min = 1;
+        posKpCfg.max = 50;
+        posKpCfg.step = 1;
+        posKpCfg.valuePath = 'posHysteresis';
+      } else {
+        posKpCfg.label = 'Kp';
+        posKpCfg.min = 0;
+        posKpCfg.max = 20;
+        posKpCfg.step = 0.1;
+        posKpCfg.valuePath = 'posPid.kp';
+      }
+
+      // Modify RPM slider list based on selected control mode
+      const rpmKpCfg = sliderConfigs.find(c => c.id === 'sld-rpm-kp');
+      if (state.rpmControlMode === 'HYSTERESIS') {
+        rpmKpCfg.label = 'Hist.';
+        rpmKpCfg.min = 10;
+        rpmKpCfg.max = 500;
+        rpmKpCfg.step = 10;
+        rpmKpCfg.valuePath = 'rpmHysteresis';
+      } else {
+        rpmKpCfg.label = 'Kp';
+        rpmKpCfg.min = 0;
+        rpmKpCfg.max = 3.0;
+        rpmKpCfg.step = 0.01;
+        rpmKpCfg.valuePath = 'rpmPid.kp';
+      }
+
+      sliderConfigs.forEach(cfg => {
+        const el = document.getElementById(cfg.id);
+        if (el) {
+          el.innerHTML = generateSliderMarkup(cfg);
+        }
+      });
+    }
+
+    // STATE LOGGING PANEL
+    function addLog(msg) {
+      if (!loggingEnabled) return;
+      state.logs.push(`[${new Date().toLocaleTimeString()}] ${msg}`);
+      if (state.logs.length > 100) state.logs.shift();
+      renderLogs();
+    }
+
+    function renderLogs() {
+      const logsBox = document.getElementById('serial-logs');
+      if (logsBox) {
+        logsBox.innerHTML = state.logs.map(log => `<div>${log}</div>`).join('');
+        logsBox.scrollTop = logsBox.scrollHeight;
+      }
+    }
+
+    function toggleLogging() {
+      loggingEnabled = !loggingEnabled;
+      const btn = document.getElementById('btn-log-toggle');
+      const dot = document.getElementById('log-dot');
+      if (loggingEnabled) {
+        btn.textContent = "Registre: ON";
+        btn.className = "text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded border bg-emerald-700/85 hover:bg-emerald-600 text-white border-emerald-500/20 transition";
+        dot.className = "w-2.5 h-2.5 bg-emerald-500 shadow-sm rounded-full";
+      } else {
+        btn.textContent = "Registre: OFF";
+        btn.className = "text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded border bg-slate-800 hover:bg-slate-700 text-slate-400 border-slate-700 transition";
+        dot.className = "w-2.5 h-2.5 bg-slate-600 rounded-full";
+      }
+    }
+
+    function clearLogs() {
+      state.logs = [];
+      renderLogs();
+    }
+
+    function toggleGuia() {
+      guiaOberta = !guiaOberta;
+      const panel = document.getElementById('panel-guia');
+      const txt = document.getElementById('txt-guia-toggle');
+      if (guiaOberta) {
+        panel.classList.remove('hidden');
+        txt.textContent = 'Amagar';
+      } else {
+        panel.classList.add('hidden');
+        txt.textContent = 'Mostrar';
+      }
+    }
+
+    // PRESET LOADER
+    function applyPreset(name) {
+      setConfig('posControlMode', 'PID');
+      setConfig('rpmControlMode', 'PID');
+      if (name === 'estable') {
+        state.posPid = { kp: 10, ki: 0, kd: 5, antiWindup: false };
+        state.rpmPid = { kp: 0.3, ki: 0.15, kd: 0, antiWindup: false };
+        addLog("[SISTEMA] S'ha aplicat el Preset ESTABLE.");
+      } else if (name === 'p') {
+        state.posPid = { kp: 10, ki: 0, kd: 0, antiWindup: false };
+        state.rpmPid = { kp: 2, ki: 0, kd: 0, antiWindup: false };
+        addLog("[SISTEMA] S'ha aplicat el Preset NOMÉS P.");
+      } else if (name === 'inestable') {
+        state.posPid = { kp: 100, ki: 50, kd: 0, antiWindup: false };
+        state.rpmPid = { kp: 20, ki: 10, kd: 0, antiWindup: false };
+        addLog("[SISTEMA] S'ha aplicat el Preset INESTABLE.");
+      }
+      renderSliders();
+      updateAWButtons();
+    }
+
+    function toggleAW(system) {
+      if (system === 'pos' && state.posControlMode === 'PID') {
+        state.posPid.antiWindup = !state.posPid.antiWindup;
+        addLog(`Anti-Windup Posició: ${state.posPid.antiWindup ? 'ACTIVAL' : 'DESACTIVAT'}`);
+      } else if (system === 'rpm' && state.rpmControlMode === 'PID') {
+        state.rpmPid.antiWindup = !state.rpmPid.antiWindup;
+        addLog(`Anti-Windup Velocitat: ${state.rpmPid.antiWindup ? 'ACTIVAT' : 'DESACTIVAT'}`);
+      }
+      updateAWButtons();
+    }
+
+    function updateAWButtons() {
+      const btnPos = document.getElementById('btn-aw-pos');
+      const btnRpm = document.getElementById('btn-aw-rpm');
+      
+      if (state.posControlMode === 'PID') {
+        btnPos.className = `w-8 h-4.5 flex items-center border justify-start rounded-full p-0.5 transition-all duration-300 ${state.posPid.antiWindup ? 'bg-emerald-900 border-emerald-500/40' : 'bg-rose-950 border-rose-800/40'}`;
+        btnPos.querySelector('span').className = `bg-white w-3.5 h-3.5 rounded-full shadow transform transition-transform ${state.posPid.antiWindup ? 'translate-x-3.5' : ''}`;
+        btnPos.removeAttribute('disabled');
+      } else {
+        btnPos.className = "w-8 h-4.5 flex items-center border justify-start rounded-full p-0.5 bg-slate-900 border-slate-800 opacity-30 cursor-not-allowed";
+        btnPos.querySelector('span').className = "bg-slate-400 w-3.5 h-3.5 rounded-full shadow";
+        btnPos.setAttribute('disabled', 'true');
+      }
+
+      if (state.rpmControlMode === 'PID') {
+        btnRpm.className = `w-8 h-4.5 flex items-center border justify-start rounded-full p-0.5 transition-all duration-300 ${state.rpmPid.antiWindup ? 'bg-emerald-900 border-emerald-500/40' : 'bg-rose-950 border-rose-800/40'}`;
+        btnRpm.querySelector('span').className = `bg-white w-3.5 h-3.5 rounded-full shadow transform transition-transform ${state.rpmPid.antiWindup ? 'translate-x-3.5' : ''}`;
+        btnRpm.removeAttribute('disabled');
+      } else {
+        btnRpm.className = "w-8 h-4.5 flex items-center border justify-start rounded-full p-0.5 bg-slate-900 border-slate-800 opacity-30 cursor-not-allowed";
+        btnRpm.querySelector('span').className = "bg-slate-400 w-3.5 h-3.5 rounded-full shadow";
+        btnRpm.setAttribute('disabled', 'true');
+      }
+    }
+
+    function setConfig(key, value) {
+      state[key] = value;
+      if (key === 'posControlMode' || key === 'rpmControlMode') {
+        renderSliders();
+        updateAWButtons();
+        addLog(`S'ha canviat el mode de regulació de ${key === 'posControlMode' ? 'Posició' : 'Velocitat'} a: ${value}`);
+      }
+      
+      // Update config inputs on the screen
+      const el = document.getElementById(`inp-${key}`);
+      if (el) el.value = value;
+      
+      const modeSelectPos = document.getElementById('pos-mode');
+      if (modeSelectPos) modeSelectPos.value = state.posControlMode;
+
+      const modeSelectRpm = document.getElementById('rpm-mode');
+      if (modeSelectRpm) modeSelectRpm.value = state.rpmControlMode;
+    }
+
+    // MQTT SCADA CONNECTOR
+    function toggleMqtt() {
+      if (mqttEnabled) {
+        // Disconnect
+        mqttEnabled = false;
+        if (mqttClient) {
+          mqttClient.end();
+          mqttClient = null;
+        }
+        document.getElementById('mqtt-status').className = "text-[9px] font-bold text-rose-400";
+        document.getElementById('mqtt-status').textContent = "DESCONNECTAT";
+        document.getElementById('mqtt-dot').className = "w-2.5 h-2.5 rounded-full bg-rose-500";
+        document.getElementById('btn-mqtt-toggle').className = "px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 transition";
+        document.getElementById('btn-mqtt-toggle').textContent = "Connectar";
+        addLog("[MQTT] Desconnectat del Broker.");
+      } else {
+        // Connect
+        const broker = document.getElementById('mqtt-broker').value;
+        const baseTopic = document.getElementById('mqtt-topic').value;
+        addLog(`[MQTT] Intentant connectar a: ${broker}...`);
+        
+        try {
+          mqttClient = mqtt.connect(broker);
+          mqttEnabled = true;
+
+          mqttClient.on('connect', () => {
+            document.getElementById('mqtt-status').className = "text-[9px] font-bold text-emerald-400";
+            document.getElementById('mqtt-status').textContent = "CONNECTAT";
+            document.getElementById('mqtt-dot').className = "w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]";
+            document.getElementById('btn-mqtt-toggle').className = "px-2 py-0.5 rounded text-[9px] font-bold bg-rose-950 text-rose-300 border border-rose-800 transition";
+            document.getElementById('btn-mqtt-toggle').textContent = "Desconnectar";
+            addLog("[MQTT] Connectat amb èxit!");
+
+            const subTopic = baseTopic.endsWith('/') ? baseTopic + 'cmd' : baseTopic + '/cmd';
+            mqttClient.subscribe(subTopic, (err) => {
+              if (!err) {
+                addLog(`[MQTT] Subscrit al tòpic de comandes: ${subTopic}`);
+              }
+            });
+          });
+
+          mqttClient.on('message', (topic, message) => {
+            try {
+              const payload = JSON.parse(message.toString());
+              addLog(`[MQTT REBUT] Comanda SCADA: ${message.toString()}`);
+              
+              if (payload.action) {
+                if (payload.action === 'start' || payload.action === 'run') {
+                  if (!state.running) toggleRunning();
+                } else if (payload.action === 'pause' || payload.action === 'stop') {
+                  if (state.running) toggleRunning();
+                } else if (payload.action === 'reset') {
+                  resetSim();
+                }
+              }
+
+              if (payload.config) {
+                Object.keys(payload.config).forEach(key => {
+                  if (key in state) {
+                    setConfig(key, payload.config[key]);
+                  }
+                });
+                renderSliders();
+              }
+            } catch (e) {
+              addLog("[MQTT ERROR] Error en decodificar el missatge JSON.");
+            }
+          });
+
+          mqttClient.on('error', (err) => {
+            addLog(`[MQTT ERROR] Error de connexió: ${err}`);
+            mqttEnabled = false;
+            document.getElementById('mqtt-status').className = "text-[9px] font-bold text-rose-400";
+            document.getElementById('mqtt-status').textContent = "DESCONNECTAT";
+            document.getElementById('mqtt-dot').className = "w-2.5 h-2.5 rounded-full bg-rose-500";
+            document.getElementById('btn-mqtt-toggle').textContent = "Connectar";
+          });
+
+          mqttClient.on('close', () => {
+            document.getElementById('mqtt-status').className = "text-[9px] font-bold text-rose-400";
+            document.getElementById('mqtt-status').textContent = "DESCONNECTAT";
+            document.getElementById('mqtt-dot').className = "w-2.5 h-2.5 rounded-full bg-rose-500";
+          });
+
+        } catch (err) {
+          addLog(`[MQTT ERROR] Connexió fallida instantàniament: ${err.message}`);
+        }
+      }
+
+      const baseTopic = document.getElementById('mqtt-topic').value;
+      const cleanTopic = baseTopic.endsWith('/') ? baseTopic : baseTopic + '/';
+      document.getElementById('lbl-pub-topic').textContent = cleanTopic + 'telemetria';
+      document.getElementById('lbl-sub-topic').textContent = cleanTopic + 'cmd';
+    }
+
+    function checkAndPublishTelemetryProperty(nomProp, valorActual, subtopic, force = false) {
+      if (!mqttEnabled || !mqttClient || !mqttClient.connected) return;
+      
+      const cfg = state.telemetry[nomProp];
+      if (!cfg) return;
+      
+      // Si no està habilitat i no s'està forçant
+      if (!cfg.enabled && !force) return;
+      
+      const ara = Date.now();
+      const tempsTranscorregut = ara - cfg.lastPublishTime;
+      
+      // Comprovar si s'ha superat el temps/interval de publicació mínim
+      if (tempsTranscorregut < cfg.minInterval && !force) return;
+      
+      let shaDePublicar = false;
+      
+      if (cfg.lastValue === null || force) {
+        shaDePublicar = true;
+      } else {
+        const canviAbs = Math.abs(valorActual - cfg.lastValue);
+        if (canviAbs >= cfg.deadbandAbs) {
+          shaDePublicar = true;
+        } else if (valorActual !== cfg.lastValue && tempsTranscorregut >= 5000) {
+          // Forçar cada 5 segons si el valor ha variat per evitar deriva
+          shaDePublicar = true;
+        }
+      }
+      
+      if (shaDePublicar) {
+        const baseTopic = document.getElementById('mqtt-topic').value;
+        const cleanTopic = baseTopic.endsWith('/') ? baseTopic : baseTopic + '/';
+        const fullTopic = cleanTopic + 'telemetria/' + subtopic;
+        const strVal = String(valorActual);
+        
+        try {
+          // Publicar valor granular
+          mqttClient.publish(fullTopic, strVal, { qos: 0, retain: false });
+          
+          // Publicar el timestamp a ts/ amb sufix -ts per emmagatzematge de base de dades
+          const tsTopic = cleanTopic + 'ts/telemetria/' + subtopic + '-ts';
+          mqttClient.publish(tsTopic, String(ara), { qos: 0, retain: false });
+          
+          cfg.lastValue = valorActual;
+          cfg.lastPublishTime = ara;
+        } catch (e) {
+          console.error(`Error publicant telemetria filtrada per a ${nomProp}:`, e);
+        }
+      }
+    }
+
+    function sendMqttTelemetry() {
+      if (!mqttEnabled || !mqttClient || !mqttClient.connected) return;
+      const baseTopic = document.getElementById('mqtt-topic').value;
+      const pubTopic = baseTopic.endsWith('/') ? baseTopic + 'telemetria' : baseTopic + '/telemetria';
+
+      const payload = {
+        posicio: Number(state.pos.toFixed(2)),
+        velocitat: Number(state.rpm.toFixed(2)),
+        polsos_cinta: Math.round(state.posPulses),
+        polsos_gir: Math.round(state.rpmPulses),
+        estat_proces: state.processState,
+        control_pos: state.posControlMode,
+        control_rpm: state.rpmControlMode,
+        consigna_pos: state.mixPos,
+        consigna_rpm: state.mixRpm,
+        sortida_pos: Number(state.posOutput.toFixed(2)),
+        sortida_rpm: Number(state.rpmOutput.toFixed(2))
+      };
+
+      try {
+        mqttClient.publish(pubTopic, JSON.stringify(payload), { qos: 0, retain: false });
+      } catch (e) {
+        // quiet
+      }
+
+      // Publicar telemetria granular filtrada per a cada variable
+      checkAndPublishTelemetryProperty('posicio', Number(state.pos.toFixed(2)), 'posicio');
+      checkAndPublishTelemetryProperty('velocitat', Number(state.rpm.toFixed(1)), 'velocitat');
+      checkAndPublishTelemetryProperty('polsos_cinta', Math.round(state.posPulses), 'polsos_cinta');
+      checkAndPublishTelemetryProperty('polsos_gir', Math.round(state.rpmPulses), 'polsos_gir');
+      checkAndPublishTelemetryProperty('sortida_pos', Number(state.posOutput.toFixed(2)), 'sortida_pos');
+      checkAndPublishTelemetryProperty('sortida_rpm', Number(state.rpmOutput.toFixed(2)), 'sortida_rpm');
+    }
+
+     // SIMULATION TIME STEPS PHYSICS INTEGRATION
+     function toggleRunning() {
+       state.running = !state.running;
+       addLog(state.running ? 'Simulació INICIADA.' : 'Simulació PAUSADA.');
+       if (state.running) {
+         initWakeLock();
+       }
+       
+       const btn = document.getElementById('btn-play');
+       if (state.running) {
+         btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg> <span>Pausa</span>`;
+         btn.className = "px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 text-white shadow-md transition";
+       } else {
+         btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> <span>Iniciar</span>`;
+         btn.className = "px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition";
+       }
+     }
+
+    function stepSim() {
+      tick(50, true);
+    }
+
+    function resetSim() {
+      // Guardar la configuració dels sliders i paràmetres de control
+      const savedConfig = {
+        posInertia: state.posInertia,
+        posPerturbation: state.posPerturbation,
+        posControlMode: state.posControlMode,
+        posHysteresis: state.posHysteresis,
+        posPid: JSON.parse(JSON.stringify(state.posPid)),
+        
+        rpmInertia: state.rpmInertia,
+        rpmPerturbation: state.rpmPerturbation,
+        rpmControlMode: state.rpmControlMode,
+        rpmHysteresis: state.rpmHysteresis,
+        rpmPid: JSON.parse(JSON.stringify(state.rpmPid)),
+        
+        accelTime: state.accelTime,
+        mixTime: state.mixTime,
+        decelTime: state.decelTime,
+        waitTime: state.waitTime,
+        
+        mixPos: state.mixPos,
+        mixRpm: state.mixRpm,
+        telemetry: JSON.parse(JSON.stringify(state.telemetry || INITIAL_STATE.telemetry))
+      };
+
+      // Reiniciar l'estat dinàmic restablint l'estat inicial complet
+      state = JSON.parse(JSON.stringify(INITIAL_STATE));
+      
+      // Restaurar la configuració de l'usuari
+      Object.assign(state, savedConfig);
+      
+      posData = [];
+      rpmData = [];
+      lastPosTime = -1;
+      lastRpmTime = -1;
+      
+      state.logs = ['[SISTEMA] Simulació reiniciada (física i procés). Configuració mantinguda.'];
+      addLog('Reset de simulació completat.');
+
+      // restablir la representació visual del botó
+      const btn = document.getElementById('btn-play');
+      if (btn) {
+        btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> <span>Iniciar</span>`;
+        btn.className = "px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition";
+      }
+
+      // Sincronitzar selectors de mode amb l'estat restaurat
+      const modeSelectPos = document.getElementById('pos-mode');
+      if (modeSelectPos) modeSelectPos.value = state.posControlMode;
+
+      const modeSelectRpm = document.getElementById('rpm-mode');
+      if (modeSelectRpm) modeSelectRpm.value = state.rpmControlMode;
+
+      // Sincronitzar camps de text de perfil temporal de l'estat restaurat
+      const inpWait = document.getElementById('inp-waitTime');
+      if (inpWait) inpWait.value = state.waitTime;
+      const inpAccel = document.getElementById('inp-accelTime');
+      if (inpAccel) inpAccel.value = state.accelTime;
+      const inpMix = document.getElementById('inp-mixTime');
+      if (inpMix) inpMix.value = state.mixTime;
+      const inpDecel = document.getElementById('inp-decelTime');
+      if (inpDecel) inpDecel.value = state.decelTime;
+
+      renderSliders();
+      updateUIElements();
+      renderLogs();
+    }
+
+    function tick(dtMs, forceStep = false) {
+      const dt = dtMs / 1000;
+      
+      if (state.processState === 'IDLE') {
+        if (state.running || forceStep) {
+          state.processState = 'POSITIONING';
+          state.posSetpoint = state.mixPos;
+          state.posTime = 0;
+          state.rpmTime = 0;
+          state.posPulses = 0;
+          state.rpmPulses = 0;
+          state.vfdSpeed = 0;
+          addLog(`Iniciant procés: Posicionament amb control ${state.posControlMode}.`);
+        }
+      } else if (state.processState === 'POSITIONING') {
+        const error = state.posSetpoint - state.pos;
+        const tolerance = state.posControlMode === 'PID' ? 0.8 : (state.posControlMode === 'HYSTERESIS' ? Math.max(1.0, state.posHysteresis) : 6.0);
+        const velocityTol = state.posControlMode === 'PID' ? 1.5 : 12.0;
+        
+        if (Math.abs(error) < tolerance && Math.abs(state.posVelocity) < velocityTol) {
+          state.timer += dt;
+          if (state.timer > state.waitTime) {
+            state.pos = state.posSetpoint;
+            state.posVelocity = 0;
+            state.posPulses = state.posSetpoint;
+            state.processState = 'ACCELERATING';
+            state.timer = 0;
+            addLog(`Fase d'Acceleració (control ${state.rpmControlMode} rotacional) activada.`);
+          }
+        } else {
+          state.timer = 0;
+        }
+      } else if (state.processState === 'ACCELERATING') {
+        state.timer += dt;
+        const progress = Math.min(1, state.timer / state.accelTime);
+        state.rpmSetpoint = progress * state.mixRpm;
+
+        const rpmTol = state.rpmControlMode === 'PID' ? state.mixRpm * 0.95 : state.mixRpm - (state.rpmControlMode === 'HYSTERESIS' ? state.rpmHysteresis * 0.8 : 50);
+        if (progress >= 1 && state.rpm >= rpmTol) {
+          state.processState = 'MIXING';
+          state.timer = 0;
+          addLog(`Fase de Mescla a velocitat constant (${state.rpmControlMode}).`);
+        }
+      } else if (state.processState === 'MIXING') {
+        state.timer += dt;
+        state.rpmSetpoint = state.mixRpm;
+        
+        const currentMixRpm = state.mixRpm > 0 ? state.mixRpm : 1;
+        const currentMixTime = state.mixTime > 0 ? state.mixTime : 1;
+        state.mixProgress = Math.min(100, state.mixProgress + (state.rpm / currentMixRpm) * (dt / currentMixTime) * 100);
+
+        if (state.timer >= state.mixTime) {
+          state.processState = 'DECELERATING';
+          state.timer = 0;
+          addLog(`Fase de Desaceleració activada.`);
+        }
+      } else if (state.processState === 'DECELERATING') {
+        state.timer += dt;
+        const progress = Math.min(1, state.timer / state.decelTime);
+        state.rpmSetpoint = state.mixRpm * (1 - progress);
+
+        if (progress >= 1 && state.rpm < 20) {
+          state.rpm = 0;
+          state.rpmSetpoint = 0;
+          state.processState = 'EXITING';
+          state.posSetpoint = 600;
+          addLog('Fase de Sortida activada.');
+        }
+      } else if (state.processState === 'EXITING') {
+        if (state.pos > 595) {
+          state.processState = 'IDLE';
+          state.pos = 0;
+          state.vfdSpeed = 0;
+          state.posSetpoint = 0;
+          state.posIntegral = 0;
+          state.posVelocity = 0;
+          state.mixProgress = 0;
+          state.running = false;
+          
+          // reset play state representing paused UI
+          const btn = document.getElementById('btn-play');
+          btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> <span>Iniciar</span>`;
+          btn.className = "px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow-md transition";
+
+          addLog('Cicle completat. Prem Iniciar per un nou cicle.');
+        }
+      }
+
+      // Time variables increment
+      if (state.processState === 'POSITIONING' || state.processState === 'EXITING') {
+        state.posTime += dt;
+      }
+      if (['ACCELERATING', 'MIXING', 'DECELERATING'].includes(state.processState)) {
+        state.rpmTime += dt;
+      }
+
+      // RPM SPEED REGULATION MATHS
+      if (['ACCELERATING', 'MIXING', 'DECELERATING'].includes(state.processState)) {
+        const error = state.rpmSetpoint - state.rpm;
+        let uRaw = 0;
+        state.rpmWindupActive = false;
+        
+        const ff = (state.rpmSetpoint / 3000) * 100;
+        state.rpmFeedforward = ff;
+
+        if (state.rpmControlMode === 'PID') {
+          const p = state.rpmPid.kp * error;
+          state.rpmIntegral += error * dt;
+          if (state.rpmPid.antiWindup) {
+            const clamped = Math.max(-50, Math.min(50, state.rpmIntegral));
+            if (clamped !== state.rpmIntegral) state.rpmWindupActive = true;
+            state.rpmIntegral = clamped;
+          }
+          const i = state.rpmPid.ki * state.rpmIntegral;
+          const d = state.rpmPid.kd * ((error - state.rpmLastError) / dt);
+          uRaw = ff + p + i + d;
+
+          state.rpmPValue = p;
+          state.rpmIValue = i;
+          state.rpmDValue = d;
+          state.rpmPrevError = state.rpmLastError;
+        } else if (state.rpmControlMode === 'ON_OFF') {
+          uRaw = error > 1 ? 100 : 0;
+        } else if (state.rpmControlMode === 'HYSTERESIS') {
+          if (error > state.rpmHysteresis) {
+            uRaw = 100;
+          } else if (error < -state.rpmHysteresis) {
+            uRaw = 0;
+          } else {
+            uRaw = state.rpmOutput;
+          }
+        }
+
+        state.rpmLastError = error;
+        state.rpmOutputRaw = uRaw;
+        state.rpmOutput = Math.max(0, Math.min(100, uRaw));
+      } else {
+        state.rpmOutput = 0;
+        state.rpmOutputRaw = 0;
+        state.rpmIntegral = 0;
+        state.rpmLastError = 0;
+        state.rpmFeedforward = 0;
+        state.rpmPValue = 0;
+        state.rpmIValue = 0;
+        state.rpmDValue = 0;
+        state.rpmPrevError = 0;
+      }
+
+      // POSITION REGULATION MATHS
+      if (state.processState === 'POSITIONING' || state.processState === 'EXITING') {
+        const error = state.posSetpoint - state.pos;
+        let uRaw = 0;
+        state.posWindupActive = false;
+
+        if (state.posControlMode === 'PID') {
+          const p = state.posPid.kp * error;
+          state.posIntegral += error * dt;
+          if (state.posPid.antiWindup) {
+            const clamped = Math.max(-100, Math.min(100, state.posIntegral));
+            if (clamped !== state.posIntegral) state.posWindupActive = true;
+            state.posIntegral = clamped;
+          }
+          const i = state.posPid.ki * state.posIntegral;
+          const d = state.posPid.kd * ((error - state.posLastError) / dt);
+          uRaw = p + i + d;
+
+          state.posPValue = p;
+          state.posIValue = i;
+          state.posDValue = d;
+          state.posPrevError = state.posLastError;
+        } else if (state.posControlMode === 'ON_OFF') {
+          uRaw = error > 0.5 ? 100 : (error < -0.5 ? -100 : 0);
+        } else if (state.posControlMode === 'HYSTERESIS') {
+          uRaw = error > state.posHysteresis ? 100 : (error < -state.posHysteresis ? -100 : 0);
+        }
+
+        state.posLastError = error;
+        state.posOutputRaw = uRaw;
+        state.posOutput = Math.max(-100, Math.min(100, uRaw));
+      } else {
+        state.posOutput = 0;
+        state.posOutputRaw = 0;
+        state.posPValue = 0;
+        state.posIValue = 0;
+        state.posDValue = 0;
+        state.posLastError = 0;
+        state.posPrevError = 0;
+        state.posIntegral = 0;
+      }
+
+      // --- HIGH FIDELITY PHYSICS SUB-STEPPING INTERPOLATIONS ---
+      const syncSpeedTarget = (state.rpmOutput / 100) * 3000;
+      state.vfdSpeed += (syncSpeedTarget - state.vfdSpeed) * (dt / (dt + 0.15));
+
+      const N_SUBSTEPS = 10;
+      const sub_dt = dt / N_SUBSTEPS;
+
+      for (let s = 0; s < N_SUBSTEPS; s++) {
+        // Motor Rotation Physics
+        if (['ACCELERATING', 'MIXING', 'DECELERATING'].includes(state.processState)) {
+          const slip = state.vfdSpeed - state.rpm;
+          const slipTorqueGain = 80;
+          let motorTorque = Math.max(-4000, Math.min(4000, slip * slipTorqueGain));
+          const drag = 2 + (state.rpm * 0.03) + (Math.pow(state.rpm, 2) * 0.0000002);
+          const loadTorque = drag + state.rpmPerturbation;
+          const inertia = Math.max(0.5, state.rpmInertia);
+          const acceleration = (motorTorque - loadTorque) / inertia;
+
+          state.rpmVelocity = acceleration;
+          state.rpm += state.rpmVelocity * sub_dt;
+          if (state.rpm < 0) state.rpm = 0;
+          state.rpmPulses += (state.rpm / 6) * sub_dt;
+        } else {
+          if (state.rpm > 0.1) {
+            const drag = 2 + (state.rpm * 0.03) + (Math.pow(state.rpm, 2) * 0.0000002);
+            const loadTorque = drag + state.rpmPerturbation;
+            const inertia = Math.max(0.5, state.rpmInertia);
+            const deceleration = -loadTorque / inertia;
+
+            state.rpmVelocity = deceleration;
+            state.rpm += state.rpmVelocity * sub_dt;
+            if (state.rpm < 0) state.rpm = 0;
+            state.rpmPulses += (state.rpm / 6) * sub_dt;
+          } else {
+            state.rpm = 0;
+            state.rpmVelocity = 0;
+            state.vfdSpeed = 0;
+          }
+        }
+
+        // Belt Lineal Physics
+        const force = (state.posOutput * 50) + state.posPerturbation;
+        const posInertia = Math.max(0.5, state.posInertia);
+        const posAcceleration = force / posInertia;
+
+        if (state.processState === 'IDLE') {
+          state.posVelocity = 0;
+          state.pos = 0;
+        } else {
+          state.posVelocity += posAcceleration * sub_dt;
+          state.posVelocity *= 0.98; // 2% damping coefficient
+          state.posVelocity = Math.max(-400, Math.min(400, state.posVelocity));
+          state.pos += state.posVelocity * sub_dt;
+        }
+
+        if (state.processState !== 'IDLE') {
+          state.posPulses = state.pos;
+        }
+      }
+
+      // Log/Chart sampling at 10Hz
+      const now = performance.now();
+      if (state.processState === 'POSITIONING' || state.processState === 'EXITING') {
+        if (state.posTime > lastPosTime + 0.1 || state.posTime === 0) {
+          lastPosTime = state.posTime;
+          posData.push({
+            time: Number(state.posTime.toFixed(1)),
+            actual: Number(state.pos.toFixed(1)),
+            setpoint: Number(state.posSetpoint.toFixed(1)),
+            output: Number(state.posOutput.toFixed(1))
+          });
+          if (posData.length > 500) posData.shift();
+        }
+      }
+
+      if (['ACCELERATING', 'MIXING', 'DECELERATING'].includes(state.processState)) {
+        if (state.rpmTime > lastRpmTime + 0.1 || state.rpmTime === 0) {
+          lastRpmTime = state.rpmTime;
+          rpmData.push({
+            time: Number(state.rpmTime.toFixed(1)),
+            actual: Number(state.rpm.toFixed(0)),
+            setpoint: Number(state.rpmSetpoint.toFixed(0)),
+            output: Number(state.rpmOutput.toFixed(1))
+          });
+          if (rpmData.length > 500) rpmData.shift();
+        }
+      }
+
+      // Keep MQTT transmission throttle at 2Hz
+      if (mqttEnabled && now - lastSendTime > 500) {
+        lastSendTime = now;
+        sendMqttTelemetry();
+      }
+
+      updateUIElements();
+    }
+
+    // DRAW PHYSICAL PLANT CANVAS VISUALS
+    function drawConveyorPlant() {
+      // Wheels support rollers rotating
+      const wheelsEl = document.getElementById('belt-wheels');
+      if (wheelsEl && wheelsEl.children.length === 0) {
+        let wheelsHtml = '';
+        for (let i = 0; i < 12; i++) {
+          wheelsHtml += `
+            <div class="w-5 h-5 rounded-full bg-slate-700 border-4 border-slate-950 shadow-md">
+              <div class="w-full h-full rounded-full border border-slate-500/30 flex items-center justify-center" id="wheel-rot-${i}">
+                <div class="w-1.5 h-1.5 bg-slate-400 rounded-full"></div>
+              </div>
+            </div>`;
+        }
+        wheelsEl.innerHTML = wheelsHtml;
+      }
+
+      // Rotate wheels based on posPulses
+      for (let i = 0; i < 12; i++) {
+        const wheel = document.getElementById(`wheel-rot-${i}`);
+        if (wheel) {
+          wheel.style.transform = `rotate(${state.posPulses * 0.5}deg)`;
+        }
+      }
+
+      // Conveyor belt lines translation
+      const beltLinesEl = document.getElementById('belt-roller-lines');
+      if (beltLinesEl) {
+        if (beltLinesEl.children.length === 0) {
+          let lines = '';
+          for (let i = 0; i < 60; i++) {
+            lines += `<div class="w-8 h-20 border-r-[3px] border-slate-900 mx-3"></div>`;
+          }
+          beltLinesEl.innerHTML = lines;
+        }
+        beltLinesEl.style.transform = `translateX(${(state.posPulses * -0.5) % 40}px)`;
+      }
+
+      // Target Clamp arms transition clamp
+      const isClamped = (state.processState === 'POSITIONING' && state.timer > state.waitTime * 0.95) ||
+                        ['ACCELERATING', 'MIXING', 'DECELERATING'].includes(state.processState);
+      
+      const clampTop = document.getElementById('clamp-top');
+      const clampBottom = document.getElementById('clamp-bottom');
+      const targetBox = document.getElementById('plant-target');
+      const targetLbl = document.getElementById('plant-target-lbl');
+
+      if (targetBox) {
+        targetBox.style.left = `calc(50% + ${state.mixPos - 300}px)`;
+        targetLbl.textContent = `SP Pos: ${state.mixPos} mm`;
+      }
+      if (clampTop) {
+        clampTop.style.transform = isClamped ? 'translateY(16px)' : 'translateY(0)';
+      }
+      if (clampBottom) {
+        clampBottom.style.transform = isClamped ? 'translateY(-16px)' : 'translateY(0)';
+      }
+
+      // Paint Can position & rotation & dynamic liquids color
+      const paintCan = document.getElementById('paint-can');
+      if (paintCan) {
+        paintCan.style.left = `calc(50% + ${state.pos - 300}px)`;
+        
+        const rotAngle = state.rpmPulses * 36;
+        paintCan.style.transform = `rotate(${rotAngle}deg)`;
+
+        // Liquid color interpolation
+        const p = state.mixProgress / 100;
+        const r = Math.round(250 + (34 - 250) * p);
+        const g = Math.round(204 + (197 - 204) * p);
+        const b = Math.round(21 + (94 - 21) * p);
+        
+        paintCan.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+
+        // Liquids counter rotate
+        const liquids = document.getElementById('paint-liquids');
+        if (liquids) {
+          liquids.style.transform = `rotate(${-rotAngle + (state.rpm * 0.12)}deg)`;
+          liquids.style.opacity = 1 - (state.mixProgress / 100);
+        }
+      }
+
+      // Active encoder pulse diagnostic signals
+      const posPhase = (state.posPulses * 0.25) % (Math.PI * 2);
+      const encPosA = Math.sin(posPhase) > 0;
+      const encPosB = Math.sin(posPhase - Math.PI / 2) > 0;
+
+      const rpmPhase = (state.rpmPulses * (2 * Math.PI / 10)) % (Math.PI * 2);
+      const encRpmA = Math.sin(rpmPhase) > 0;
+      const encRpmB = Math.sin(rpmPhase - Math.PI / 2) > 0;
+
+      document.getElementById('enc-pos-a').className = `w-2.5 h-2.5 rounded-full ${encPosA ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-slate-800'}`;
+      document.getElementById('enc-pos-b').className = `w-2.5 h-2.5 rounded-full ${encPosB ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-slate-800'}`;
+      
+      document.getElementById('enc-rpm-a').className = `w-2.5 h-2.5 rounded-full ${encRpmA ? 'bg-amber-400 shadow-[0_0_8px_#fbbf24]' : 'bg-slate-800'}`;
+      document.getElementById('enc-rpm-b').className = `w-2.5 h-2.5 rounded-full ${encRpmB ? 'bg-amber-400 shadow-[0_0_8px_#fbbf24]' : 'bg-slate-800'}`;
+
+      // Numeric readings overlay
+      document.getElementById('enc-pos-val').textContent = `${state.pos.toFixed(1)} mm`;
+      document.getElementById('enc-pos-out').textContent = `${state.posOutput.toFixed(1)}%`;
+      document.getElementById('enc-rpm-val').textContent = `${state.rpm.toFixed(0)} RPM`;
+      document.getElementById('enc-rpm-out').textContent = `${state.rpmOutput.toFixed(1)}%`;
+    }
+
+    // DRAW GRID TIME SERIES PLOTTERS
+    function renderPlotters() {
+      // Canvas Pos Plotter
+      renderCanvasChart(
+        'canvas-pos',
+        posData,
+        600,
+        0,
+        'pos',
+        '#ef4444',
+        '#38bdf8'
+      );
+
+      // Canvas Rpm Plotter
+      renderCanvasChart(
+        'canvas-rpm',
+        rpmData,
+        2000,
+        0,
+        'rpm',
+        '#ef4444',
+        '#fbbf24'
+      );
+    }
+
+    function renderCanvasChart(canvasId, data, maxVal, minVal, modeKey, colorSP, colorPV) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+
+      const w = rect.width;
+      const h = rect.height;
+
+      ctx.clearRect(0, 0, w, h);
+
+      const pLeft = 35;
+      const pRight = 38;
+      const pTop = 12;
+      const pBottom = 24; // Més espai inferior per mostrar l'eix X de temps de forma elegant
+
+      const pWidth = w - pLeft - pRight;
+      const pHeight = h - pTop - pBottom;
+
+      // Determinar divisions de graella (nGrid) i rang dret
+      // Per la posició volem divisions de 300 (0, 300, 600) -> nGrid = 2
+      // Per la velocitat volem divisions de 500 (0, 500, 1000, 1500, 2000) -> nGrid = 4
+      const nGrid = modeKey === 'pos' ? 2 : 4;
+      const rightMax = 100;
+      const rightMin = -100; // Demanat "-100, 0 i 100" per a ambdós sistemes
+
+      // Draw gridlines i labels d'eix Y
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      ctx.font = '8px JetBrains Mono, monospace';
+      
+      for (let i = 0; i <= nGrid; i++) {
+        const y = pTop + (pHeight / nGrid) * i;
+        ctx.beginPath();
+        ctx.moveTo(pLeft, y);
+        ctx.lineTo(w - pRight, y);
+        ctx.stroke();
+
+        // Left Labels (Escala esquerra PV/SP)
+        ctx.fillStyle = '#64748b';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'middle';
+        const leftVal = maxVal - ((maxVal - minVal) / nGrid) * i;
+        ctx.fillText(Math.round(leftVal), pLeft - 5, y);
+
+        // Right Labels (Escala dreta Control U)
+        ctx.fillStyle = '#a855f7';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'middle';
+        const rightVal = rightMax - ((rightMax - rightMin) / nGrid) * i;
+        ctx.fillText(Math.round(rightVal) + '%', w - pRight + 5, y);
+      }
+
+      // Dibuixar la línia física de l'eix X inferior
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(pLeft, pTop + pHeight);
+      ctx.lineTo(w - pRight, pTop + pHeight);
+      ctx.stroke();
+
+      // Dibuixar marques de temps (Eix X)
+      ctx.fillStyle = '#64748b';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+
+      const minT = data.length > 0 ? data[0].time : 0;
+      const maxT = data.length > 0 ? Math.max(minT + 12, data[data.length - 1].time) : 12;
+      const nTimeTicks = 5;
+
+      for (let j = 0; j < nTimeTicks; j++) {
+        const tVal = minT + ((maxT - minT) / (nTimeTicks - 1)) * j;
+        const tx = pLeft + (j / (nTimeTicks - 1)) * pWidth;
+        const relTime = tVal - minT;
+        ctx.fillText(relTime.toFixed(1) + 's', tx, pTop + pHeight + 5);
+      }
+
+      if (data.length === 0) return;
+
+      const getX = (t) => pLeft + ((t - minT) / (maxT - minT)) * pWidth;
+      const getY = (val) => pTop + pHeight - ((val - minVal) / (maxVal - minVal)) * pHeight;
+      const getOutY = (val) => {
+        return pTop + pHeight - ((val - rightMin) / (rightMax - rightMin)) * pHeight;
+      };
+
+      // Draw Setpoint
+      ctx.beginPath();
+      ctx.strokeStyle = colorSP;
+      ctx.lineWidth = 1.2;
+      ctx.setLineDash([3, 3]);
+      for (let i = 0; i < data.length; i++) {
+        const px = getX(data[i].time);
+        const py = getY(data[i].setpoint);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Draw Controller Output step representation
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(168, 85, 247, 0.4)';
+      ctx.lineWidth = 1;
+      for (let i = 0; i < data.length; i++) {
+        const px = getX(data[i].time);
+        const py = getOutY(data[i].output);
+        if (i === 0) ctx.moveTo(px, py);
+        else {
+          ctx.lineTo(px, getOutY(data[i - 1].output));
+          ctx.lineTo(px, py);
+        }
+      }
+      ctx.stroke();
+
+      // Draw Actual
+      ctx.beginPath();
+      ctx.strokeStyle = colorPV;
+      ctx.lineWidth = 1.8;
+      for (let i = 0; i < data.length; i++) {
+        const px = getX(data[i].time);
+        const py = getY(data[i].actual);
+        if (i === 0) ctx.moveTo(px, py);
+        else ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+
+    // MATH EQUATIONS MATHS PANEL WRITER
+    function updateMathPanels() {
+      const posActive = state.processState === 'POSITIONING' || state.processState === 'EXITING';
+      const posSP = posActive ? state.posSetpoint : 0;
+      const posPV = posActive ? state.pos : 0;
+      const posErr = posActive ? (posSP - posPV) : 0;
+      
+      // Position math
+      const posMathPanel = document.getElementById('panel-math-pos');
+      document.getElementById('lbl-math-pos-mode').textContent = state.posControlMode;
+      
+      if (state.posControlMode === 'PID') {
+        posMathPanel.innerHTML = `
+          <div><span class="text-slate-500 font-bold">e[k] = SP - PV:</span><br/><span class="pl-2 block text-slate-400">${posSP.toFixed(2)} - ${posPV.toFixed(2)} = <span class="text-white">${posErr.toFixed(2)}</span></span></div>
+          <div><span class="text-slate-500 font-bold">P[k] = Kp · e[k]:</span><br/><span class="pl-2 block text-slate-400">${state.posPid.kp} · ${posErr.toFixed(2)} = <span class="text-amber-300">${state.posPValue.toFixed(2)}</span></span></div>
+          <div><span class="text-slate-500 font-bold">I[k] = I[k-1] + (Ki · e[k] · Δt):</span><br/><span class="pl-2 block text-slate-400">${(state.posIValue - (state.posPid.ki * posErr * 0.05)).toFixed(2)} + (${state.posPid.ki} · ${posErr.toFixed(2)} · 0.05) = <span class="text-teal-300">${state.posIValue.toFixed(2)}</span></span></div>
+          <div><span class="text-slate-500 font-bold">D[k] = Kd · (e[k] - e[k-1]) / Δt:</span><br/><span class="pl-2 block text-slate-400">${state.posPid.kd} · (${posErr.toFixed(2)} - ${state.posPrevError.toFixed(2)}) / 0.05 = <span class="text-fuchsia-300">${state.posDValue.toFixed(2)}</span></span></div>
+          <div class="pt-1 border-t border-slate-900 font-bold">
+            <span class="text-slate-500">U[k] = P[k] + I[k] + D[k]:</span><br/>
+            <span class="pl-2 block text-emerald-400 text-[10px]">${state.posPValue.toFixed(1)} + ${state.posIValue.toFixed(1)} + ${state.posDValue.toFixed(1)} = ${state.posOutputRaw.toFixed(1)} V → <span class="text-white">${state.posOutput.toFixed(1)}%</span> ${state.posWindupActive && posActive ? '<span class="text-red-500 font-bold uppercase text-[9px] ml-1">AW actiu</span>' : ''}</span>
+          </div>`;
+      } else if (state.posControlMode === 'HYSTERESIS') {
+        posMathPanel.innerHTML = `
+          <div><span class="text-slate-500 font-bold">Marge Histeresi (H):</span> <span class="text-white">±${state.posHysteresis} mm</span></div>
+          <div><span class="text-slate-500 font-bold">Error Actual e[k]:</span> <span class="text-white">${posErr.toFixed(2)} mm</span></div>
+          <div class="bg-slate-950 p-1 rounded text-[9.5px] text-slate-400 space-y-0.5 my-1">
+            <div class="${posErr > state.posHysteresis ? 'text-emerald-300 font-bold' : ''}">- Si e[k] &gt; ${state.posHysteresis} mm → U = +100% (Endavant)</div>
+            <div class="${posErr < -state.posHysteresis ? 'text-rose-300 font-bold' : ''}">- Si e[k] &lt; -${state.posHysteresis} mm → U = -100% (Enrere)</div>
+            <div class="${Math.abs(posErr) <= state.posHysteresis ? 'text-teal-300 font-bold' : ''}">- Si |e[k]| ≤ ${state.posHysteresis} mm → U = 0% (Banda Morta)</div>
+          </div>
+          <div class="pt-1 border-t border-slate-900 font-bold">
+            <span class="text-slate-500">U[k] evaluat:</span> <span class="text-emerald-400">${state.posOutput.toFixed(0)}%</span>
+          </div>`;
+      } else {
+        posMathPanel.innerHTML = `
+          <div><span class="text-slate-500 font-bold">Control Pur On-Off:</span> <span class="text-rose-400 text-[9px] font-bold">RISC DE CHATTERING</span></div>
+          <div><span class="text-slate-500 font-bold">Error Actual e[k]:</span> <span class="text-white">${posErr.toFixed(2)} mm</span></div>
+          <div class="bg-slate-950 p-1 rounded text-[9.5px] text-slate-400 space-y-0.5 my-1">
+            <div class="${posErr > 0.5 ? 'text-emerald-300 font-bold' : ''}">- Si e[k] &gt; 0.5 mm → U = 100%</div>
+            <div class="${posErr < -0.5 ? 'text-rose-300 font-bold' : ''}">- Si e[k] &lt; -0.5 mm → U = -100%</div>
+            <div class="${Math.abs(posErr) <= 0.5 ? 'text-teal-300 font-bold' : ''}">- Si |e[k]| ≤ 0.5 mm → U = 0%</div>
+          </div>
+          <div class="pt-1 border-t border-slate-900 font-bold">
+            <span class="text-slate-500">U[k] evaluat:</span> <span class="text-emerald-400">${state.posOutput.toFixed(0)}%</span>
+          </div>`;
+      }
+
+      // RPM maths
+      const rpmActive = ['ACCELERATING', 'MIXING', 'DECELERATING'].includes(state.processState);
+      const rpmSP = rpmActive ? state.rpmSetpoint : 0;
+      const rpmPV = rpmActive ? state.rpm : 0;
+      const rpmErr = rpmActive ? (rpmSP - rpmPV) : 0;
+
+      const rpmMathPanel = document.getElementById('panel-math-rpm');
+      document.getElementById('lbl-math-rpm-mode').textContent = state.rpmControlMode;
+
+      if (state.rpmControlMode === 'PID') {
+        rpmMathPanel.innerHTML = `
+          <div><span class="text-slate-500 font-bold">e[k] = SP - PV:</span><br/><span class="pl-2 block text-slate-400">${rpmSP.toFixed(1)} - ${rpmPV.toFixed(0)} = <span class="text-white">${rpmErr.toFixed(1)}</span></span></div>
+          <div><span class="text-slate-500 font-bold">FF[k] = (SP / 3000) · 100:</span><br/><span class="pl-2 block text-slate-400">(${rpmSP.toFixed(0)} / 3000) · 100 = <span class="text-sky-300">${state.rpmFeedforward.toFixed(1)}%</span></span></div>
+          <div><span class="text-slate-500 font-bold">P[k] = Kp · e[k]:</span><br/><span class="pl-2 block text-slate-400">${state.rpmPid.kp} · ${rpmErr.toFixed(1)} = <span class="text-amber-300">${state.rpmPValue.toFixed(1)}%</span></span></div>
+          <div><span class="text-slate-500 font-bold">I[k] = I[k-1] + (Ki · e[k] · Δt):</span><br/><span class="pl-2 block text-slate-400">${(state.rpmIValue - (state.rpmPid.ki * rpmErr * 0.05)).toFixed(1)} + (${state.rpmPid.ki} · ${rpmErr.toFixed(1)} · 0.05) = <span class="text-teal-300">${state.rpmIValue.toFixed(1)}%</span></span></div>
+          <div><span class="text-slate-500 font-bold">D[k] = Kd · (e[k] - e[k-1]) / Δt:</span><br/><span class="pl-2 block text-slate-400">${state.rpmPid.kd} · (${rpmErr.toFixed(1)} - ${state.rpmPrevError.toFixed(1)}) / 0.05 = <span class="text-fuchsia-300">${state.rpmDValue.toFixed(1)}%</span></span></div>
+          <div class="pt-1 border-t border-slate-900 font-bold">
+            <span class="text-slate-500">U[k] = FF + P + I + D:</span><br/>
+            <span class="pl-2 block text-emerald-400 text-[10px]">${state.rpmFeedforward.toFixed(1)}% + ${state.rpmPValue.toFixed(1)}% + ${state.rpmIValue.toFixed(1)}% + ${state.rpmDValue.toFixed(1)}% = ${state.rpmOutputRaw.toFixed(1)}% → <span class="text-white">${state.rpmOutput.toFixed(1)}%</span> ${state.rpmWindupActive && rpmActive ? '<span class="text-red-500 font-bold uppercase text-[9px] ml-1">AW actiu</span>' : ''}</span>
+          </div>`;
+      } else if (state.rpmControlMode === 'HYSTERESIS') {
+        rpmMathPanel.innerHTML = `
+          <div><span class="text-slate-500 font-bold">Banda Histeresi (H):</span> <span class="text-white">±${state.rpmHysteresis} RPM</span></div>
+          <div><span class="text-slate-500 font-bold">Error Actual e[k]:</span> <span class="text-white">${rpmErr.toFixed(1)} RPM</span></div>
+          <div class="bg-slate-950 p-1 rounded text-[9.5px] text-slate-400 space-y-0.5 my-1">
+            <div class="${rpmErr > state.rpmHysteresis ? 'text-emerald-300 font-bold' : ''}">- Si e[k] &gt; ${state.rpmHysteresis} RPM → U = 100% (Motor ON)</div>
+            <div class="${rpmErr < -state.rpmHysteresis ? 'text-rose-300 font-bold' : ''}">- Si e[k] &lt; -${state.rpmHysteresis} RPM → U = 0% (Motor OFF)</div>
+            <div class="${Math.abs(rpmErr) <= state.rpmHysteresis ? 'text-teal-300 font-bold' : ''}">- Altre cas → Manté estat anterior (Memòria de Commutació)</div>
+          </div>
+          <div class="pt-1 border-t border-slate-900 font-bold">
+            <span class="text-slate-500">U[k] actual:</span> <span class="text-emerald-400">${state.rpmOutput.toFixed(0)}%</span>
+          </div>`;
+      } else {
+        rpmMathPanel.innerHTML = `
+          <div><span class="text-slate-500 font-bold">Control Pur On-Off:</span> <span class="text-rose-400 text-[9px] font-bold">BATEGA TOTAL/NUL</span></div>
+          <div><span class="text-slate-500 font-bold">Error Actual e[k]:</span> <span class="text-white">${rpmErr.toFixed(1)} RPM</span></div>
+          <div class="bg-slate-950 p-1 rounded text-[9.5px] text-slate-400 space-y-0.5 my-1">
+            <div class="${rpmErr > 1 ? 'text-emerald-300 font-bold' : ''}">- Si e[k] &gt; 1 RPM → U = 100%</div>
+            <div class="${rpmErr <= 1 ? 'text-rose-300 font-bold' : ''}">- Si e[k] ≤ 1 RPM → U = 0%</div>
+          </div>
+          <div class="pt-1 border-t border-slate-900 font-bold">
+            <span class="text-slate-500">U[k] actual:</span> <span class="text-emerald-400">${state.rpmOutput.toFixed(0)}%</span>
+          </div>`;
+      }
+
+      // Encoders panel text
+      document.getElementById('lbl-pulses-pos').textContent = `${Math.round(state.posPulses)} pulses`;
+      document.getElementById('lbl-pulses-rpm').textContent = `${Math.round(state.rpmPulses)} pulses`;
+      document.getElementById('lbl-rpm-under').textContent = `Velocitat: ${state.rpm.toFixed(1)} RPM`;
+    }
+
+    // MAIN BIND UPDATE INTERFACES
+    function updateUIElements() {
+      // Process logical state
+      document.getElementById('process-state').textContent = state.processState;
+
+      // Bottom control bar values
+      document.getElementById('txt-pos-out').textContent = `${state.posOutput.toFixed(1)}%`;
+      document.getElementById('bar-pos-out').style.left = state.posOutput < 0 ? `${50 + (state.posOutput / 2)}%` : '50%';
+      document.getElementById('bar-pos-out').style.width = `${Math.abs(state.posOutput) / 2}%`;
+
+      document.getElementById('txt-rpm-out').textContent = `${state.rpmOutput.toFixed(1)}%`;
+      document.getElementById('bar-rpm-out').style.width = `${Math.max(0, state.rpmOutput)}%`;
+
+      // Study guide and manuals sync
+      updateAWButtons();
+      drawConveyorPlant();
+      updateMathPanels();
+      renderPlotters();
+    }
+
+    // EXPORT HARVESTED DATA SERIES TO CSV FILE
+    function downloadCsv() {
+      if (posData.length === 0 && rpmData.length === 0) {
+        addLog("[SISTEMA] No hi ha dades per descarregar encara.");
+        return;
+      }
+
+      let csv = "\uFEFF"; // UTF-8 BOM
+      csv += "Temps Pos (s);Posicio (mm);Consigna Posicio (mm);Temps RPM (s);Velocitat (RPM);Consigna Velocitat (RPM)\n";
+
+      const maxLen = Math.max(posData.length, rpmData.length);
+      for (let i = 0; i < maxLen; i++) {
+        const p = posData[i] || { time: '', actual: '', setpoint: '' };
+        const r = rpmData[i] || { time: '', actual: '', setpoint: '' };
+
+        csv += `${String(p.time).replace('.', ',')};` +
+               `${String(p.actual).replace('.', ',')};` +
+               `${String(p.setpoint).replace('.', ',')};` +
+               `${String(r.time).replace('.', ',')};` +
+               `${String(r.actual).replace('.', ',')};` +
+               `${String(r.setpoint).replace('.', ',')}\n`;
+      }
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Simulador_Centrifugadora_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      addLog("[SISTEMA] S'ha generat i descarregat l'historial CSV.");
+    }
+
+    // WINDOW RESPONSIVE SIZE OBSERVER
+    window.addEventListener('resize', () => {
+      renderPlotters();
+    });
+
+    // CLOCK TICK INTERVAL PROCESS LOOP
+    setInterval(() => {
+      if (state.running) {
+        tick(50);
+      }
+    }, 50);
+
+    // --- GESTIÓ DE MODALS D'AJUDA I TELEMETRIA (Estil Forn industrial) ---
+    function toggleTelemetryWindow() {
+      const modal = document.getElementById("telemetry-modal");
+      if (!modal) return;
+      
+      const isHidden = modal.classList.contains("hidden");
+      if (isHidden) {
+        // Omplir inputs abans d'obrir
+        const keys = ['posicio', 'velocitat', 'polsos_cinta', 'polsos_gir', 'sortida_pos', 'sortida_rpm'];
+        keys.forEach(k => {
+          const cfg = state.telemetry[k];
+          if (!cfg) return;
+          
+          const enableCb = document.getElementById(`tel-enable-${k}`);
+          const absIn = document.getElementById(`tel-abs-${k}`);
+          const intIn = document.getElementById(`tel-int-${k}`);
+          
+          if (enableCb) enableCb.checked = cfg.enabled;
+          if (absIn) absIn.value = cfg.deadbandAbs;
+          if (intIn) intIn.value = cfg.minInterval;
+        });
+        modal.classList.remove("hidden");
+      } else {
+        modal.classList.add("hidden");
+      }
+    }
+
+    function guardarConfigTelemetry() {
+      const keys = ['posicio', 'velocitat', 'polsos_cinta', 'polsos_gir', 'sortida_pos', 'sortida_rpm'];
+      keys.forEach(k => {
+        const cfg = state.telemetry[k];
+        if (!cfg) return;
+        
+        const enableCb = document.getElementById(`tel-enable-${k}`);
+        const absIn = document.getElementById(`tel-abs-${k}`);
+        const intIn = document.getElementById(`tel-int-${k}`);
+        
+        if (enableCb) cfg.enabled = enableCb.checked;
+        if (absIn) cfg.deadbandAbs = parseFloat(absIn.value) || 0;
+        if (intIn) cfg.minInterval = parseInt(intIn.value) || 0;
+      });
+      
+      addLog("[SCADA] Filtres i intervals de telemetria (deadbands i intervals) guardats correctament.");
+      toggleTelemetryWindow();
+    }
+
+    function toggleHelpWindow() {
+      const modal = document.getElementById("help-modal");
+      if (modal) {
+        modal.classList.toggle("hidden");
+      }
+    }
+
+    // FIRST EXECUTION INITIALIZATION
+    window.onload = () => {
+      // populate select modes
+      document.getElementById('pos-mode').value = state.posControlMode;
+      document.getElementById('rpm-mode').value = state.rpmControlMode;
+
+      // populate timing configs inputs
+      document.getElementById('inp-waitTime').value = state.waitTime;
+      document.getElementById('inp-accelTime').value = state.accelTime;
+      document.getElementById('inp-mixTime').value = state.mixTime;
+      document.getElementById('inp-decelTime').value = state.decelTime;
+
+      renderSliders();
+      updateUIElements();
+      renderLogs();
+    };
+  </script>
+
+  <!-- Modal de Configuració de Telemetria -->
+  <div id="telemetry-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl p-5 max-w-lg w-full shadow-2xl space-y-4 m-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="p-1.5 bg-emerald-600/20 text-emerald-400 rounded-lg border border-emerald-500/25">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-slate-100 uppercase tracking-tight">Filtres de Telemetria (MQTT)</h3>
+            <span class="text-[9px] text-slate-500 block">Configurar deadbands i throttling per a les variables de la cinta i motor</span>
+          </div>
+        </div>
+        <button onclick="toggleTelemetryWindow()" class="text-slate-400 hover:text-slate-150 text-xs p-1 bg-slate-800/60 hover:bg-slate-800 rounded-lg transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="space-y-3 max-h-[350px] overflow-y-auto pr-1">
+        <div class="grid grid-cols-1 gap-2.5">
+          <!-- Variable: Posició -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800/50 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-300 uppercase font-mono">Posició Cinta (mm)</span>
+              <div class="flex items-center gap-1">
+                <input type="checkbox" id="tel-enable-posicio" checked class="w-3.5 h-3.5 accent-emerald-500 rounded border-slate-750 bg-slate-900 pointer-events-auto">
+                <label for="tel-enable-posicio" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Canvi Absolut (mm)</label>
+                <input type="number" step="0.1" id="tel-abs-posicio" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
+              </div>
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Interval Mínim (ms)</label>
+                <input type="number" step="50" id="tel-int-posicio" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Variable: Velocitat -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800/50 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-300 uppercase font-mono">Velocitat (RPM)</span>
+              <div class="flex items-center gap-1">
+                <input type="checkbox" id="tel-enable-velocitat" checked class="w-3.5 h-3.5 accent-emerald-500 rounded border-slate-750 bg-slate-900 pointer-events-auto">
+                <label for="tel-enable-velocitat" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Canvi Absolut (RPM)</label>
+                <input type="number" step="1" id="tel-abs-velocitat" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
+              </div>
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Interval Mínim (ms)</label>
+                <input type="number" step="50" id="tel-int-velocitat" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Variable: Polsos Cinta -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800/50 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-300 uppercase font-mono">Polsos Cinta (polsos)</span>
+              <div class="flex items-center gap-1">
+                <input type="checkbox" id="tel-enable-polsos_cinta" checked class="w-3.5 h-3.5 accent-emerald-500 rounded border-slate-750 bg-slate-900 pointer-events-auto">
+                <label for="tel-enable-polsos_cinta" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Canvi Absolut</label>
+                <input type="number" step="1" id="tel-abs-polsos_cinta" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
+              </div>
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Interval Mínim (ms)</label>
+                <input type="number" step="50" id="tel-int-polsos_cinta" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Variable: Polsos Gir -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800/50 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-300 uppercase font-mono">Polsos Gir Motor (polsos)</span>
+              <div class="flex items-center gap-1">
+                <input type="checkbox" id="tel-enable-polsos_gir" checked class="w-3.5 h-3.5 accent-emerald-500 rounded border-slate-750 bg-slate-900 pointer-events-auto">
+                <label for="tel-enable-polsos_gir" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Canvi Absolut</label>
+                <input type="number" step="1" id="tel-abs-polsos_gir" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
+              </div>
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Interval Mínim (ms)</label>
+                <input type="number" step="50" id="tel-int-polsos_gir" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Variable: Sortida Pos -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800/50 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-300 uppercase font-mono">Control Motor Cinta (%)</span>
+              <div class="flex items-center gap-1">
+                <input type="checkbox" id="tel-enable-sortida_pos" checked class="w-3.5 h-3.5 accent-emerald-500 rounded border-slate-750 bg-slate-900 pointer-events-auto">
+                <label for="tel-enable-sortida_pos" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Canvi Absolut (%)</label>
+                <input type="number" step="0.5" id="tel-abs-sortida_pos" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
+              </div>
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Interval Mínim (ms)</label>
+                <input type="number" step="50" id="tel-int-sortida_pos" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
+              </div>
+            </div>
+          </div>
+
+          <!-- Variable: Sortida Rpm -->
+          <div class="bg-slate-950/60 p-2.5 border border-slate-800/50 rounded-xl space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-bold text-slate-300 uppercase font-mono">Control Centrífuga (%)</span>
+              <div class="flex items-center gap-1">
+                <input type="checkbox" id="tel-enable-sortida_rpm" checked class="w-3.5 h-3.5 accent-emerald-500 rounded border-slate-750 bg-slate-900 pointer-events-auto">
+                <label for="tel-enable-sortida_rpm" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Canvi Absolut (%)</label>
+                <input type="number" step="0.5" id="tel-abs-sortida_rpm" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
+              </div>
+              <div>
+                <label class="text-[8px] text-slate-500 uppercase font-bold block">Interval Mínim (ms)</label>
+                <input type="number" step="50" id="tel-int-sortida_rpm" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end gap-2 border-t border-slate-800 pt-3">
+        <button onclick="guardarConfigTelemetry()" class="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold shadow transition-colors">Guardar i Aplicar</button>
+        <button onclick="toggleTelemetryWindow()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-lg text-xs font-semibold border border-slate-700/60 transition-colors">Tancar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal d'Ajuda MQTT -->
+  <div id="help-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 backdrop-blur-sm hidden text-slate-300">
+    <div class="bg-slate-900 border border-slate-700/80 rounded-2xl p-5 max-w-4xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto m-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <div class="p-1.5 bg-emerald-600/20 text-emerald-400 rounded-lg border border-emerald-500/25">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-black text-slate-100 uppercase tracking-tight">Manual MQTT de la Centrifugadora</h3>
+            <span class="text-[9px] text-slate-500 block">Llista de tòpics, adreces, direcció de telemetria i ordres de control</span>
+          </div>
+        </div>
+        <button onclick="toggleHelpWindow()" class="text-slate-400 hover:text-slate-150 text-xs p-1 bg-slate-800 hover:bg-slate-750 rounded-lg transition-all">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="text-[10px] space-y-4 font-mono">
+        <p class="text-slate-400 font-sans">El sistema MQTT utilitza un <span class="text-emerald-400 font-bold">tòpic base</span> configurable (ex: <code class="bg-slate-950 px-1 py-0.5 rounded text-slate-300">iesebre/centrifugadora/</code>). Es publica el paquet sencer en format JSON, així com valors individuals filtrats per deadband i timestamps Unix de recepció sota la carpeta <code class="bg-slate-950 px-1 py-0.5 rounded text-slate-400">ts/</code> con el sufix <code class="bg-slate-950 px-1 py-0.5 rounded text-slate-400">-ts</code> per facilitar la persistència històrica en SCADA i bases de dades.</p>
+
+        <div class="border border-slate-800 rounded-xl overflow-hidden bg-slate-950/40">
+          <table class="w-full text-left border-collapse">
+            <thead class="bg-slate-800 text-[9px] text-slate-400 uppercase tracking-wider">
+              <tr>
+                <th class="px-3 py-2 border-b border-slate-700 font-bold">Tòpic</th>
+                <th class="px-3 py-2 border-b border-slate-700 font-bold">Direcció</th>
+                <th class="px-3 py-2 border-b border-slate-700 text-center font-bold">Rang / Format</th>
+                <th class="px-3 py-2 border-b border-slate-700 font-bold">Descripció</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/40">
+              <tr class="hover:bg-slate-900/30">
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-900 px-1 rounded text-[8px] uppercase">PUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">JSON object</td>
+                <td class="px-3 py-2 text-slate-400">Paquet complet de dades de posició, velocitat, polsos i sortides de motor</td>
+              </tr>
+              <tr class="hover:bg-slate-900/30">
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/posicio</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-900 px-1 rounded text-[8px] uppercase">PUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">0.0 – 600.0 (mm)</td>
+                <td class="px-3 py-2 text-slate-400">Posició real de la cinta lineal en mm (filtrada per deadband)</td>
+              </tr>
+              <tr class="hover:bg-slate-900/30">
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/velocitat</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">0 – 3000 (RPM)</td>
+                <td class="px-3 py-2 text-slate-400">Velocitat de gir real del tambor giratori (filtrada per deadband)</td>
+              </tr>
+              <tr class="hover:bg-slate-900/30">
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/polsos_cinta</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">0+ integer</td>
+                <td class="px-3 py-2 text-slate-400">Lectura acumulada del encoder lineal de la cinta</td>
+              </tr>
+              <tr class="hover:bg-slate-900/30">
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/polsos_gir</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">0+ integer</td>
+                <td class="px-3 py-2 text-slate-400">Lectura acumulada del encoder rotatiu del motor giratori</td>
+              </tr>
+              <tr class="hover:bg-slate-900/30">
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/sortida_pos</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">-100.0 – 100.0 (%)</td>
+                <td class="px-3 py-2 text-slate-400">Senyal de control d'actuació de posició de la cinta</td>
+              </tr>
+              <tr class="hover:bg-slate-900/30">
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/sortida_rpm</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">0.0 – 100.0 (%)</td>
+                <td class="px-3 py-2 text-slate-400">Senyal de control d'actuació de velocitat de la centrifugadora</td>
+              </tr>
+              <tr class="hover:bg-slate-900/30">
+                <td class="px-3 py-2 text-amber-400 font-bold">ts/telemetria/*-ts</td>
+                <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-900 px-1 rounded text-[8px] uppercase">PUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">Unix ms</td>
+                <td class="px-3 py-2 text-slate-400">Timestamp Unix (en ms) de l'instant de publicació d'aquella variable</td>
+              </tr>
+              <tr class="hover:bg-slate-900/30">
+                <td class="px-3 py-2 text-sky-400 font-bold">cmd</td>
+                <td class="px-3 py-2"><span class="bg-sky-950 text-sky-500 border border-sky-800 px-1 rounded text-[8px] uppercase">SUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500">JSON object</td>
+                <td class="px-3 py-2 text-slate-400">Accepta ordres generals: <code class="text-slate-300">{"action": "start" | "pause" | "reset"}</code> o configuració de variables: <code class="text-slate-300">{"config": {"mixPos": 350, "posInertia": 8}}</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-end border-t border-slate-800 pt-3">
+        <button onclick="toggleHelpWindow()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-750 text-slate-300 rounded-lg text-xs font-semibold border border-slate-700/60 shadow transition-colors">Tancar i Tornar</button>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
