@@ -87,26 +87,28 @@
       <div class="lg:col-span-7 flex flex-col gap-4">
         <!-- MQTT PANEL -->
         <div class="bg-slate-900/95 rounded-xl p-3 border border-slate-800 shadow-lg">
-          <div class="flex items-center justify-between border-b border-slate-850 pb-2 mb-2">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-850 pb-2 mb-2 gap-2">
             <div class="flex items-center gap-2">
               <span id="mqtt-dot" class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
               <span class="text-[10px] font-black text-slate-200 uppercase tracking-wider">MQTT SCADA CONTROL (Bi-direccional)</span>
             </div>
-            <div class="flex items-center gap-1.5">
+            <div class="flex flex-wrap items-center gap-1.5">
               <button id="btn-mqtt-config" onclick="toggleTelemetryWindow()" class="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[9px] font-bold rounded transition flex items-center gap-1">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 Telemetria
               </button>
               <button id="btn-mqtt-help" onclick="toggleHelpWindow()" class="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[9px] font-bold rounded transition flex items-center gap-1">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <svg class="w-3.5 h-3.5 text-amber-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 Ajuda
               </button>
-              <span id="mqtt-status" class="text-[9px] font-bold text-rose-400">DESCONNECTAT</span>
+              <div class="flex items-center gap-1 bg-slate-950 px-1.5 py-0.5 rounded border border-slate-800">
+                <span id="mqtt-status" class="text-[9px] font-bold text-rose-400">DESCONNECTAT</span>
+              </div>
               <button id="btn-mqtt-toggle" onclick="toggleMqtt()" class="px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-300 border border-emerald-800 transition">Connectar</button>
             </div>
           </div>
@@ -118,6 +120,16 @@
             <div class="sm:w-1/3">
               <label class="text-[8.5px] font-bold text-slate-500 block mb-0.5">TÒPIC BASE:</label>
               <input type="text" id="mqtt-topic" value="iesebre/centrifugadora/" class="w-full bg-slate-950 border border-slate-800 text-slate-300 rounded px-2 py-1 text-[10px] outline-none focus:border-emerald-500 font-mono">
+            </div>
+          </div>
+          <div class="flex flex-col sm:flex-row gap-2 mt-2">
+            <div class="sm:w-1/2">
+              <label class="text-[8.5px] font-bold text-slate-500 block mb-0.5">USUARI MQTT (OPCIONAL):</label>
+              <input type="text" id="mqtt-user" value="" placeholder="Sense usuari" class="w-full bg-slate-950 border border-slate-800 text-slate-300 rounded px-2 py-1 text-[10px] outline-none focus:border-emerald-500 font-mono">
+            </div>
+            <div class="sm:w-1/2">
+              <label class="text-[8.5px] font-bold text-slate-500 block mb-0.5">CONTRASENYA MQTT (OPCIONAL):</label>
+              <input type="password" id="mqtt-pass" value="" placeholder="Sense contrasenya" class="w-full bg-slate-950 border border-slate-800 text-slate-300 rounded px-2 py-1 text-[10px] outline-none focus:border-emerald-500 font-mono">
             </div>
           </div>
           <div class="text-[8.5px] text-slate-400 mt-1.5 flex justify-between">
@@ -146,16 +158,26 @@
                     <option value="PID" class="bg-slate-900 text-slate-100">PID</option>
                     <option value="ON_OFF" class="bg-slate-900 text-slate-100">On-Off</option>
                     <option value="HYSTERESIS" class="bg-slate-900 text-slate-100">Histeresi</option>
+                    <option value="MQTT" class="bg-slate-900 text-slate-100">MQTT</option>
                   </select>
                 </div>
 
-                <div class="grid grid-cols-2 gap-x-4 gap-y-3 pt-6 mb-2">
+                <div class="grid grid-cols-2 gap-x-4 gap-y-3 pt-6 mb-2" id="grid-pos-params">
                   <div id="sld-pos-sp" class="flex flex-col gap-0.5"></div>
                   <div id="sld-pos-kp" class="flex flex-col gap-0.5"></div>
                   <div id="sld-pos-inertia" class="flex flex-col gap-0.5"></div>
                   <div id="sld-pos-ki" class="flex flex-col gap-0.5"></div>
                   <div id="sld-pos-pert" class="flex flex-col gap-0.5"></div>
                   <div id="sld-pos-kd" class="flex flex-col gap-0.5"></div>
+                </div>
+
+                <!-- Position Manual MQTT -->
+                <div id="group-posMQTT" class="w-full flex flex-col bg-slate-900/50 rounded-xl border border-slate-700/40 p-2 transition-all opacity-20 pointer-events-none mt-2 hidden">
+                   <div class="flex justify-between items-center w-full mb-1">
+                      <span class="text-[10px] font-bold text-purple-400">Control Motor (Manual MQTT)</span>
+                      <span id="val-posExternal" class="text-[10px] font-mono text-purple-300 bg-purple-950/80 px-1 py-0.5 rounded font-bold">0%</span>
+                   </div>
+                   <input id="slider-posExternal" type="range" min="-100" max="100" step="1" value="0" class="w-full h-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-purple-500" oninput="updateParam('posExternal', this.value)">
                 </div>
 
                 <div class="mt-2 pt-2 border-t border-slate-800">
@@ -179,16 +201,26 @@
                     <option value="PID" class="bg-slate-900 text-slate-100">PID</option>
                     <option value="ON_OFF" class="bg-slate-900 text-slate-100">On-Off</option>
                     <option value="HYSTERESIS" class="bg-slate-900 text-slate-100">Histeresi</option>
+                    <option value="MQTT" class="bg-slate-900 text-slate-100">MQTT</option>
                   </select>
                 </div>
 
-                <div class="grid grid-cols-2 gap-x-4 gap-y-3 pt-6 mb-2">
+                <div class="grid grid-cols-2 gap-x-4 gap-y-3 pt-6 mb-2" id="grid-rpm-params">
                   <div id="sld-rpm-sp" class="flex flex-col gap-0.5"></div>
                   <div id="sld-rpm-kp" class="flex flex-col gap-0.5"></div>
                   <div id="sld-rpm-inertia" class="flex flex-col gap-0.5"></div>
                   <div id="sld-rpm-ki" class="flex flex-col gap-0.5"></div>
                   <div id="sld-rpm-pert" class="flex flex-col gap-0.5"></div>
                   <div id="sld-rpm-kd" class="flex flex-col gap-0.5"></div>
+                </div>
+
+                <!-- RPM Manual MQTT -->
+                <div id="group-rpmMQTT" class="w-full flex flex-col bg-slate-900/50 rounded-xl border border-slate-700/40 p-2 transition-all opacity-20 pointer-events-none mt-2 hidden">
+                   <div class="flex justify-between items-center w-full mb-1">
+                      <span class="text-[10px] font-bold text-purple-400">Control Motor (Manual MQTT)</span>
+                      <span id="val-rpmExternal" class="text-[10px] font-mono text-purple-300 bg-purple-950/80 px-1 py-0.5 rounded font-bold">0%</span>
+                   </div>
+                   <input id="slider-rpmExternal" type="range" min="-100" max="100" step="1" value="0" class="w-full h-1.5 bg-slate-700 rounded-lg outline-none cursor-pointer accent-purple-500" oninput="updateParam('rpmExternal', this.value)">
                 </div>
 
                 <div class="mt-2 pt-2 border-t border-slate-800">
@@ -373,31 +405,6 @@
           </div>
         </div>
 
-        <!-- STUDY AND STUDY MANUAL -->
-        <div class="bg-slate-900/90 rounded-xl p-3 border border-slate-800 shadow-md">
-          <button onclick="toggleGuia()" class="w-full flex justify-between items-center text-xs font-bold text-slate-300 uppercase tracking-wider text-left hover:text-white transition">
-            <span class="flex items-center gap-1.5">
-              <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
-              Guia d'Estudi i Pràctica SCADA
-            </span>
-            <span id="txt-guia-toggle" class="text-[10px] text-slate-500">Amagar</span>
-          </button>
-          <div id="panel-guia" class="mt-2.5 text-[9.5px] text-slate-300 space-y-2.5 leading-relaxed border-t border-slate-850 pt-2.5 transition-all">
-            <div>
-              <h4 class="font-bold text-emerald-400 uppercase text-[10px]">1. PID (Proporcional, Integral, Derivatiu)</h4>
-              <p class="text-slate-400">És el control de bucle tancat més precís. El motor rep una senyal proporcional al valor d'error, evitant frenades o arrencades brusques i eliminant l'error estàtic mitjançant l'acció integral.</p>
-              <p class="mt-1 text-[8.5px] italic text-slate-500">- Prova d'establir <code class="text-slate-300 font-mono">Kp=10</code>, <code class="text-slate-300 font-mono">Ki=0.1</code> i <code class="text-slate-300 font-mono">Kd=4</code> per veure com la cinta es posiciona ràpid i estable.</p>
-            </div>
-            <div>
-              <h4 class="font-bold text-amber-400 uppercase text-[10px]">2. On-Off (Tot o Res)</h4>
-              <p class="text-slate-400">Aplica 100% de potència si l'error és positiu o -100% si és negatiu. Com que la cinta té inèrcia física, el sistema comença a oscil·lar frenèticament al voltant del punt consigna (chattering). Això destrueix els relés físics en la indústria real.</p>
-            </div>
-            <div>
-              <h4 class="font-bold text-sky-400 uppercase text-[10px]">3. Control amb Histeresi</h4>
-              <p class="text-slate-400">Introdueix una finestra de tolerància (banda morta). Quan el can de pintura arriba a la banda, el motor s'apaga totalment (0%) en lloc de canviar de sentit. D'aquesta manera s'allarga la vida útil de la mecànica.</p>
-            </div>
-          </div>
-        </div>
 
         <!-- CONSOLE SERIAL MONITOR -->
         <div class="bg-slate-900/90 rounded-xl p-3 border border-slate-800 shadow-md flex flex-col flex-grow min-h-[250px]">
@@ -541,12 +548,16 @@
       mixRpm: 1000,
       mixProgress: 0,
 
+      globalTime: 0,
       posTime: 0,
       rpmTime: 0,
 
       posPulses: 0,
       rpmPulses: 0,
       vfdSpeed: 0,
+
+      posExternal: 0,
+      rpmExternal: 0,
 
       running: false,
       posControlMode: 'PID',
@@ -561,8 +572,8 @@
         velocitat: { enabled: true, deadbandAbs: 10.0, minInterval: 250, lastValue: null, lastPublishTime: 0 },
         polsos_cinta: { enabled: true, deadbandAbs: 1.0, minInterval: 500, lastValue: null, lastPublishTime: 0 },
         polsos_gir: { enabled: true, deadbandAbs: 10.0, minInterval: 500, lastValue: null, lastPublishTime: 0 },
-        sortida_pos: { enabled: true, deadbandAbs: 1.0, minInterval: 250, lastValue: null, lastPublishTime: 0 },
-        sortida_rpm: { enabled: true, deadbandAbs: 1.0, minInterval: 250, lastValue: null, lastPublishTime: 0 }
+        control_pos: { enabled: true, deadbandAbs: 1.0, minInterval: 250, lastValue: null, lastPublishTime: 0 },
+        control_rpm: { enabled: true, deadbandAbs: 1.0, minInterval: 250, lastValue: null, lastPublishTime: 0 }
       }
     };
 
@@ -576,8 +587,6 @@
     let rpmData = [];
     let lastPosTime = -1;
     let lastRpmTime = -1;
-
-    let guiaOberta = true;
 
     // SCADA SLIDER DEFINE PARAMETERS
     const sliderConfigs = [
@@ -701,6 +710,16 @@
       }
     }
 
+    function updateParam(key, value) {
+      const numVal = Number(value);
+      state[key] = numVal;
+      const el = document.getElementById(`val-${key}`);
+      if (el) el.textContent = numVal.toFixed(0) + '%';
+      
+      const slider = document.getElementById(`slider-${key}`);
+      if (slider && slider.value !== value) slider.value = value;
+    }
+
     function renderSliders() {
       // Modify position slider list based on selected control mode
       const posKpCfg = sliderConfigs.find(c => c.id === 'sld-pos-kp');
@@ -741,6 +760,31 @@
           el.innerHTML = generateSliderMarkup(cfg);
         }
       });
+
+      // Handle MQTT mode visibility
+      const posGrid = document.getElementById('grid-pos-params');
+      const posMqtt = document.getElementById('group-posMQTT');
+      if (posGrid && posMqtt) {
+        if (state.posControlMode === 'MQTT') {
+          posGrid.classList.add('opacity-20', 'pointer-events-none');
+          posMqtt.classList.remove('hidden', 'opacity-20', 'pointer-events-none');
+        } else {
+          posGrid.classList.remove('opacity-20', 'pointer-events-none');
+          posMqtt.classList.add('hidden');
+        }
+      }
+
+      const rpmGrid = document.getElementById('grid-rpm-params');
+      const rpmMqtt = document.getElementById('group-rpmMQTT');
+      if (rpmGrid && rpmMqtt) {
+        if (state.rpmControlMode === 'MQTT') {
+          rpmGrid.classList.add('opacity-20', 'pointer-events-none');
+          rpmMqtt.classList.remove('hidden', 'opacity-20', 'pointer-events-none');
+        } else {
+          rpmGrid.classList.remove('opacity-20', 'pointer-events-none');
+          rpmMqtt.classList.add('hidden');
+        }
+      }
     }
 
     // STATE LOGGING PANEL
@@ -777,19 +821,6 @@
     function clearLogs() {
       state.logs = [];
       renderLogs();
-    }
-
-    function toggleGuia() {
-      guiaOberta = !guiaOberta;
-      const panel = document.getElementById('panel-guia');
-      const txt = document.getElementById('txt-guia-toggle');
-      if (guiaOberta) {
-        panel.classList.remove('hidden');
-        txt.textContent = 'Amagar';
-      } else {
-        panel.classList.add('hidden');
-        txt.textContent = 'Mostrar';
-      }
     }
 
     // PRESET LOADER
@@ -887,10 +918,21 @@
         // Connect
         const broker = document.getElementById('mqtt-broker').value;
         const baseTopic = document.getElementById('mqtt-topic').value;
+        const user = document.getElementById('mqtt-user').value.trim();
+        const pass = document.getElementById('mqtt-pass').value;
+
+        const connectOptions = {};
+        if (user) {
+          connectOptions.username = user;
+        }
+        if (pass) {
+          connectOptions.password = pass;
+        }
+
         addLog(`[MQTT] Intentant connectar a: ${broker}...`);
         
         try {
-          mqttClient = mqtt.connect(broker);
+          mqttClient = mqtt.connect(broker, connectOptions);
           mqttEnabled = true;
 
           mqttClient.on('connect', () => {
@@ -901,39 +943,60 @@
             document.getElementById('btn-mqtt-toggle').textContent = "Desconnectar";
             addLog("[MQTT] Connectat amb èxit!");
 
-            const subTopic = baseTopic.endsWith('/') ? baseTopic + 'cmd' : baseTopic + '/cmd';
-            mqttClient.subscribe(subTopic, (err) => {
-              if (!err) {
-                addLog(`[MQTT] Subscrit al tòpic de comandes: ${subTopic}`);
-              }
+            const cleanTopic = baseTopic.endsWith('/') ? baseTopic : baseTopic + '/';
+            const subTopicCmd = cleanTopic + 'cmd';
+            
+            mqttClient.subscribe(subTopicCmd, (err) => {
+              if (!err) addLog(`[MQTT] Subscrit a: ${subTopicCmd}`);
             });
+            
+            // Subscripcions individuals
+            mqttClient.subscribe(cleanTopic + 'telemetria/control_pos/set');
+            mqttClient.subscribe(cleanTopic + 'telemetria/control_rpm/set');
           });
 
           mqttClient.on('message', (topic, message) => {
             try {
-              const payload = JSON.parse(message.toString());
-              addLog(`[MQTT REBUT] Comanda SCADA: ${message.toString()}`);
-              
-              if (payload.action) {
-                if (payload.action === 'start' || payload.action === 'run') {
-                  if (!state.running) toggleRunning();
-                } else if (payload.action === 'pause' || payload.action === 'stop') {
-                  if (state.running) toggleRunning();
-                } else if (payload.action === 'reset') {
-                  resetSim();
+              const cleanTopic = baseTopic.endsWith('/') ? baseTopic : baseTopic + '/';
+              const subtopic = topic.replace(cleanTopic, '');
+              const payloadStr = message.toString().trim();
+
+              if (subtopic === 'cmd') {
+                const payload = JSON.parse(payloadStr);
+                addLog(`[MQTT REBUT] Comanda JSON: ${payloadStr}`);
+                
+                if (payload.action) {
+                  if (payload.action === 'start' || payload.action === 'run') {
+                    if (!state.running) toggleRunning();
+                  } else if (payload.action === 'pause' || payload.action === 'stop') {
+                    if (state.running) toggleRunning();
+                  } else if (payload.action === 'reset') {
+                    resetSim();
+                  }
+                }
+
+                if (payload.config) {
+                  Object.keys(payload.config).forEach(key => {
+                    if (key in state) {
+                      setConfig(key, payload.config[key]);
+                    }
+                  });
+                  renderSliders();
+                }
+              } else if (subtopic === 'telemetria/control_pos/set') {
+                const val = parseFloat(payloadStr);
+                if (!isNaN(val)) {
+                  updateParam('posExternal', Math.min(100, Math.max(-100, val)));
+                }
+              } else if (subtopic === 'telemetria/control_rpm/set') {
+                const val = parseFloat(payloadStr);
+                if (!isNaN(val)) {
+                  updateParam('rpmExternal', Math.min(100, Math.max(-100, val)));
                 }
               }
 
-              if (payload.config) {
-                Object.keys(payload.config).forEach(key => {
-                  if (key in state) {
-                    setConfig(key, payload.config[key]);
-                  }
-                });
-                renderSliders();
-              }
             } catch (e) {
-              addLog("[MQTT ERROR] Error en decodificar el missatge JSON.");
+              addLog(`[MQTT ERROR] Error processant missatge de ${topic}: ${e.message}`);
             }
           });
 
@@ -1000,11 +1063,11 @@
         
         try {
           // Publicar valor granular
-          mqttClient.publish(fullTopic, strVal, { qos: 0, retain: false });
+          mqttClient.publish(fullTopic, strVal, { qos: 0, retain: true });
           
           // Publicar el timestamp a ts/ amb sufix -ts per emmagatzematge de base de dades
           const tsTopic = cleanTopic + 'ts/telemetria/' + subtopic + '-ts';
-          mqttClient.publish(tsTopic, String(ara), { qos: 0, retain: false });
+          mqttClient.publish(tsTopic, String(ara), { qos: 0, retain: true });
           
           cfg.lastValue = valorActual;
           cfg.lastPublishTime = ara;
@@ -1029,12 +1092,12 @@
         control_rpm: state.rpmControlMode,
         consigna_pos: state.mixPos,
         consigna_rpm: state.mixRpm,
-        sortida_pos: Number(state.posOutput.toFixed(2)),
-        sortida_rpm: Number(state.rpmOutput.toFixed(2))
+        control_pos: Number(state.posOutput.toFixed(2)),
+        control_rpm: Number(state.rpmOutput.toFixed(2))
       };
 
       try {
-        mqttClient.publish(pubTopic, JSON.stringify(payload), { qos: 0, retain: false });
+        mqttClient.publish(pubTopic, JSON.stringify(payload), { qos: 0, retain: true });
       } catch (e) {
         // quiet
       }
@@ -1044,8 +1107,8 @@
       checkAndPublishTelemetryProperty('velocitat', Number(state.rpm.toFixed(1)), 'velocitat');
       checkAndPublishTelemetryProperty('polsos_cinta', Math.round(state.posPulses), 'polsos_cinta');
       checkAndPublishTelemetryProperty('polsos_gir', Math.round(state.rpmPulses), 'polsos_gir');
-      checkAndPublishTelemetryProperty('sortida_pos', Number(state.posOutput.toFixed(2)), 'sortida_pos');
-      checkAndPublishTelemetryProperty('sortida_rpm', Number(state.rpmOutput.toFixed(2)), 'sortida_rpm');
+      checkAndPublishTelemetryProperty('control_pos', Number(state.posOutput.toFixed(2)), 'control_pos');
+      checkAndPublishTelemetryProperty('control_rpm', Number(state.rpmOutput.toFixed(2)), 'control_rpm');
     }
 
      // SIMULATION TIME STEPS PHYSICS INTEGRATION
@@ -1106,7 +1169,7 @@
       lastPosTime = -1;
       lastRpmTime = -1;
       
-      state.logs = ['[SISTEMA] Simulació reiniciada (física i procés). Configuració mantinguda.'];
+      state.logs = [`[SISTEMA] Simulació reiniciada (física i procés). Estratègies mantingudes (Posició: ${state.posControlMode}, Velocitat: ${state.rpmControlMode}).` ];
       addLog('Reset de simulació completat.');
 
       // restablir la representació visual del botó
@@ -1134,6 +1197,8 @@
       if (inpDecel) inpDecel.value = state.decelTime;
 
       renderSliders();
+      updateParam('posExternal', 0);
+      updateParam('rpmExternal', 0);
       updateUIElements();
       renderLogs();
     }
@@ -1154,15 +1219,12 @@
         }
       } else if (state.processState === 'POSITIONING') {
         const error = state.posSetpoint - state.pos;
-        const tolerance = state.posControlMode === 'PID' ? 0.8 : (state.posControlMode === 'HYSTERESIS' ? Math.max(1.0, state.posHysteresis) : 6.0);
+        const tolerance = state.posControlMode === 'PID' ? 1.0 : (state.posControlMode === 'HYSTERESIS' ? Math.max(1.0, state.posHysteresis) : 6.0);
         const velocityTol = state.posControlMode === 'PID' ? 1.5 : 12.0;
         
         if (Math.abs(error) < tolerance && Math.abs(state.posVelocity) < velocityTol) {
           state.timer += dt;
           if (state.timer > state.waitTime) {
-            state.pos = state.posSetpoint;
-            state.posVelocity = 0;
-            state.posPulses = state.posSetpoint;
             state.processState = 'ACCELERATING';
             state.timer = 0;
             addLog(`Fase d'Acceleració (control ${state.rpmControlMode} rotacional) activada.`);
@@ -1227,6 +1289,7 @@
       }
 
       // Time variables increment
+      state.globalTime += dt;
       if (state.processState === 'POSITIONING' || state.processState === 'EXITING') {
         state.posTime += dt;
       }
@@ -1244,20 +1307,39 @@
 
         if (state.rpmControlMode === 'PID') {
           const p = state.rpmPid.kp * error;
-          state.rpmIntegral += error * dt;
-          if (state.rpmPid.antiWindup) {
-            const clamped = Math.max(-50, Math.min(50, state.rpmIntegral));
-            if (clamped !== state.rpmIntegral) state.rpmWindupActive = true;
-            state.rpmIntegral = clamped;
+          
+          let de_dt = 0;
+          let d = 0;
+          if (state.rpmLastError !== null && state.rpmLastError !== undefined) {
+            de_dt = (error - state.rpmLastError) / dt;
+            d = state.rpmPid.kd * de_dt;
           }
-          const i = state.rpmPid.ki * state.rpmIntegral;
-          const d = state.rpmPid.kd * ((error - state.rpmLastError) / dt);
+
+          const iTermPrevia = state.rpmPid.ki * state.rpmIntegral * dt;
+          const uPrevia = p + iTermPrevia + d;
+
+          const isSaturatedSota = uPrevia < 0;
+          const isSaturatedDalt = uPrevia > 100;
+
+          const windupSota = isSaturatedSota && error < 0;
+          const windupDalt = isSaturatedDalt && error > 0;
+          const sotaAW = windupSota || windupDalt;
+
+          state.rpmWindupActive = state.rpmPid.antiWindup && sotaAW;
+
+          if (state.rpmPid.ki === 0) {
+            state.rpmIntegral = 0;
+          } else if (!state.rpmWindupActive) {
+            state.rpmIntegral += error;
+          }
+
+          const i = state.rpmPid.ki * state.rpmIntegral * dt;
           uRaw = p + i + d;
 
           state.rpmPValue = p;
           state.rpmIValue = i;
           state.rpmDValue = d;
-          state.rpmPrevError = state.rpmLastError;
+          state.rpmPrevError = state.rpmLastError || 0;
         } else if (state.rpmControlMode === 'ON_OFF') {
           uRaw = error > 1 ? 100 : 0;
         } else if (state.rpmControlMode === 'HYSTERESIS') {
@@ -1268,6 +1350,8 @@
           } else {
             uRaw = state.rpmOutput;
           }
+        } else if (state.rpmControlMode === 'MQTT') {
+          uRaw = state.rpmExternal;
         }
 
         state.rpmLastError = error;
@@ -1293,24 +1377,45 @@
 
         if (state.posControlMode === 'PID') {
           const p = state.posPid.kp * error;
-          state.posIntegral += error * dt;
-          if (state.posPid.antiWindup) {
-            const clamped = Math.max(-100, Math.min(100, state.posIntegral));
-            if (clamped !== state.posIntegral) state.posWindupActive = true;
-            state.posIntegral = clamped;
+          
+          let de_dt = 0;
+          let d = 0;
+          if (state.posLastError !== null && state.posLastError !== undefined) {
+            de_dt = (error - state.posLastError) / dt;
+            d = state.posPid.kd * de_dt;
           }
-          const i = state.posPid.ki * state.posIntegral;
-          const d = state.posPid.kd * ((error - state.posLastError) / dt);
+
+          const iTermPrevia = state.posPid.ki * state.posIntegral * dt;
+          const uPrevia = p + iTermPrevia + d;
+
+          const isSaturatedSota = uPrevia < -100;
+          const isSaturatedDalt = uPrevia > 100;
+
+          const windupSota = isSaturatedSota && error < 0;
+          const windupDalt = isSaturatedDalt && error > 0;
+          const sotaAW = windupSota || windupDalt;
+
+          state.posWindupActive = state.posPid.antiWindup && sotaAW;
+
+          if (state.posPid.ki === 0) {
+            state.posIntegral = 0;
+          } else if (!state.posWindupActive) {
+            state.posIntegral += error;
+          }
+
+          const i = state.posPid.ki * state.posIntegral * dt;
           uRaw = p + i + d;
 
           state.posPValue = p;
           state.posIValue = i;
           state.posDValue = d;
-          state.posPrevError = state.posLastError;
+          state.posPrevError = state.posLastError || 0;
         } else if (state.posControlMode === 'ON_OFF') {
           uRaw = error > 0.5 ? 100 : (error < -0.5 ? -100 : 0);
         } else if (state.posControlMode === 'HYSTERESIS') {
           uRaw = error > state.posHysteresis ? 100 : (error < -state.posHysteresis ? -100 : 0);
+        } else if (state.posControlMode === 'MQTT') {
+          uRaw = state.posExternal;
         }
 
         state.posLastError = error;
@@ -1368,16 +1473,36 @@
         }
 
         // Belt Lineal Physics
-        const force = (state.posOutput * 50) + state.posPerturbation;
+        let force = (state.posOutput * 50) + state.posPerturbation;
         const posInertia = Math.max(0.5, state.posInertia);
+        
+        // Static and Kinetic Friction
+        if (Math.abs(state.posVelocity) < 0.1) {
+          const staticFriction = 55; // Force threshold to start moving (requires > 1.1% output)
+          if (Math.abs(force) < staticFriction) {
+            force = 0;
+            state.posVelocity = 0;
+          } else {
+            force = force > 0 ? force - staticFriction : force + staticFriction;
+          }
+        } else {
+          const kineticFriction = 45; // Friction while moving
+          if (force > 0) force = Math.max(0, force - kineticFriction);
+          else if (force < 0) force = Math.min(0, force + kineticFriction);
+        }
+
         const posAcceleration = force / posInertia;
+        const isPhysicallyClamped = (state.processState === 'POSITIONING' && state.timer > state.waitTime * 0.95) ||
+                          ['ACCELERATING', 'MIXING', 'DECELERATING'].includes(state.processState);
 
         if (state.processState === 'IDLE') {
           state.posVelocity = 0;
           state.pos = 0;
+        } else if (isPhysicallyClamped) {
+          state.posVelocity = 0;
         } else {
           state.posVelocity += posAcceleration * sub_dt;
-          state.posVelocity *= 0.98; // 2% damping coefficient
+          state.posVelocity *= 0.96; // Viscous damping
           state.posVelocity = Math.max(-400, Math.min(400, state.posVelocity));
           state.pos += state.posVelocity * sub_dt;
         }
@@ -1389,30 +1514,25 @@
 
       // Log/Chart sampling at 10Hz
       const now = performance.now();
-      if (state.processState === 'POSITIONING' || state.processState === 'EXITING') {
-        if (state.posTime > lastPosTime + 0.1 || state.posTime === 0) {
-          lastPosTime = state.posTime;
-          posData.push({
-            time: Number(state.posTime.toFixed(1)),
-            actual: Number(state.pos.toFixed(1)),
-            setpoint: Number(state.posSetpoint.toFixed(1)),
-            output: Number(state.posOutput.toFixed(1))
-          });
-          if (posData.length > 500) posData.shift();
-        }
-      }
+      if (state.globalTime > lastPosTime + 0.1 || state.globalTime === 0) {
+        lastPosTime = state.globalTime;
+        lastRpmTime = state.globalTime;
+        
+        posData.push({
+          time: Number(state.globalTime.toFixed(1)),
+          actual: Number(state.pos.toFixed(1)),
+          setpoint: Number(state.processState === 'IDLE' ? state.pos : state.posSetpoint.toFixed(1)),
+          output: Number(state.posOutput.toFixed(1))
+        });
+        if (posData.length > 500) posData.shift();
 
-      if (['ACCELERATING', 'MIXING', 'DECELERATING'].includes(state.processState)) {
-        if (state.rpmTime > lastRpmTime + 0.1 || state.rpmTime === 0) {
-          lastRpmTime = state.rpmTime;
-          rpmData.push({
-            time: Number(state.rpmTime.toFixed(1)),
-            actual: Number(state.rpm.toFixed(0)),
-            setpoint: Number(state.rpmSetpoint.toFixed(0)),
-            output: Number(state.rpmOutput.toFixed(1))
-          });
-          if (rpmData.length > 500) rpmData.shift();
-        }
+        rpmData.push({
+          time: Number(state.globalTime.toFixed(1)),
+          actual: Number(state.rpm.toFixed(0)),
+          setpoint: Number(state.processState === 'IDLE' ? 0 : state.rpmSetpoint.toFixed(0)),
+          output: Number(state.rpmOutput.toFixed(1))
+        });
+        if (rpmData.length > 500) rpmData.shift();
       }
 
       // Keep MQTT transmission throttle at 2Hz
@@ -1700,7 +1820,7 @@
         posMathPanel.innerHTML = `
           <div><span class="text-slate-500 font-bold">e[k] = SP - PV:</span><br/><span class="pl-2 block text-slate-400">${posSP.toFixed(2)} - ${posPV.toFixed(2)} = <span class="text-white">${posErr.toFixed(2)}</span></span></div>
           <div><span class="text-slate-500 font-bold">P[k] = Kp · e[k]:</span><br/><span class="pl-2 block text-slate-400">${state.posPid.kp} · ${posErr.toFixed(2)} = <span class="text-amber-300">${state.posPValue.toFixed(2)}</span></span></div>
-          <div><span class="text-slate-500 font-bold">I[k] = I[k-1] + (Ki · e[k] · Δt):</span><br/><span class="pl-2 block text-slate-400">${(state.posIValue - (state.posPid.ki * posErr * 0.05)).toFixed(2)} + (${state.posPid.ki} · ${posErr.toFixed(2)} · 0.05) = <span class="text-teal-300">${state.posIValue.toFixed(2)}</span></span></div>
+          <div><span class="text-slate-500 font-bold">I[k] = I[k-1] + (Ki · e[k] · Δt):</span><br/><span class="pl-2 block text-slate-400">${state.posWindupActive ? state.posIValue.toFixed(2) : (state.posIValue - (state.posPid.ki * posErr * 0.05)).toFixed(2)} + ${state.posWindupActive ? '0 (AW Clamped)' : '(' + state.posPid.ki + ' · ' + posErr.toFixed(2) + ' · 0.05)'} = <span class="text-teal-300">${state.posIValue.toFixed(2)}</span></span></div>
           <div><span class="text-slate-500 font-bold">D[k] = Kd · (e[k] - e[k-1]) / Δt:</span><br/><span class="pl-2 block text-slate-400">${state.posPid.kd} · (${posErr.toFixed(2)} - ${state.posPrevError.toFixed(2)}) / 0.05 = <span class="text-fuchsia-300">${state.posDValue.toFixed(2)}</span></span></div>
           <div class="pt-1 border-t border-slate-900 font-bold">
             <span class="text-slate-500">U[k] = P[k] + I[k] + D[k]:</span><br/>
@@ -1717,6 +1837,16 @@
           </div>
           <div class="pt-1 border-t border-slate-900 font-bold">
             <span class="text-slate-500">U[k] evaluat:</span> <span class="text-emerald-400">${state.posOutput.toFixed(0)}%</span>
+          </div>`;
+      } else if (state.posControlMode === 'MQTT') {
+        posMathPanel.innerHTML = `
+          <div><span class="text-slate-500 font-bold">Control Manual / Extern (MQTT):</span></div>
+          <div><span class="text-slate-500 font-bold">Error Actual e[k]:</span> <span class="text-white">${posErr.toFixed(2)} mm</span></div>
+          <div class="bg-slate-950 p-1 rounded text-[9.5px] text-slate-400 space-y-0.5 my-1">
+            Rebut via MQTT al topic: <span class="text-purple-400">telemetria/control_pos/set</span>
+          </div>
+          <div class="pt-1 border-t border-slate-900 font-bold">
+            <span class="text-slate-500">U[k] aplicat directament:</span> <span class="text-purple-400">${state.posOutput.toFixed(0)}%</span>
           </div>`;
       } else {
         posMathPanel.innerHTML = `
@@ -1745,7 +1875,7 @@
         rpmMathPanel.innerHTML = `
           <div><span class="text-slate-500 font-bold">e[k] = SP - PV:</span><br/><span class="pl-2 block text-slate-400">${rpmSP.toFixed(1)} - ${rpmPV.toFixed(0)} = <span class="text-white">${rpmErr.toFixed(1)}</span></span></div>
           <div><span class="text-slate-500 font-bold">P[k] = Kp · e[k]:</span><br/><span class="pl-2 block text-slate-400">${state.rpmPid.kp} · ${rpmErr.toFixed(1)} = <span class="text-amber-300">${state.rpmPValue.toFixed(1)}%</span></span></div>
-          <div><span class="text-slate-500 font-bold">I[k] = I[k-1] + (Ki · e[k] · Δt):</span><br/><span class="pl-2 block text-slate-400">${(state.rpmIValue - (state.rpmPid.ki * rpmErr * 0.05)).toFixed(1)} + (${state.rpmPid.ki} · ${rpmErr.toFixed(1)} · 0.05) = <span class="text-teal-300">${state.rpmIValue.toFixed(1)}%</span></span></div>
+          <div><span class="text-slate-500 font-bold">I[k] = I[k-1] + (Ki · e[k] · Δt):</span><br/><span class="pl-2 block text-slate-400">${state.rpmWindupActive ? state.rpmIValue.toFixed(1) : (state.rpmIValue - (state.rpmPid.ki * rpmErr * 0.05)).toFixed(1)} + ${state.rpmWindupActive ? '0 (AW Clamped)' : '(' + state.rpmPid.ki + ' · ' + rpmErr.toFixed(1) + ' · 0.05)'} = <span class="text-teal-300">${state.rpmIValue.toFixed(1)}%</span></span></div>
           <div><span class="text-slate-500 font-bold">D[k] = Kd · (e[k] - e[k-1]) / Δt:</span><br/><span class="pl-2 block text-slate-400">${state.rpmPid.kd} · (${rpmErr.toFixed(1)} - ${state.rpmPrevError.toFixed(1)}) / 0.05 = <span class="text-fuchsia-300">${state.rpmDValue.toFixed(1)}%</span></span></div>
           <div class="pt-1 border-t border-slate-900 font-bold">
             <span class="text-slate-500">U[k] = P + I + D:</span><br/>
@@ -1762,6 +1892,16 @@
           </div>
           <div class="pt-1 border-t border-slate-900 font-bold">
             <span class="text-slate-500">U[k] actual:</span> <span class="text-emerald-400">${state.rpmOutput.toFixed(0)}%</span>
+          </div>`;
+      } else if (state.rpmControlMode === 'MQTT') {
+        rpmMathPanel.innerHTML = `
+          <div><span class="text-slate-500 font-bold">Control Manual / Extern (MQTT):</span></div>
+          <div><span class="text-slate-500 font-bold">Error Actual e[k]:</span> <span class="text-white">${rpmErr.toFixed(1)} RPM</span></div>
+          <div class="bg-slate-950 p-1 rounded text-[9.5px] text-slate-400 space-y-0.5 my-1">
+            Rebut via MQTT al topic: <span class="text-purple-400">telemetria/control_rpm/set</span>
+          </div>
+          <div class="pt-1 border-t border-slate-900 font-bold">
+            <span class="text-slate-500">U[k] aplicat directament:</span> <span class="text-purple-400">${state.rpmOutput.toFixed(0)}%</span>
           </div>`;
       } else {
         rpmMathPanel.innerHTML = `
@@ -1856,7 +1996,7 @@
       const isHidden = modal.classList.contains("hidden");
       if (isHidden) {
         // Omplir inputs abans d'obrir
-        const keys = ['posicio', 'velocitat', 'polsos_cinta', 'polsos_gir', 'sortida_pos', 'sortida_rpm'];
+        const keys = ['posicio', 'velocitat', 'polsos_cinta', 'polsos_gir', 'control_pos', 'control_rpm'];
         keys.forEach(k => {
           const cfg = state.telemetry[k];
           if (!cfg) return;
@@ -1876,7 +2016,7 @@
     }
 
     function guardarConfigTelemetry() {
-      const keys = ['posicio', 'velocitat', 'polsos_cinta', 'polsos_gir', 'sortida_pos', 'sortida_rpm'];
+      const keys = ['posicio', 'velocitat', 'polsos_cinta', 'polsos_gir', 'control_pos', 'control_rpm'];
       keys.forEach(k => {
         const cfg = state.telemetry[k];
         if (!cfg) return;
@@ -2032,18 +2172,18 @@
             <div class="flex items-center justify-between">
               <span class="text-[10px] font-bold text-slate-300 uppercase font-mono">Control Motor Cinta (%)</span>
               <div class="flex items-center gap-1">
-                <input type="checkbox" id="tel-enable-sortida_pos" checked class="w-3.5 h-3.5 accent-emerald-500 rounded border-slate-750 bg-slate-900 pointer-events-auto">
-                <label for="tel-enable-sortida_pos" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
+                <input type="checkbox" id="tel-enable-control_pos" checked class="w-3.5 h-3.5 accent-emerald-500 rounded border-slate-750 bg-slate-900 pointer-events-auto">
+                <label for="tel-enable-control_pos" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
               </div>
             </div>
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="text-[8px] text-slate-500 uppercase font-bold block">Canvi Absolut (%)</label>
-                <input type="number" step="0.5" id="tel-abs-sortida_pos" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
+                <input type="number" step="0.5" id="tel-abs-control_pos" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
               </div>
               <div>
                 <label class="text-[8px] text-slate-500 uppercase font-bold block">Interval Mínim (ms)</label>
-                <input type="number" step="50" id="tel-int-sortida_pos" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
+                <input type="number" step="50" id="tel-int-control_pos" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
               </div>
             </div>
           </div>
@@ -2053,18 +2193,18 @@
             <div class="flex items-center justify-between">
               <span class="text-[10px] font-bold text-slate-300 uppercase font-mono">Control Centrífuga (%)</span>
               <div class="flex items-center gap-1">
-                <input type="checkbox" id="tel-enable-sortida_rpm" checked class="w-3.5 h-3.5 accent-emerald-500 rounded border-slate-750 bg-slate-900 pointer-events-auto">
-                <label for="tel-enable-sortida_rpm" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
+                <input type="checkbox" id="tel-enable-control_rpm" checked class="w-3.5 h-3.5 accent-emerald-500 rounded border-slate-750 bg-slate-900 pointer-events-auto">
+                <label for="tel-enable-control_rpm" class="text-[9px] font-bold text-slate-400 uppercase">Actiu</label>
               </div>
             </div>
             <div class="grid grid-cols-2 gap-2">
               <div>
                 <label class="text-[8px] text-slate-500 uppercase font-bold block">Canvi Absolut (%)</label>
-                <input type="number" step="0.5" id="tel-abs-sortida_rpm" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
+                <input type="number" step="0.5" id="tel-abs-control_rpm" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
               </div>
               <div>
                 <label class="text-[8px] text-slate-500 uppercase font-bold block">Interval Mínim (ms)</label>
-                <input type="number" step="50" id="tel-int-sortida_rpm" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
+                <input type="number" step="50" id="tel-int-control_rpm" class="w-full bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 text-[9.5px] text-slate-300 font-mono outline-none focus:border-emerald-500">
               </div>
             </div>
           </div>
@@ -2145,13 +2285,13 @@
                 <td class="px-3 py-2 text-slate-400">Lectura acumulada del encoder rotatiu del motor giratori</td>
               </tr>
               <tr class="hover:bg-slate-900/30">
-                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/sortida_pos</td>
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/control_pos</td>
                 <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
                 <td class="px-3 py-2 text-center text-slate-500">-100.0 – 100.0 (%)</td>
                 <td class="px-3 py-2 text-slate-400">Senyal de control d'actuació de posició de la cinta</td>
               </tr>
               <tr class="hover:bg-slate-900/30">
-                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/sortida_rpm</td>
+                <td class="px-3 py-2 text-emerald-400 font-bold">telemetria/control_rpm</td>
                 <td class="px-3 py-2"><span class="bg-emerald-950 text-emerald-500 border border-emerald-800 px-1 rounded text-[8px] uppercase">PUB</span></td>
                 <td class="px-3 py-2 text-center text-slate-500">0.0 – 100.0 (%)</td>
                 <td class="px-3 py-2 text-slate-400">Senyal de control d'actuació de velocitat de la centrifugadora</td>
@@ -2163,13 +2303,73 @@
                 <td class="px-3 py-2 text-slate-400">Timestamp Unix (en ms) de l'instant de publicació d'aquella variable</td>
               </tr>
               <tr class="hover:bg-slate-900/30">
-                <td class="px-3 py-2 text-sky-400 font-bold">cmd</td>
+                <td class="px-3 py-2 text-sky-400 font-bold font-mono">telemetria/control_pos/set</td>
+                <td class="px-3 py-2"><span class="bg-sky-950 text-sky-400 border border-sky-800 px-1 rounded text-[8px] uppercase font-bold">SUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500 font-mono">float</td>
+                <td class="px-3 py-2 text-slate-350">
+                  Aplica un senyal de control manual extern (de -100.0 a 100.0%) al motor de posició quan el mode d'estratègia està en <span class="text-emerald-400 font-bold">MQTT</span>.
+                </td>
+              </tr>
+              <tr class="hover:bg-slate-900/30">
+                <td class="px-3 py-2 text-sky-400 font-bold font-mono">telemetria/control_rpm/set</td>
+                <td class="px-3 py-2"><span class="bg-sky-950 text-sky-400 border border-sky-800 px-1 rounded text-[8px] uppercase font-bold">SUB</span></td>
+                <td class="px-3 py-2 text-center text-slate-500 font-mono">float</td>
+                <td class="px-3 py-2 text-slate-350">
+                  Aplica un senyal de control manual extern (de 0.0 a 100.0%) al variador de velocitat quan el mode d'estratègia està en <span class="text-emerald-400 font-bold">MQTT</span>.
+                </td>
+              </tr>
+              <tr class="hover:bg-slate-900/30">
+                <td class="px-3 py-2 text-sky-400 font-bold font-mono">cmd</td>
                 <td class="px-3 py-2"><span class="bg-sky-950 text-sky-500 border border-sky-800 px-1 rounded text-[8px] uppercase">SUB</span></td>
                 <td class="px-3 py-2 text-center text-slate-500">JSON object</td>
-                <td class="px-3 py-2 text-slate-400">Accepta ordres generals: <code class="text-slate-300">{"action": "start" | "pause" | "reset"}</code> o configuració de variables: <code class="text-slate-300">{"config": {"mixPos": 350, "posInertia": 8}}</code></td>
+                <td class="px-3 py-2 text-slate-350 space-y-1.5">
+                  <div>Accepta ordres de control de cicle i configuració de paràmetres de simulació en format JSON:</div>
+                  <div class="bg-slate-950 p-2.5 rounded text-[9.5px] text-slate-300 font-mono space-y-1.5 border border-slate-900">
+                    <div><span class="text-emerald-400 font-bold">Ordres generals de cicle (action):</span></div>
+                    <div class="pl-3 text-slate-400 space-y-0.5">
+                      • <code class="text-slate-200">{"action": "start"}</code> / <code class="text-slate-200">"run"</code> : Activa el procés / cicle<br/>
+                      • <code class="text-slate-200">{"action": "pause"}</code> / <code class="text-slate-200">"stop"</code> : Atura temporalment el procés<br/>
+                      • <code class="text-slate-200">{"action": "reset"}</code> : Reinicia les variables físiques i d'estat
+                    </div>
+                    <div class="text-amber-400 font-bold mt-2.5">Paràmetres dinàmics (config):</div>
+                    <div class="pl-3 text-slate-400 space-y-0.5">
+                      • <code class="text-slate-200">"mixPos"</code> : Consigna de posició de la cinta (0 – 600)<br/>
+                      • <code class="text-slate-200">"mixRpm"</code> : Velocitat de consigna de centrifugat (0 – 3000)<br/>
+                      • <code class="text-slate-200">"posControlMode"</code> / <code class="text-slate-200">"rpmControlMode"</code> : <code class="text-slate-300">"PID" | "ON_OFF" | "HYSTERESIS" | "MQTT"</code><br/>
+                      • <code class="text-slate-200">"posHysteresis"</code> / <code class="text-slate-200">"rpmHysteresis"</code> : Finestra d'histeresi<br/>
+                      • <code class="text-slate-200">"posInertia"</code> / <code class="text-slate-200">"rpmInertia"</code> : Inèrcies físiques (1 – 20)<br/>
+                      • <code class="text-slate-200">"posPerturbation"</code> / <code class="text-slate-200">"rpmPerturbation"</code> : Pertorbacions físiques (0 – 100)<br/>
+                      • <code class="text-slate-200">"accelTime"</code> / <code class="text-slate-200">"mixTime"</code> / <code class="text-slate-200">"decelTime"</code> / <code class="text-slate-200">"waitTime"</code> : Valors de temporització del cicle (s)
+                    </div>
+                    <div class="text-slate-500 border-t border-slate-900 pt-1.5 mt-1.5 text-[8.5px]">Exemple d'ús: <code class="text-slate-300">{"action": "start", "config": {"mixPos": 450, "posControlMode": "PID"}}</code></div>
+                  </div>
+                </td>
               </tr>
             </tbody>
           </table>
+        </div>
+
+        <!-- GUIA D'ESTUDI I PRÀCTICA SCADA DINS DE L'AJUDA -->
+        <div class="border border-slate-800/80 bg-slate-950/40 rounded-xl p-4 space-y-3.5">
+          <h3 class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5 border-b border-slate-800/60 pb-2">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
+            Guia d'Estudi i Pràctica SCADA
+          </h3>
+          <div class="text-[10px] space-y-3 leading-relaxed font-sans">
+            <div>
+              <h4 class="font-bold text-emerald-400 uppercase text-[10.5px]">1. PID (Proporcional, Integral, Derivatiu)</h4>
+              <p class="text-slate-350">És el control de bucle tancat més precís. El motor rep una senyal proporcional al valor d'error, evitant frenades o arrencades brusques i eliminant l'error estàtic mitjançant l'acció integral.</p>
+              <p class="mt-1 text-[9px] italic text-slate-500">- Prova d'establir <code class="text-slate-300 font-mono">Kp=10</code>, <code class="text-slate-300 font-mono">Ki=0.1</code> i <code class="text-slate-300 font-mono">Kd=4</code> per veure com la cinta es posiciona ràpid i estable.</p>
+            </div>
+            <div class="border-t border-slate-800/40 pt-2.5">
+              <h4 class="font-bold text-amber-400 uppercase text-[10.5px]">2. On-Off (Tot o Res)</h4>
+              <p class="text-slate-350">Aplica 100% de potència si l'error és positiu o -100% si és negatiu. Com que la cinta té inèrcia física, el sistema comença a oscil·lar frenèticament al voltant del punt consigna (chattering). Això destrueix els relés físics en la indústria real.</p>
+            </div>
+            <div class="border-t border-slate-800/40 pt-2.5">
+              <h4 class="font-bold text-sky-400 uppercase text-[10.5px]">3. Control amb Histeresi</h4>
+              <p class="text-slate-350">Introdueix una finestra de tolerància (banda morta). Quan el can de pintura arriba a la banda, el motor s'apaga totalment (0%) en lloc de canviar de sentit. D'aquesta manera s'allarga la vida útil de la mecànica.</p>
+            </div>
+          </div>
         </div>
       </div>
 
