@@ -1,0 +1,2172 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mesura i regulació - Conceptes.</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --neutral-50: #f8fafc;
+      --neutral-100: #f1f5f9;
+      --neutral-200: #e2e8f0;
+      --neutral-300: #cbd5e1;
+      --neutral-400: #94a3b8;
+      --neutral-500: #64748b;
+      --neutral-600: #475569;
+      --neutral-700: #334155;
+      --neutral-800: #1e293b;
+      --neutral-900: #0f172a;
+      
+      --emerald-50: #ecfdf5;
+      --emerald-100: #d1fae5;
+      --emerald-200: #a7f3d0;
+      --emerald-600: #059669;
+      --emerald-700: #047857;
+      --amber-50: #fffbeb;
+      --amber-100: #fef3c7;
+      --amber-500: #f59e0b;
+      --amber-600: #d97706;
+      --purple-50: #faf5ff;
+      --purple-100: #f3e8ff;
+      --purple-200: #e9d5ff;
+      --purple-600: #9333ea;
+      --purple-700: #7e22ce;
+      --red-50: #fef2f2;
+      --red-100: #fee2e2;
+      --red-600: #dc2626;
+      --orange-500: #f97316;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background-color: var(--neutral-50);
+      color: var(--neutral-900);
+      line-height: 1.5;
+      padding: 1.5rem;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    header {
+      background-color: #ffffff;
+      padding: 1.5rem;
+      border-radius: 1rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      border: 1px solid var(--neutral-200);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    header .logo {
+      color: var(--primary);
+    }
+
+    header h1 {
+      font-size: 1.5rem;
+      font-weight: 800;
+      letter-spacing: -0.025em;
+      color: var(--neutral-900);
+    }
+
+    header p {
+      font-size: 0.825rem;
+      font-weight: 600;
+      color: var(--neutral-600);
+    }
+
+    /* Controls Grid */
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1.25rem;
+    }
+
+    .card {
+      background-color: #ffffff;
+      border-radius: 1rem;
+      border: 1px solid var(--neutral-200);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .card-title {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--neutral-800);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--neutral-100);
+      padding-bottom: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .card-title svg {
+      color: var(--primary);
+    }
+
+    /* Form Styles */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .form-label-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--neutral-700);
+    }
+
+    .badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.1rem 0.4rem;
+      border-radius: 0.25rem;
+    }
+
+    .badge-primary {
+      background-color: var(--neutral-100);
+      color: var(--neutral-800);
+    }
+
+    .badge-accent {
+      background-color: var(--purple-50);
+      color: var(--purple-700);
+    }
+
+    .badge-orange {
+      background-color: var(--amber-50);
+      color: var(--amber-600);
+    }
+
+    select, input[type="text"] {
+      width: 100%;
+      background-color: var(--neutral-50);
+      border: 1px solid var(--neutral-300);
+      color: var(--neutral-900);
+      font-size: 0.75rem;
+      padding: 0.4rem 0.6rem;
+      border-radius: 0.5rem;
+      outline: none;
+      transition: border-color 0.15s;
+    }
+
+    select:focus {
+      border-color: var(--primary);
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 6px;
+      background: var(--neutral-200);
+      border-radius: 4px;
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      transition: transform 0.1s;
+    }
+
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+    }
+
+    input[type="range"].accent-purple::-webkit-slider-thumb {
+      background: var(--purple-600);
+    }
+
+    input[type="range"].accent-orange::-webkit-slider-thumb {
+      background: var(--orange-500);
+    }
+
+    /* Segmented Control Buttons */
+    .segmented-control {
+      display: flex;
+      background-color: var(--neutral-100);
+      padding: 0.25rem;
+      border-radius: 0.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .segmented-btn {
+      flex: 1;
+      border: none;
+      background: none;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.35rem;
+      border-radius: 0.375rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      color: var(--neutral-600);
+    }
+
+    .segmented-btn.active {
+      background-color: #ffffff;
+      color: var(--neutral-900);
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    }
+
+    /* Grid layout for buttons */
+    .button-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0.25rem;
+    }
+
+    .grid-btn {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.35rem 0.1rem;
+      border: 1px solid var(--neutral-200);
+      border-radius: 0.375rem;
+      background-color: #ffffff;
+      color: var(--neutral-700);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .grid-btn:hover {
+      background-color: var(--neutral-50);
+    }
+
+    .grid-btn.active {
+      background-color: var(--primary);
+      color: #ffffff;
+      border-color: var(--primary);
+    }
+
+    .checkbox-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+      cursor: pointer;
+    }
+
+    input[type="checkbox"] {
+      width: 0.9rem;
+      height: 0.9rem;
+      border-radius: 0.25rem;
+      border: 1px solid var(--neutral-300);
+      cursor: pointer;
+    }
+
+    /* Control Bar */
+    .control-bar {
+      background-color: #ffffff;
+      border-radius: 1rem;
+      border: 1px solid var(--neutral-200);
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .status-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    .ping-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--amber-500);
+    }
+
+    .ping-indicator.active {
+      background-color: var(--emerald-600);
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(5, 150, 105, 0.7); }
+      70% { transform: scale(1); box-shadow: 0 0 0 4px rgba(5, 150, 105, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(5, 150, 105, 0); }
+    }
+
+    .btn {
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 0.45rem 0.85rem;
+      border-radius: 0.5rem;
+      border: 1px solid var(--neutral-300);
+      background-color: #ffffff;
+      color: var(--neutral-700);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: all 0.15s;
+    }
+
+    .btn:hover {
+      background-color: var(--neutral-50);
+    }
+
+    .btn-primary {
+      background-color: var(--emerald-600);
+      color: #ffffff;
+      border-color: var(--emerald-700);
+    }
+
+    .btn-primary:hover {
+      background-color: var(--emerald-700);
+    }
+
+    .btn-primary.paused {
+      background-color: var(--amber-500);
+      border-color: var(--amber-600);
+    }
+
+    .btn-primary.paused:hover {
+      background-color: var(--amber-600);
+    }
+
+    .btn-purple {
+      border-color: var(--purple-200);
+      color: var(--purple-700);
+      background-color: var(--purple-50);
+    }
+
+    .btn-purple:hover {
+      background-color: var(--purple-100);
+    }
+
+    .btn-purple.active {
+      background-color: var(--purple-600);
+      color: #ffffff;
+      border-color: var(--purple-700);
+    }
+
+    .action-group {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    /* Math Panel */
+    .calculations-panel {
+      background-color: var(--neutral-100);
+      border-radius: 1rem;
+      border: 1px solid var(--neutral-200);
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .calc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--neutral-200);
+      padding-bottom: 0.5rem;
+    }
+
+    .calc-header h4 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--neutral-700);
+    }
+
+    .calc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem;
+    }
+
+    .calc-box {
+      background-color: #ffffff;
+      padding: 0.75rem;
+      border-radius: 0.75rem;
+      border: 1px solid var(--neutral-200);
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .calc-box-title {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--neutral-500);
+    }
+
+    .calc-box-formula {
+      font-size: 0.65rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--neutral-400);
+    }
+
+    .calc-box-value {
+      font-size: 0.8rem;
+      font-weight: 700;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--neutral-900);
+      margin-top: 0.15rem;
+    }
+
+    /* Chart Area */
+    .chart-card {
+      background-color: #ffffff;
+      border-radius: 1rem;
+      border: 1px solid var(--neutral-200);
+      padding: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 1rem;
+      gap: 1rem;
+    }
+
+    .chart-header-left h3 {
+      font-size: 0.875rem;
+      font-weight: 700;
+      color: var(--neutral-800);
+    }
+
+    .chart-header-left p {
+      font-size: 0.75rem;
+      color: var(--neutral-500);
+    }
+
+    .chart-container {
+      position: relative;
+      width: 100%;
+      height: 380px;
+    }
+
+    svg#sim-chart {
+      width: 100%;
+      height: 100%;
+      display: block;
+      user-select: none;
+    }
+
+    /* Tooltip */
+    .chart-tooltip {
+      position: absolute;
+      background-color: rgba(255, 255, 255, 0.96);
+      border: 1px solid var(--neutral-200);
+      border-radius: 0.75rem;
+      padding: 0.75rem;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      font-size: 0.75rem;
+      pointer-events: none;
+      z-index: 50;
+      display: none;
+      backdrop-filter: blur(4px);
+    }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (min-width: 640px) {
+      .kpi-grid {
+        grid-template-columns: repeat(5, 1fr);
+      }
+    }
+
+    .kpi-grid {
+      gap: 0.75rem;
+    }
+
+    .kpi-card {
+      background-color: #ffffff;
+      border-radius: 0.75rem;
+      border: 1px solid var(--neutral-200);
+      padding: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-height: 80px;
+    }
+
+    .kpi-title {
+      font-size: 0.65rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: var(--neutral-500);
+      letter-spacing: 0.025em;
+    }
+
+    .kpi-value {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 1.125rem;
+      font-weight: 700;
+      color: var(--neutral-900);
+    }
+
+    .kpi-subtext {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.65rem;
+      font-weight: 500;
+      color: var(--neutral-500);
+      margin-top: 0.25rem;
+      border-top: 1px solid var(--neutral-100);
+      padding-top: 0.25rem;
+      line-height: 1.2;
+    }
+
+    /* Hide elements helper */
+    .hidden {
+      display: none !important;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    
+    <!-- HEADER -->
+    <header>
+      <svg class="logo" xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+      </svg>
+      <div>
+        <h1>Mesura i regulació - Conceptes.</h1>
+        <p>Institut de l'Ebre - Agustí Baubí - abaubi@xtec.cat</p>
+      </div>
+    </header>
+
+    <!-- MAIN INTERFACE: CONTROLS GRID -->
+    <div class="controls-grid">
+
+      <!-- CARD 1: CONTROLLER PARAMETERS -->
+      <div class="card">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+          </svg>
+          <span>Paràmetres del Controlador</span>
+        </div>
+
+        <!-- Tipus de Controlador -->
+        <div class="segmented-control">
+          <button id="type-pid-btn" class="segmented-btn active" onclick="setControllerType('pid')">Controlador PID</button>
+          <button id="type-onoff-btn" class="segmented-btn" onclick="setControllerType('on-off')">Tot o res / Histèresi</button>
+        </div>
+
+        <!-- PID CONTROLS CONTAINER -->
+        <div id="pid-controls-group">
+          <!-- Preset selection -->
+          <div class="form-group">
+            <label for="select-preset">Presets de Sintonització</label>
+            <select id="select-preset" onchange="applyPreset(this.value)">
+              <option value="-1">Personalitzat (Fes ajustos a sota)</option>
+              <option value="0" selected>Estable sintonitzat (PID recomanat)</option>
+              <option value="1">Instabilitat / Oscil·lacions (Kp alt)</option>
+              <option value="2">Només Kp moderat (Error permanent)</option>
+            </select>
+          </div>
+
+          <!-- Kp -->
+          <div class="form-group">
+            <div class="form-label-row">
+              <label for="slider-kp">Guany Proporcional (Kp)</label>
+              <span id="val-kp" class="badge badge-primary">1.8</span>
+            </div>
+            <input id="slider-kp" type="range" min="0.0" max="20.0" step="0.1" value="1.8" oninput="updateParam('kp', this.value)">
+          </div>
+
+          <!-- Ki -->
+          <div class="form-group">
+            <div class="form-label-row">
+              <label for="slider-ki">Constant Integral (Ki)</label>
+              <span id="val-ki" class="badge badge-primary">0.60</span>
+            </div>
+            <input id="slider-ki" type="range" min="0.0" max="5.0" step="0.05" value="0.60" oninput="updateParam('ki', this.value)">
+          </div>
+
+          <!-- Kd -->
+          <div class="form-group">
+            <div class="form-label-row">
+              <label for="slider-kd">Constant Derivativa (Kd)</label>
+              <span id="val-kd" class="badge badge-primary">0.15</span>
+            </div>
+            <input id="slider-kd" type="range" min="0.0" max="2.0" step="0.01" value="0.15" oninput="updateParam('kd', this.value)">
+          </div>
+
+          <!-- Advanced PID improvements -->
+          <div style="border-top: 1px solid var(--neutral-200); padding-top: 0.75rem; margin-top: 0.5rem; display: flex; flex-direction: column; gap: 0.5rem;">
+            <div style="font-size: 0.65rem; font-weight: 700; color: var(--neutral-400); text-transform: uppercase; letter-spacing: 0.05em;">Millores i Configuració Avançada PID</div>
+            
+            <div class="form-group">
+              <label for="select-improvement">Millores al PID</label>
+              <select id="select-improvement" onchange="updateParam('improvement', this.value)">
+                <option value="none" selected>Cap (Ninguna)</option>
+                <option value="anti-windup">Anti-wind-up (Clamping)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <div class="form-label-row">
+                <label for="slider-umax">Saturació Control (u_max)</label>
+                <span id="val-umax" class="badge badge-accent">±15.0</span>
+              </div>
+              <input id="slider-umax" class="accent-purple" type="range" min="0.5" max="20.0" step="0.1" value="15.0" oninput="updateParam('uMax', this.value)">
+            </div>
+          </div>
+        </div>
+
+        <!-- ON-OFF CONTROLS CONTAINER -->
+        <div id="onoff-controls-group" class="hidden">
+          <div class="form-group">
+            <div class="form-label-row">
+              <label for="slider-onoffpower">Potència On-Off (u_on_off)</label>
+              <span id="val-onoffpower" class="badge badge-primary">2.0</span>
+            </div>
+            <input id="slider-onoffpower" type="range" min="0.1" max="10.0" step="0.1" value="2.0" oninput="updateParam('onOffPower', this.value)">
+          </div>
+
+          <div class="form-group">
+            <div class="checkbox-container">
+              <input id="chk-ind-hysteresis" type="checkbox" onchange="toggleHysteresisMode(this.checked)">
+              <label style="cursor:pointer;" for="chk-ind-hysteresis">Histèresi independent superior/inferior</label>
+            </div>
+          </div>
+
+          <!-- Symmetric Hysteresis -->
+          <div id="group-symmetric-hysteresis" class="form-group">
+            <div class="form-label-row">
+              <label for="slider-hyst-sym">Histèresi Simètrica (Δ)</label>
+              <span id="val-hyst-sym" class="badge badge-accent">0.10</span>
+            </div>
+            <input id="slider-hyst-sym" class="accent-purple" type="range" min="0.00" max="2.00" step="0.01" value="0.10" oninput="updateParam('hysteresisSymmetric', this.value)">
+          </div>
+
+          <!-- Independent Hysteresis -->
+          <div id="group-independent-hysteresis" class="hidden">
+            <div class="form-group">
+              <div class="form-label-row">
+                <label for="slider-hyst-up">Histèresi Superior (Δs)</label>
+                <span id="val-hyst-up" class="badge badge-accent">0.10</span>
+              </div>
+              <input id="slider-hyst-up" class="accent-purple" type="range" min="0.00" max="2.00" step="0.01" value="0.10" oninput="updateParam('hysteresisUpper', this.value)">
+            </div>
+            <div class="form-group">
+              <div class="form-label-row">
+                <label for="slider-hyst-lo">Histèresi Inferior (Δi)</label>
+                <span id="val-hyst-lo" class="badge badge-accent">0.10</span>
+              </div>
+              <input id="slider-hyst-lo" class="accent-purple" type="range" min="0.00" max="2.00" step="0.01" value="0.10" oninput="updateParam('hysteresisLower', this.value)">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 3: SIMULATION MODE & SETTINGS -->
+      <div class="card">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>
+          </svg>
+          <span>Mode de Simulació</span>
+        </div>
+
+        <!-- Simulation mode selector -->
+        <div class="segmented-control">
+          <button id="mode-step-btn" class="segmented-btn active" onclick="setControlMode('step')">Escaló (Estàtic)</button>
+          <button id="mode-osc-btn" class="segmented-btn" onclick="setControlMode('oscillation')">Oscil·lació</button>
+          <button id="mode-manual-btn" class="segmented-btn" onclick="setControlMode('manual')">Manual T.R.</button>
+        </div>
+
+        <!-- Info/Control depending on mode -->
+        <div id="step-info-block" style="padding: 0.5rem; background-color: var(--neutral-50); border-radius: 0.5rem; border: 1px solid var(--neutral-100);">
+          <p style="font-size: 0.725rem; color: var(--neutral-600); line-height: 1.4;">
+            El mode <strong>Escaló (Estàtic)</strong> calcula de forma instantània la resposta d'un escaló de referència unitari des de t = -2.0 fins a 20.0 segons. Ideal per analitzar sobrepics i temps d'estabilització.
+          </p>
+        </div>
+
+        <div id="manual-control-block" class="form-group hidden">
+          <div class="form-label-row">
+            <label for="slider-manual-sp">Referència manual (Setpoint SP)</label>
+            <span id="val-manual-sp" class="badge badge-orange">1.00</span>
+          </div>
+          <input id="slider-manual-sp" class="accent-orange" type="range" min="0.0" max="2.5" step="0.05" value="1.00" oninput="updateParam('manualSP', this.value)">
+        </div>
+
+        <div id="oscillation-control-block" class="form-group hidden">
+          <label>Període d'Oscil·lació de la referència</label>
+          <div class="button-grid">
+            <button id="btn-period-1" class="grid-btn" onclick="setOscillationPeriod(1.0)">1 s</button>
+            <button id="btn-period-2" class="grid-btn active" onclick="setOscillationPeriod(2.0)">2 s</button>
+            <button id="btn-period-4" class="grid-btn" onclick="setOscillationPeriod(4.0)">4 s</button>
+            <button id="btn-period-8" class="grid-btn" onclick="setOscillationPeriod(8.0)">8 s</button>
+          </div>
+        </div>
+
+        <!-- Toggle Control Signal -->
+        <div class="form-group" style="margin-top: 0.5rem;">
+          <div class="checkbox-container">
+            <input id="chk-show-control" type="checkbox" onchange="toggleShowControl(this.checked)">
+            <label style="cursor:pointer;" for="chk-show-control">Mostra senyal de control u(t)</label>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2: PLANT MODEL (PROCESS) -->
+      <div class="card">
+        <div class="card-title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="15" x2="23" y2="15"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="15" x2="4" y2="15"/>
+          </svg>
+          <span>Model de la Planta (Procés)</span>
+        </div>
+
+        <!-- Gain K -->
+        <div class="form-group">
+          <div class="form-label-row">
+            <label for="slider-gain">Guany de la Planta (K)</label>
+            <span id="val-gain" class="badge badge-primary">1.0</span>
+          </div>
+          <input id="slider-gain" type="range" min="0.1" max="5.0" step="0.1" value="1.0" oninput="updateParam('plantGain', this.value)">
+        </div>
+
+        <!-- Tau 1 -->
+        <div class="form-group">
+          <div class="form-label-row">
+            <label for="slider-tau1">Constant de temps 1 (T1)</label>
+            <span id="val-tau1" class="badge badge-primary">2.0 s</span>
+          </div>
+          <input id="slider-tau1" type="range" min="0.1" max="10.0" step="0.1" value="2.0" oninput="updateParam('plantTau1', this.value)">
+        </div>
+
+        <!-- Tau 2 -->
+        <div class="form-group">
+          <div class="form-label-row">
+            <label for="slider-tau2">Constant de temps 2 (T2)</label>
+            <span id="val-tau2" class="badge badge-primary">0.0 s</span>
+          </div>
+          <input id="slider-tau2" type="range" min="0.0" max="10.0" step="0.1" value="0.0" oninput="updateParam('plantTau2', this.value)">
+        </div>
+
+        <!-- Tau 3 -->
+        <div class="form-group">
+          <div class="form-label-row">
+            <label for="slider-tau3">Constant de temps 3 (T3)</label>
+            <span id="val-tau3" class="badge badge-primary">0.0 s</span>
+          </div>
+          <input id="slider-tau3" type="range" min="0.0" max="10.0" step="0.1" value="0.0" oninput="updateParam('plantTau3', this.value)">
+        </div>
+
+        <!-- Dead Time L -->
+        <div class="form-group">
+          <div class="form-label-row">
+            <label for="slider-deadtime">Temps Mort / Retard (L)</label>
+            <span id="val-deadtime" class="badge badge-primary">0.3 s</span>
+          </div>
+          <input id="slider-deadtime" type="range" min="0.0" max="5.0" step="0.1" value="0.3" oninput="updateParam('plantDeadTime', this.value)">
+        </div>
+
+        <!-- Clamp Output Positive -->
+        <div class="form-group">
+          <div class="checkbox-container">
+            <input id="chk-clamp-positive" type="checkbox" checked onchange="toggleClampOutput(this.checked)">
+            <label style="cursor:pointer;" for="chk-clamp-positive">Limita sortida a valors positius (y &ge; 0)</label>
+          </div>
+        </div>
+
+        <!-- Transfer Function Formula -->
+        <div class="form-group" style="margin-top: 0.5rem; border-top: 1px solid var(--neutral-100); padding-top: 0.75rem;">
+          <label style="font-size: 0.65rem; color: var(--neutral-500); text-transform: uppercase; font-weight: 700; letter-spacing: 0.025em;">Funció de Transferència G(s)</label>
+          <div style="display: flex; align-items: center; justify-content: center; gap: 0.4rem; padding: 0.5rem 0.75rem; background-color: var(--neutral-50); border-radius: 0.5rem; border: 1px solid var(--neutral-200); font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; min-height: 52px; margin-top: 0.25rem;">
+            <span style="font-weight: 700; color: var(--primary);">G(s) = </span>
+            <div style="display: inline-flex; flex-direction: column; align-items: center; margin: 0 4px; vertical-align: middle;">
+              <span id="formula-num" style="border-bottom: 1.5px solid var(--neutral-600); padding: 0 4px; line-height: 1.2; font-weight: 700; color: var(--neutral-800);">1.0</span>
+              <span id="formula-den" style="padding: 0 4px; line-height: 1.2; color: var(--neutral-700);">2.0s + 1</span>
+            </div>
+            <span id="formula-delay" style="font-weight: 600; color: var(--purple-700);"></span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- REALTIME CONTROL BAR -->
+    <div id="realtime-control-bar" class="control-bar hidden">
+      <div class="status-group">
+        <span id="status-indicator" class="ping-indicator"></span>
+        <span id="status-text">Simulació en temps real: <strong style="color: var(--amber-600);">Aturada</strong></span>
+        <span id="status-time" style="color: var(--neutral-400); font-family: 'JetBrains Mono', monospace; font-size: 0.7rem;">(0.0s simulat)</span>
+      </div>
+
+      <div class="action-group">
+        <button id="btn-step" class="btn" onclick="runLiveStepClicked()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 4 15 12 5 20 5 4"/><line x1="19" y1="5" x2="19" y2="19"/>
+          </svg>
+          Pas a pas
+        </button>
+
+        <button id="btn-calc" class="btn btn-purple" onclick="toggleCalculations()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/><line x1="9" y1="9" x2="9" y2="17"/><line x1="13" y1="9" x2="13" y2="17"/>
+          </svg>
+          Càlculs Inactius
+        </button>
+
+        <button id="btn-play" class="btn btn-primary" onclick="togglePlay()">
+          <svg id="play-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2">
+            <polygon points="5 3 19 12 5 21 5 3"/>
+          </svg>
+          <span id="play-text">Iniciar</span>
+        </button>
+
+        <button class="btn" onclick="resetLiveSimulation()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/>
+          </svg>
+          Reiniciar
+        </button>
+      </div>
+    </div>
+
+    <!-- CALCULATIONS PANEL -->
+    <div id="calculations-panel" class="calculations-panel hidden">
+      <div class="calc-header">
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+          <svg style="color:var(--purple-600)" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="4" width="16" height="16" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="9"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/>
+          </svg>
+          <h4>Càlculs Interns del Controlador (dt = 0.05s)</h4>
+        </div>
+        <span id="calc-step-info" class="badge" style="background-color:var(--purple-100); color:var(--purple-700)">Pas actual t = 0.00s</span>
+      </div>
+
+      <!-- PID MATH SHOWCASE -->
+      <div id="calc-pid-boxes" class="calc-grid">
+        <div class="calc-box">
+          <span class="calc-box-title" style="color: var(--amber-600)">Error Actual</span>
+          <span class="calc-box-formula">e[k] = SP - PV</span>
+          <div id="calc-val-err" class="calc-box-value">1.00 - 0.00 = 1.00</div>
+        </div>
+        <div class="calc-box">
+          <span class="calc-box-title" style="color: var(--primary)">Acció Proporcional</span>
+          <span class="calc-box-formula">P[k] = Kp · e[k]</span>
+          <div id="calc-val-p" class="calc-box-value">1.8 · 1.00 = 1.80</div>
+        </div>
+        <div class="calc-box">
+          <span class="calc-box-title" style="color: var(--emerald-600); display:flex; justify-content:space-between;">
+            <span>Acció Integral</span>
+            <span id="calc-windup-badge" class="badge" style="background-color: var(--red-100); color: var(--red-600); display:none;">Anti-windup</span>
+          </span>
+          <span class="calc-box-formula">I[k] = I[k-1] + Ki·e·dt</span>
+          <div id="calc-val-i" class="calc-box-value">0.00 + (0.6 · 1.00 · 0.05) = 0.03</div>
+        </div>
+        <div class="calc-box">
+          <span class="calc-box-title" style="color: var(--purple-600)">Acció Derivativa</span>
+          <span class="calc-box-formula">D[k] = Kd · (Δe / dt)</span>
+          <div id="calc-val-d" class="calc-box-value">0.15 · 0.00 = 0.00</div>
+        </div>
+        <div class="calc-box">
+          <span class="calc-box-title" style="color: var(--orange-500); display:flex; justify-content:space-between;">
+            <span>Senyal Control u[k]</span>
+            <span id="calc-sat-badge" class="badge" style="background-color: var(--amber-100); color: var(--amber-600); display:none;">Saturat</span>
+          </span>
+          <span class="calc-box-formula">u[k] = P[k] + I[k] + D[k]</span>
+          <div id="calc-val-u" class="calc-box-value">1.80 + 0.03 + 0.00 = 1.83</div>
+        </div>
+      </div>
+
+      <!-- ON-OFF MATH SHOWCASE -->
+      <div id="calc-onoff-boxes" class="calc-grid hidden">
+        <div class="calc-box">
+          <span class="calc-box-title" style="color: var(--amber-600)">Error Actual</span>
+          <span class="calc-box-formula">e[k] = SP - PV</span>
+          <div id="calc-val-onoff-err" class="calc-box-value">1.00 - 0.00 = 1.00</div>
+        </div>
+        <div class="calc-box">
+          <span class="calc-box-title" style="color: var(--primary)">Llindar Superior</span>
+          <span class="calc-box-formula">Apaga si y &ge; SP + Δs</span>
+          <div id="calc-val-onoff-up" class="calc-box-value">1.00 + 0.10 = 1.10</div>
+        </div>
+        <div class="calc-box">
+          <span class="calc-box-title" style="color: var(--emerald-600)">Llindar Inferior</span>
+          <span class="calc-box-formula">Encén si y &le; SP - Δi</span>
+          <div id="calc-val-onoff-lo" class="calc-box-value">1.00 - 0.10 = 0.90</div>
+        </div>
+        <div class="calc-box">
+          <span class="calc-box-title" style="color: var(--purple-600); display:flex; justify-content:space-between;">
+            <span>Actuador u[k]</span>
+            <span id="calc-onoff-state-badge" class="badge" style="background-color: var(--red-100); color: var(--red-600);">Actiu ON</span>
+          </span>
+          <span class="calc-box-formula">u[k] &in; {0, u_on_off}</span>
+          <div id="calc-val-onoff-u" class="calc-box-value">u = 2.00 / 2.00</div>
+        </div>
+        <div class="calc-box" style="grid-column: span 1;">
+          <span class="calc-box-title" style="color: var(--orange-500)">Lògica Histèresi</span>
+          <span class="calc-box-formula">Estat actual del sistema</span>
+          <div id="calc-val-onoff-exp" class="calc-box-value" style="font-size: 0.65rem; font-family: sans-serif; font-weight: 500; line-height: 1.3;">Esperant...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHART CARD -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-header-left">
+          <h3 id="chart-main-title">Resposta Temporal de l'Escaló</h3>
+          <p id="chart-sub-title">Escaló unitari aplicat a t = 0.0 s. La gràfica mostra el règim transitori i el permanent</p>
+        </div>
+        <span id="chart-y-domain-badge" class="badge badge-primary" style="font-family: 'JetBrains Mono', monospace;">Eix Y: [0.0, 1.2]</span>
+      </div>
+
+      <div class="chart-container">
+        <svg id="sim-chart">
+          <!-- Grids -->
+          <g id="grid-lines"></g>
+          <!-- Special Zero Lines -->
+          <line id="zero-line-x" style="stroke: var(--neutral-400); stroke-width: 1.5; display: none;"></line>
+          <line id="zero-line-y" style="stroke: var(--neutral-400); stroke-width: 1.5; display: none;"></line>
+          <!-- Lines and Paths -->
+          <g id="chart-paths"></g>
+          <!-- Axes Labels -->
+          <g id="axis-labels"></g>
+          <!-- Hover Group -->
+          <g id="hover-group" style="display:none;">
+            <line id="hover-line" style="stroke: var(--neutral-400); stroke-width: 1; stroke-dasharray: 3 3;"></line>
+            <circle id="hover-dot-sp" r="5" style="fill: #ef4444; stroke: #ffffff; stroke-width: 1.5;"></circle>
+            <circle id="hover-dot-pv" r="6" style="fill: #2563eb; stroke: #ffffff; stroke-width: 2;"></circle>
+            <circle id="hover-dot-ctrl" r="5" style="fill: #a855f7; stroke: #ffffff; stroke-width: 1.5; display:none;"></circle>
+            <circle id="hover-dot-up" r="4" style="fill: #3b82f6; stroke: #ffffff; stroke-width: 1.5; display:none;"></circle>
+            <circle id="hover-dot-lo" r="4" style="fill: #10b981; stroke: #ffffff; stroke-width: 1.5; display:none;"></circle>
+          </g>
+        </svg>
+
+        <!-- Tooltip div inside relative container -->
+        <div id="chart-tooltip" class="chart-tooltip"></div>
+      </div>
+    </div>
+
+    <!-- KPI PERFORMANCE METRICS -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <span class="kpi-title">Setpoint</span>
+        <span id="kpi-sp" class="kpi-value">1.00</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-title">Valor Actual</span>
+        <span id="kpi-pv" class="kpi-value">0.0000</span>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-title">Error actual</span>
+        <span id="kpi-err" class="kpi-value">0.0000</span>
+        <div id="kpi-err-sub" class="kpi-subtext">Abs: 0.0000<br>Rel: 0.0%</div>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-title">Sobrepic</span>
+        <span id="kpi-overshoot" class="kpi-value">0.0%</span>
+        <div id="kpi-overshoot-sub" class="kpi-subtext">Abs: 0.0000</div>
+      </div>
+      <div class="kpi-card">
+        <span class="kpi-title">Temps Resp.</span>
+        <span id="kpi-resp" class="kpi-value">0.00 s</span>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // State management variables
+    let controllerType = 'pid';
+    let onOffPower = 2.0;
+    let isHysteresisIndependent = false;
+    let hysteresisSymmetric = 0.1;
+    let hysteresisUpper = 0.1;
+    let hysteresisLower = 0.1;
+
+    let kp = 1.8;
+    let ki = 0.6;
+    let kd = 0.15;
+    let preset = 0;
+    let improvement = 'none';
+    let uMax = 15.0;
+    let showControlSignal = false;
+    let clampOutputPositive = true;
+
+    let plantGain = 1.0;
+    let plantTau1 = 2.0;
+    let plantTau2 = 0.0;
+    let plantTau3 = 0.0;
+    let plantDeadTime = 0.3;
+
+    let controlMode = 'step';
+    let oscillationPeriod = 2.0;
+    let manualSP = 1.0;
+    let isPlaying = false;
+    let showCalculations = false;
+
+    // Simulation timing constants
+    const dt = 0.05;
+    const timeEnd = 20.0;
+    const stepTime = 0.0;
+
+    // Simulation Live state
+    let liveState = {
+      time: 0,
+      x1: 0,
+      x2: 0,
+      y: 0,
+      integralE: 0,
+      prevE: 1.0,
+      prevY: 0,
+      dFiltered: 0,
+      data: [],
+      trace: null
+    };
+
+    let staticSimulationData = [];
+    let currentChartData = [];
+    let timerId = null;
+
+    // Initialize DOM links
+    const elements = {
+      typePidBtn: document.getElementById('type-pid-btn'),
+      typeOnoffBtn: document.getElementById('type-onoff-btn'),
+      pidGroup: document.getElementById('pid-controls-group'),
+      onoffGroup: document.getElementById('onoff-controls-group'),
+      chkIndHysteresis: document.getElementById('chk-ind-hysteresis'),
+      groupSymmetricHyst: document.getElementById('group-symmetric-hysteresis'),
+      groupIndependentHyst: document.getElementById('group-independent-hysteresis'),
+      chkClampPositive: document.getElementById('chk-clamp-positive'),
+      modeStepBtn: document.getElementById('mode-step-btn'),
+      modeOscBtn: document.getElementById('mode-osc-btn'),
+      modeManualBtn: document.getElementById('mode-manual-btn'),
+      stepInfoBlock: document.getElementById('step-info-block'),
+      manualControlBlock: document.getElementById('manual-control-block'),
+      oscillationControlBlock: document.getElementById('oscillation-control-block'),
+      chkShowControl: document.getElementById('chk-show-control'),
+      realtimeControlBar: document.getElementById('realtime-control-bar'),
+      statusIndicator: document.getElementById('status-indicator'),
+      statusText: document.getElementById('status-text'),
+      statusTime: document.getElementById('status-time'),
+      btnPlay: document.getElementById('btn-play'),
+      playIcon: document.getElementById('play-icon'),
+      playText: document.getElementById('play-text'),
+      btnStep: document.getElementById('btn-step'),
+      btnCalc: document.getElementById('btn-calc'),
+      calculationsPanel: document.getElementById('calculations-panel'),
+      calcStepInfo: document.getElementById('calc-step-info'),
+      calcPidBoxes: document.getElementById('calc-pid-boxes'),
+      calcOnoffBoxes: document.getElementById('calc-onoff-boxes'),
+      chartMainTitle: document.getElementById('chart-main-title'),
+      chartSubTitle: document.getElementById('chart-sub-title'),
+      chartYDomainBadge: document.getElementById('chart-y-domain-badge'),
+      simChart: document.getElementById('sim-chart'),
+      gridLines: document.getElementById('grid-lines'),
+      chartPaths: document.getElementById('chart-paths'),
+      axisLabels: document.getElementById('axis-labels'),
+      hoverGroup: document.getElementById('hover-group'),
+      hoverLine: document.getElementById('hover-line'),
+      hoverDotSp: document.getElementById('hover-dot-sp'),
+      hoverDotPv: document.getElementById('hover-dot-pv'),
+      hoverDotCtrl: document.getElementById('hover-dot-ctrl'),
+      hoverDotUp: document.getElementById('hover-dot-up'),
+      hoverDotLo: document.getElementById('hover-dot-lo'),
+      chartTooltip: document.getElementById('chart-tooltip'),
+      zeroLineX: document.getElementById('zero-line-x'),
+      zeroLineY: document.getElementById('zero-line-y'),
+      kpiSp: document.getElementById('kpi-sp'),
+      kpiPv: document.getElementById('kpi-pv'),
+      kpiErr: document.getElementById('kpi-err'),
+      kpiErrSub: document.getElementById('kpi-err-sub'),
+      kpiOvershoot: document.getElementById('kpi-overshoot'),
+      kpiOvershootSub: document.getElementById('kpi-overshoot-sub'),
+      kpiResp: document.getElementById('kpi-resp'),
+    };
+
+    // Preset configurations
+    const presets = [
+      { kp: 1.8, ki: 0.6, kd: 0.15 },
+      { kp: 12.0, ki: 1.0, kd: 0.05 },
+      { kp: 1.5, ki: 0.0, kd: 0.0 }
+    ];
+
+    function applyPreset(val) {
+      const idx = parseInt(val);
+      if (idx === -1) return;
+      preset = idx;
+      
+      kp = presets[idx].kp;
+      ki = presets[idx].ki;
+      kd = presets[idx].kd;
+
+      document.getElementById('slider-kp').value = kp;
+      document.getElementById('slider-ki').value = ki;
+      document.getElementById('slider-kd').value = kd;
+
+      syncSliderValues();
+      recalculateAndRedraw();
+    }
+
+    function syncSliderValues() {
+      document.getElementById('val-kp').innerText = kp.toFixed(1);
+      document.getElementById('val-ki').innerText = ki.toFixed(2);
+      document.getElementById('val-kd').innerText = kd.toFixed(2);
+      document.getElementById('val-umax').innerText = '±' + uMax.toFixed(1);
+      document.getElementById('val-onoffpower').innerText = onOffPower.toFixed(1);
+      document.getElementById('val-hyst-sym').innerText = hysteresisSymmetric.toFixed(2);
+      document.getElementById('val-hyst-up').innerText = hysteresisUpper.toFixed(2);
+      document.getElementById('val-hyst-lo').innerText = hysteresisLower.toFixed(2);
+      document.getElementById('val-gain').innerText = plantGain.toFixed(1);
+      document.getElementById('val-tau1').innerText = plantTau1.toFixed(1) + ' s';
+      document.getElementById('val-tau2').innerText = plantTau2.toFixed(1) + ' s';
+      document.getElementById('val-tau3').innerText = plantTau3.toFixed(1) + ' s';
+      document.getElementById('val-deadtime').innerText = plantDeadTime.toFixed(1) + ' s';
+      document.getElementById('val-manual-sp').innerText = manualSP.toFixed(2);
+      updatePlantFormula();
+    }
+
+    function updatePlantFormula() {
+      const numElem = document.getElementById('formula-num');
+      const denElem = document.getElementById('formula-den');
+      const delayElem = document.getElementById('formula-delay');
+      if (!numElem || !denElem || !delayElem) return;
+
+      numElem.innerText = plantGain.toFixed(1);
+
+      let denTerms = [];
+      if (plantTau1 > 0) {
+        denTerms.push(`(${plantTau1.toFixed(1)}s + 1)`);
+      } else {
+        denTerms.push(`1`);
+      }
+      if (plantTau2 > 0) {
+        denTerms.push(`(${plantTau2.toFixed(1)}s + 1)`);
+      }
+      if (plantTau3 > 0) {
+        denTerms.push(`(${plantTau3.toFixed(1)}s + 1)`);
+      }
+      denElem.innerText = denTerms.join('');
+
+      if (plantDeadTime > 0) {
+        delayElem.innerHTML = `·e<sup>-${plantDeadTime.toFixed(1)}s</sup>`;
+        delayElem.style.display = 'inline';
+      } else {
+        delayElem.style.display = 'none';
+      }
+    }
+
+    // Update simulation parameters
+    function updateParam(param, value) {
+      const val = parseFloat(value);
+      if (param === 'kp') { kp = val; resetPresetSelector(); }
+      else if (param === 'ki') { ki = val; resetPresetSelector(); }
+      else if (param === 'kd') { kd = val; resetPresetSelector(); }
+      else if (param === 'improvement') { improvement = value; }
+      else if (param === 'uMax') { uMax = val; }
+      else if (param === 'onOffPower') { onOffPower = val; }
+      else if (param === 'hysteresisSymmetric') { hysteresisSymmetric = val; }
+      else if (param === 'hysteresisUpper') { hysteresisUpper = val; }
+      else if (param === 'hysteresisLower') { hysteresisLower = val; }
+      else if (param === 'plantGain') { plantGain = val; }
+      else if (param === 'plantTau1') { plantTau1 = val; }
+      else if (param === 'plantTau2') { plantTau2 = val; }
+      else if (param === 'plantTau3') { plantTau3 = val; }
+      else if (param === 'plantDeadTime') { plantDeadTime = val; }
+      else if (param === 'manualSP') { manualSP = val; }
+
+      syncSliderValues();
+      recalculateAndRedraw();
+    }
+
+    function resetPresetSelector() {
+      document.getElementById('select-preset').value = "-1";
+      preset = -1;
+    }
+
+    // Toggle logic functions
+    function toggleHysteresisMode(checked) {
+      isHysteresisIndependent = checked;
+      elements.chkIndHysteresis.checked = checked;
+      if (isHysteresisIndependent) {
+        elements.groupSymmetricHyst.classList.add('hidden');
+        elements.groupIndependentHyst.classList.remove('hidden');
+      } else {
+        elements.groupSymmetricHyst.classList.remove('hidden');
+        elements.groupIndependentHyst.classList.add('hidden');
+      }
+      recalculateAndRedraw();
+    }
+
+    function toggleClampOutput(checked) {
+      clampOutputPositive = checked;
+      elements.chkClampPositive.checked = checked;
+      recalculateAndRedraw();
+    }
+
+    function toggleShowControl(checked) {
+      showControlSignal = checked;
+      elements.chkShowControl.checked = checked;
+      recalculateAndRedraw();
+    }
+
+    function toggleCalculations() {
+      if (controlMode === 'step') return;
+      showCalculations = !showCalculations;
+      if (showCalculations) {
+        elements.btnCalc.classList.add('active');
+        elements.btnCalc.innerText = 'Càlculs Actius';
+        elements.calculationsPanel.classList.remove('hidden');
+      } else {
+        elements.btnCalc.classList.remove('active');
+        elements.btnCalc.innerText = 'Càlculs Inactius';
+        elements.calculationsPanel.classList.add('hidden');
+      }
+      syncCalculationsPanel();
+    }
+
+    function togglePlay() {
+      isPlaying = !isPlaying;
+      if (isPlaying) {
+        elements.btnPlay.classList.add('paused');
+        elements.playText.innerText = 'Pausa';
+        elements.playIcon.setAttribute('fill', 'none');
+        elements.playIcon.innerHTML = `<rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/>`;
+        elements.statusIndicator.classList.add('active');
+        elements.statusText.innerHTML = `Simulació en temps real: <strong style="color: var(--emerald-600);">Executant</strong>`;
+        elements.btnStep.classList.add('hidden');
+        startInterval();
+      } else {
+        elements.btnPlay.classList.remove('paused');
+        elements.playText.innerText = 'Iniciar';
+        elements.playIcon.setAttribute('fill', 'currentColor');
+        elements.playIcon.innerHTML = `<polygon points="5 3 19 12 5 21 5 3"/>`;
+        elements.statusIndicator.classList.remove('active');
+        elements.statusText.innerHTML = `Simulació en temps real: <strong style="color: var(--amber-600);">Aturada</strong>`;
+        elements.btnStep.classList.remove('hidden');
+        stopInterval();
+      }
+    }
+
+    function startInterval() {
+      if (timerId) clearInterval(timerId);
+      timerId = setInterval(() => {
+        runLiveStep();
+      }, 50);
+    }
+
+    // Stop real-time loop
+    function stopInterval() {
+      if (timerId) {
+        clearInterval(timerId);
+        timerId = null;
+      }
+    }
+
+    function runLiveStepClicked() {
+      runLiveStep();
+    }
+
+    // Set controller type
+    function setControllerType(type) {
+      controllerType = type;
+      if (controllerType === 'pid') {
+        elements.typePidBtn.classList.add('active');
+        elements.typeOnoffBtn.classList.remove('active');
+        elements.pidGroup.classList.remove('hidden');
+        elements.onoffGroup.classList.add('hidden');
+        elements.calcPidBoxes.classList.remove('hidden');
+        elements.calcOnoffBoxes.classList.add('hidden');
+      } else {
+        elements.typePidBtn.classList.remove('active');
+        elements.typeOnoffBtn.classList.add('active');
+        elements.pidGroup.classList.add('hidden');
+        elements.onoffGroup.classList.remove('hidden');
+        elements.calcPidBoxes.classList.add('hidden');
+        elements.calcOnoffBoxes.classList.remove('hidden');
+      }
+      resetLiveSimulation();
+      recalculateAndRedraw();
+    }
+
+    // Set control mode
+    function setControlMode(mode) {
+      controlMode = mode;
+      isPlaying = false;
+      stopInterval();
+
+      elements.modeStepBtn.classList.remove('active');
+      elements.modeOscBtn.classList.remove('active');
+      elements.modeManualBtn.classList.remove('active');
+
+      elements.stepInfoBlock.classList.add('hidden');
+      elements.manualControlBlock.classList.add('hidden');
+      elements.oscillationControlBlock.classList.add('hidden');
+      elements.realtimeControlBar.classList.add('hidden');
+
+      if (mode === 'step') {
+        elements.modeStepBtn.classList.add('active');
+        elements.stepInfoBlock.classList.remove('hidden');
+        elements.chartMainTitle.innerText = "Resposta Temporal de l'Escaló";
+        elements.chartSubTitle.innerText = "Escaló unitari aplicat a t = 0.0 s. La gràfica mostra el règim transitori i el permanent";
+        elements.calculationsPanel.classList.add('hidden');
+      } else {
+        elements.realtimeControlBar.classList.remove('hidden');
+        elements.btnStep.classList.remove('hidden');
+        elements.btnPlay.classList.remove('paused');
+        elements.playText.innerText = 'Iniciar';
+        elements.playIcon.setAttribute('fill', 'currentColor');
+        elements.playIcon.innerHTML = `<polygon points="5 3 19 12 5 21 5 3"/>`;
+        elements.statusIndicator.classList.remove('active');
+        elements.statusText.innerHTML = `Simulació en temps real: <strong style="color: var(--amber-600);">Aturada</strong>`;
+
+        if (mode === 'oscillation') {
+          elements.modeOscBtn.classList.add('active');
+          elements.oscillationControlBlock.classList.remove('hidden');
+          elements.chartMainTitle.innerText = "Resposta Dinàmica Lliscant (Últims 20s)";
+          elements.chartSubTitle.innerText = "Ona quadrada periòdica. El senyal u(t) es correspon amb la sortida de regulació";
+        } else {
+          elements.modeManualBtn.classList.add('active');
+          elements.manualControlBlock.classList.remove('hidden');
+          elements.chartMainTitle.innerText = "Resposta Dinàmica Lliscant (Últims 20s)";
+          elements.chartSubTitle.innerText = "Simulació interactiva en temps real. Defineix la referència amb el lliscador superior";
+        }
+
+        if (showCalculations) {
+          elements.calculationsPanel.classList.remove('hidden');
+        } else {
+          elements.calculationsPanel.classList.add('hidden');
+        }
+      }
+
+      resetLiveSimulation();
+      recalculateAndRedraw();
+    }
+
+    function setOscillationPeriod(period) {
+      oscillationPeriod = period;
+      document.getElementById('btn-period-1').classList.remove('active');
+      document.getElementById('btn-period-2').classList.remove('active');
+      document.getElementById('btn-period-4').classList.remove('active');
+      document.getElementById('btn-period-8').classList.remove('active');
+      document.getElementById('btn-period-' + period).classList.add('active');
+      recalculateAndRedraw();
+    }
+
+    // Static Simulation calculation (STEP MODE)
+    function calculateStaticSimulation() {
+      let y = 0.0;
+      let x1 = 0.0;
+      let x2 = 0.0;
+      let prev_y = 0.0;
+      let integral_e = 0.0;
+      let prev_e = 1.0;
+      let d_filtered = 0.0;
+      const result = [];
+      const uHistory = [];
+
+      const uMin = -uMax;
+      const Tf = 0.15;
+      let uActive = false;
+
+      for (let t = -2.0; t <= timeEnd + 0.001; t += dt) {
+        const currentSP = t >= stepTime ? 1.0 : 0.0;
+        const e = currentSP - y;
+        let u = 0.0;
+
+        if (controllerType === 'on-off') {
+          const deltaS = isHysteresisIndependent ? hysteresisUpper : hysteresisSymmetric;
+          const deltaI = isHysteresisIndependent ? hysteresisLower : hysteresisSymmetric;
+          const upperThreshold = currentSP + deltaS;
+          const lowerThreshold = currentSP - deltaI;
+
+          if (y > upperThreshold) {
+            uActive = false;
+          } else if (y < lowerThreshold) {
+            uActive = true;
+          }
+          u = uActive ? onOffPower : 0.0;
+        } else {
+          const dy_dt_raw = t > -2.0 ? (y - prev_y) / dt : 0;
+          const alpha = dt / (Tf + dt);
+          d_filtered = d_filtered + alpha * (dy_dt_raw - d_filtered);
+
+          let integrate = true;
+          if (improvement === 'anti-windup') {
+            const u_other = (kp * e) - (kd * d_filtered);
+            const u_tentative = u_other + (ki * (integral_e + e * dt));
+            const isSaturated = u_tentative > uMax || u_tentative < uMin;
+            const sameSign = (e > 0 && u_tentative > 0) || (e < 0 && u_tentative < 0);
+            if (isSaturated && sameSign) {
+              integrate = false;
+            }
+          }
+
+          if (integrate) {
+            integral_e += e * dt;
+          }
+          u = (kp * e) + (ki * integral_e) - (kd * d_filtered);
+          if (u > uMax) u = uMax;
+          if (u < uMin) u = uMin;
+        }
+
+        uHistory.push(u);
+
+        const delaySteps = Math.round(plantDeadTime / dt);
+        const delayedU = uHistory.length > delaySteps ? uHistory[uHistory.length - 1 - delaySteps] : 0.0;
+
+        prev_y = y;
+
+        // Substepping for numerical accuracy
+        const subSteps = 5;
+        const dtSub = dt / subSteps;
+        for (let i = 0; i < subSteps; i++) {
+          const dx1 = ((plantGain * delayedU) - x1) / plantTau1;
+          x1 += dx1 * dtSub;
+
+          if (plantTau2 > 0) {
+            const dx2 = (x1 - x2) / plantTau2;
+            x2 += dx2 * dtSub;
+          } else {
+            x2 = x1;
+          }
+
+          if (plantTau3 > 0) {
+            const dy = (x2 - y) / plantTau3;
+            y += dy * dtSub;
+          } else {
+            y = x2;
+          }
+
+          if (clampOutputPositive) {
+            if (y < 0) y = 0;
+            if (x1 < 0) x1 = 0;
+            if (x2 < 0) x2 = 0;
+          }
+        }
+
+        prev_e = e;
+
+        result.push({
+          time: parseFloat(t.toFixed(2)),
+          Sortida: parseFloat(y.toFixed(4)),
+          Setpoint: currentSP,
+          Control: parseFloat(u.toFixed(4)),
+          LlindarSuperior: controllerType === 'on-off' ? currentSP + (isHysteresisIndependent ? hysteresisUpper : hysteresisSymmetric) : undefined,
+          LlindarInferior: controllerType === 'on-off' ? currentSP - (isHysteresisIndependent ? hysteresisLower : hysteresisSymmetric) : undefined,
+        });
+      }
+      staticSimulationData = result;
+    }
+
+    // Reset Live Simulation
+    function resetLiveSimulation() {
+      const initialSP = controlMode === 'manual' ? manualSP : 1.0;
+      liveState = {
+        time: 0,
+        x1: 0,
+        x2: 0,
+        y: 0,
+        integralE: 0,
+        prevE: initialSP,
+        prevY: 0,
+        dFiltered: 0,
+        data: [],
+        trace: getInitialTrace(initialSP)
+      };
+      elements.statusTime.innerText = "(0.0s simulat)";
+      syncCalculationsPanel();
+      recalculateAndRedraw();
+    }
+
+    function getInitialTrace(sp) {
+      return {
+        sp: sp,
+        pv: 0.0,
+        e: sp,
+        kp: kp,
+        pVal: kp * sp,
+        prevI: 0.0,
+        ki: ki,
+        dt: dt,
+        iVal: 0.0,
+        kd: kd,
+        prevE: sp,
+        dVal: 0.0,
+        uVal: kp * sp,
+        uRaw: kp * sp,
+        isSaturated: (kp * sp) > uMax,
+        integrate: true,
+        onOffExplanation: "L'estat inicial és d'engegada."
+      };
+    }
+
+    // Run a single simulation step in real time
+    function runLiveStep() {
+      let currentSP = 0.0;
+      const t = liveState.time;
+
+      if (controlMode === 'manual') {
+        currentSP = manualSP;
+      } else if (controlMode === 'oscillation') {
+        const phase = Math.floor(t / (oscillationPeriod / 2)) % 2;
+        currentSP = phase === 0 ? 1.0 : 0.0;
+      }
+
+      const e = currentSP - liveState.y;
+      let u = 0.0;
+      let uRaw = 0.0;
+      let pVal = 0.0;
+      let prevI = 0.0;
+      let iVal = 0.0;
+      let dVal = 0.0;
+      let nextIntegralE = liveState.integralE;
+      let nextDFiltered = liveState.dFiltered;
+      let integrate = true;
+      let explanation = "";
+
+      if (controllerType === 'on-off') {
+        const lastPoint = liveState.data.length > 0 ? liveState.data[liveState.data.length - 1] : null;
+        let uActive = lastPoint ? (lastPoint.Control > 0) : (liveState.y < currentSP);
+
+        const deltaS = isHysteresisIndependent ? hysteresisUpper : hysteresisSymmetric;
+        const deltaI = isHysteresisIndependent ? hysteresisLower : hysteresisSymmetric;
+        const upperThreshold = currentSP + deltaS;
+        const lowerThreshold = currentSP - deltaI;
+
+        if (liveState.y > upperThreshold) {
+          uActive = false;
+          explanation = `La variable (PV) ha superat el Llindar Superior (${upperThreshold.toFixed(2)}) → Sortida = 0 (OFF)`;
+        } else if (liveState.y < lowerThreshold) {
+          uActive = true;
+          explanation = `La variable (PV) ha caigut per sota del Llindar Inferior (${lowerThreshold.toFixed(2)}) → Sortida = ${onOffPower.toFixed(2)} (ON)`;
+        } else {
+          explanation = `La variable es troba dins la banda de transició [${lowerThreshold.toFixed(2)}, ${upperThreshold.toFixed(2)}] → Es manté l'estat anterior (${uActive ? 'ON' : 'OFF'})`;
+        }
+        u = uActive ? onOffPower : 0.0;
+        uRaw = u;
+      } else {
+        const dy_dt_raw = t > 0 ? (liveState.y - liveState.prevY) / dt : 0.0;
+        const Tf = 0.15;
+        const alpha = dt / (Tf + dt);
+        nextDFiltered = liveState.dFiltered + alpha * (dy_dt_raw - liveState.dFiltered);
+
+        const uMin = -uMax;
+        if (improvement === 'anti-windup') {
+          const u_other = (kp * e) - (kd * nextDFiltered);
+          const u_tentative = u_other + (ki * (liveState.integralE + e * dt));
+          const isSaturated = u_tentative > uMax || u_tentative < uMin;
+          const sameSign = (e > 0 && u_tentative > 0) || (e < 0 && u_tentative < 0);
+          if (isSaturated && sameSign) {
+            integrate = false;
+          }
+        }
+
+        nextIntegralE = integrate ? liveState.integralE + e * dt : liveState.integralE;
+
+        u = (kp * e) + (ki * nextIntegralE) - (kd * nextDFiltered);
+        uRaw = u;
+        if (u > uMax) u = uMax;
+        if (u < uMin) u = uMin;
+
+        pVal = kp * e;
+        prevI = liveState.integralE * ki;
+        iVal = nextIntegralE * ki;
+        dVal = kd * (e - liveState.prevE) / dt;
+      }
+
+      const trace = {
+        sp: currentSP,
+        pv: liveState.y,
+        e: e,
+        kp: kp,
+        pVal: pVal,
+        prevI: prevI,
+        ki: ki,
+        dt: dt,
+        iVal: iVal,
+        kd: kd,
+        prevE: liveState.prevE,
+        dVal: dVal,
+        uVal: u,
+        uRaw: uRaw,
+        isSaturated: controllerType === 'pid' ? (uRaw > uMax || uRaw < -uMax) : false,
+        integrate: integrate,
+        onOffExplanation: explanation,
+      };
+
+      const delaySteps = Math.round(plantDeadTime / dt);
+      let delayedU = 0.0;
+      if (delaySteps === 0) {
+        delayedU = u;
+      } else if (liveState.data.length >= delaySteps) {
+        delayedU = liveState.data[liveState.data.length - delaySteps].Control;
+      } else {
+        delayedU = 0.0;
+      }
+
+      let nextX1 = liveState.x1;
+      let nextX2 = liveState.x2;
+      let nextY = liveState.y;
+      const subSteps = 5;
+      const dtSub = dt / subSteps;
+
+      for (let i = 0; i < subSteps; i++) {
+        const dx1 = ((plantGain * delayedU) - nextX1) / plantTau1;
+        nextX1 += dx1 * dtSub;
+
+        if (plantTau2 > 0) {
+          const dx2 = (nextX1 - nextX2) / plantTau2;
+          nextX2 += dx2 * dtSub;
+        } else {
+          nextX2 = nextX1;
+        }
+
+        if (plantTau3 > 0) {
+          const dy = (nextX2 - nextY) / plantTau3;
+          nextY += dy * dtSub;
+        } else {
+          nextY = nextX2;
+        }
+
+        if (clampOutputPositive) {
+          if (nextY < 0) nextY = 0;
+          if (nextX1 < 0) nextX1 = 0;
+          if (nextX2 < 0) nextX2 = 0;
+        }
+      }
+
+      const nextPoint = {
+        time: parseFloat(t.toFixed(2)),
+        Sortida: parseFloat(nextY.toFixed(4)),
+        Setpoint: currentSP,
+        Control: parseFloat(u.toFixed(4)),
+        LlindarSuperior: controllerType === 'on-off' ? currentSP + (isHysteresisIndependent ? hysteresisUpper : hysteresisSymmetric) : undefined,
+        LlindarInferior: controllerType === 'on-off' ? currentSP - (isHysteresisIndependent ? hysteresisLower : hysteresisSymmetric) : undefined,
+      };
+
+      const newData = [...liveState.data, nextPoint];
+      if (newData.length > 800) {
+        newData.shift();
+      }
+
+      liveState = {
+        time: t + dt,
+        x1: nextX1,
+        x2: nextX2,
+        y: nextY,
+        integralE: nextIntegralE,
+        prevE: e,
+        prevY: liveState.y,
+        dFiltered: nextDFiltered,
+        data: newData,
+        trace: trace
+      };
+
+      elements.statusTime.innerText = `(${liveState.time.toFixed(1)}s simulat)`;
+
+      syncCalculationsPanel();
+      recalculateAndRedraw();
+    }
+
+    // Sync calculations DOM values
+    function syncCalculationsPanel() {
+      if (!showCalculations || controlMode === 'step') return;
+      const trace = liveState.trace;
+      if (!trace) return;
+
+      elements.calcStepInfo.innerText = `Pas actual t = ${liveState.time.toFixed(2)}s | Mode: ${controllerType === 'pid' ? 'PID' : 'Tot o res'}`;
+
+      if (controllerType === 'pid') {
+        document.getElementById('calc-val-err').innerText = `${trace.sp.toFixed(2)} - ${trace.pv.toFixed(2)} = ${trace.e.toFixed(2)}`;
+        document.getElementById('calc-val-p').innerText = `${trace.kp.toFixed(1)} · ${trace.e.toFixed(2)} = ${trace.pVal.toFixed(2)}`;
+        document.getElementById('calc-val-i').innerText = `${trace.prevI.toFixed(2)} + (${trace.ki.toFixed(1)} · ${trace.e.toFixed(2)} · ${trace.dt.toFixed(2)}) = ${trace.iVal.toFixed(2)}`;
+        document.getElementById('calc-val-d').innerText = `${kd.toFixed(1)} · (${trace.e.toFixed(2)} - ${trace.prevE.toFixed(2)}) / ${trace.dt.toFixed(2)} = ${trace.dVal.toFixed(2)}`;
+        
+        const formulaU = `${trace.pVal.toFixed(2)} + ${trace.iVal.toFixed(2)} + ${trace.dVal.toFixed(2)} = ${trace.uVal.toFixed(2)}`;
+        document.getElementById('calc-val-u').innerText = formulaU;
+
+        document.getElementById('calc-windup-badge').style.display = trace.integrate ? 'none' : 'block';
+        document.getElementById('calc-sat-badge').style.display = trace.isSaturated ? 'block' : 'none';
+      } else {
+        const deltaS = isHysteresisIndependent ? hysteresisUpper : hysteresisSymmetric;
+        const deltaI = isHysteresisIndependent ? hysteresisLower : hysteresisSymmetric;
+
+        document.getElementById('calc-val-onoff-err').innerText = `${trace.sp.toFixed(2)} - ${trace.pv.toFixed(2)} = ${trace.e.toFixed(2)}`;
+        document.getElementById('calc-val-onoff-up').innerText = `${trace.sp.toFixed(2)} + ${deltaS.toFixed(2)} = ${(trace.sp + deltaS).toFixed(2)}`;
+        document.getElementById('calc-val-onoff-lo').innerText = `${trace.sp.toFixed(2)} - ${deltaI.toFixed(2)} = ${(trace.sp - deltaI).toFixed(2)}`;
+        document.getElementById('calc-val-onoff-u').innerText = `u = ${trace.uVal.toFixed(2)} / ${onOffPower.toFixed(2)}`;
+        
+        const badge = document.getElementById('calc-onoff-state-badge');
+        if (trace.uVal > 0) {
+          badge.innerText = 'Actiu ON';
+          badge.style.backgroundColor = 'var(--emerald-100)';
+          badge.style.color = 'var(--emerald-700)';
+        } else {
+          badge.innerText = 'Inactiu OFF';
+          badge.style.backgroundColor = 'var(--neutral-100)';
+          badge.style.color = 'var(--neutral-600)';
+        }
+
+        document.getElementById('calc-val-onoff-exp').innerText = trace.onOffExplanation;
+      }
+    }
+
+    // Process KPI values and fill DOM elements
+    function updateKPIs() {
+      let sp = 0.0;
+      let yVal = 0.0;
+
+      if (controlMode === 'step') {
+        sp = 1.0;
+        yVal = staticSimulationData.length > 0 ? staticSimulationData[staticSimulationData.length - 1].Sortida : 0.0;
+      } else {
+        sp = controlMode === 'manual' ? manualSP : (liveState.data.length > 0 ? liveState.data[liveState.data.length - 1].Setpoint : 0.0);
+        yVal = liveState.y;
+      }
+
+      const err = sp - yVal;
+      elements.kpiSp.innerText = sp.toFixed(2);
+      elements.kpiPv.innerText = yVal.toFixed(4);
+      elements.kpiErr.innerText = err.toFixed(4);
+
+      const errRel = sp !== 0 ? ((err / sp) * 100).toFixed(1) : '0.0';
+      elements.kpiErrSub.innerHTML = `Rel: ${errRel}%`;
+
+      // Overshoot calculation
+      let overshootPct = 0.0;
+      let overshootAbs = 0.0;
+
+      if (controlMode === 'step') {
+        const maxOut = Math.max(...staticSimulationData.map(d => d.Sortida));
+        if (maxOut > 1.0) {
+          overshootPct = (maxOut - 1.0) * 100;
+          overshootAbs = maxOut - 1.0;
+        }
+      } else {
+        const activeSPData = liveState.data.filter(d => d.Setpoint > 0.1);
+        if (activeSPData.length > 0) {
+          const maxOut = Math.max(...activeSPData.map(d => d.Sortida));
+          const targetSP = activeSPData[activeSPData.length - 1].Setpoint;
+          if (maxOut > targetSP) {
+            overshootPct = ((maxOut - targetSP) / targetSP) * 100;
+            overshootAbs = maxOut - targetSP;
+          }
+        }
+      }
+
+      elements.kpiOvershoot.innerText = overshootPct.toFixed(1) + '%';
+      elements.kpiOvershootSub.innerText = `Abs: ${overshootAbs.toFixed(4)}`;
+
+      // Settling time calculation
+      let settlingStr = "No s'estabilitza";
+      if (controlMode === 'step') {
+        const threshold = 0.05 * 1.0;
+        let lastOutsideIdx = -1;
+        for (let i = 0; i < staticSimulationData.length; i++) {
+          const d = staticSimulationData[i];
+          if (d.time >= 0.0) {
+            if (Math.abs(d.Sortida - 1.0) > threshold) {
+              lastOutsideIdx = i;
+            }
+          }
+        }
+
+        if (lastOutsideIdx === -1) {
+          settlingStr = "0.00 s";
+        } else if (lastOutsideIdx === staticSimulationData.length - 1) {
+          settlingStr = "No s'estabilitza";
+        } else {
+          const sTime = staticSimulationData[lastOutsideIdx + 1].time;
+          settlingStr = `${sTime.toFixed(2)} s`;
+        }
+      } else {
+        if (liveState.data.length < 2) {
+          settlingStr = "Simulant...";
+        } else {
+          const currentSetpoint = liveState.data[liveState.data.length - 1].Setpoint;
+          if (currentSetpoint === 0) {
+            settlingStr = "Aturat (SP=0)";
+          } else {
+            const threshold = 0.05 * currentSetpoint;
+            let settledSinceTime = -1;
+            for (let i = liveState.data.length - 1; i >= 0; i--) {
+              const d = liveState.data[i];
+              if (d.Setpoint !== currentSetpoint) break;
+              if (Math.abs(d.Sortida - currentSetpoint) > threshold) {
+                settledSinceTime = d.time;
+                break;
+              }
+            }
+
+            if (settledSinceTime === -1) {
+              settlingStr = "Sintonitzat < 5%";
+            } else {
+              const lastSPChangeIndex = liveState.data.findIndex(d => d.Setpoint === currentSetpoint);
+              if (lastSPChangeIndex === -1) {
+                settlingStr = "No s'estabilitza";
+              } else {
+                const spAppliedTime = liveState.data[lastSPChangeIndex].time;
+                const tEstabil = liveState.y - currentSetpoint;
+                if (Math.abs(liveState.y - currentSetpoint) > threshold) {
+                  settlingStr = "Simulant...";
+                } else {
+                  settlingStr = `${(settledSinceTime - spAppliedTime).toFixed(2)} s`;
+                }
+              }
+            }
+          }
+        }
+      }
+      elements.kpiResp.innerText = settlingStr;
+    }
+
+    // High performance SVG charting engine
+    function drawChart() {
+      currentChartData = controlMode === 'step' ? staticSimulationData : liveState.data;
+
+      const svg = elements.simChart;
+      const width = svg.clientWidth || 600;
+      const height = svg.clientHeight || 380;
+
+      const margin = { top: 20, right: 15, bottom: 25, left: 40 };
+      const plotWidth = width - margin.left - margin.right;
+      const plotHeight = height - margin.top - margin.bottom;
+
+      // X Domain
+      let xMin = 0.0;
+      let xMax = timeEnd;
+      if (controlMode === 'step') {
+        xMin = -2.0;
+        xMax = timeEnd;
+      } else {
+        const maxTime = liveState.time;
+        if (maxTime <= 20) {
+          xMin = 0.0;
+          xMax = 20.0;
+        } else {
+          xMin = maxTime - 20;
+          xMax = maxTime;
+        }
+      }
+
+      // Y Domain
+      let hasNegative = false;
+      let maxVal = 1.2;
+      let minVal = 0.0;
+
+      currentChartData.forEach(d => {
+        const vals = [d.Sortida, d.Setpoint];
+        if (showControlSignal) vals.push(d.Control);
+        vals.forEach(v => {
+          if (v < -0.05) hasNegative = true;
+          if (v > maxVal) maxVal = v;
+          if (v < minVal) minVal = v;
+        });
+      });
+
+      let yMin = 0.0;
+      let yMax = 1.2;
+      if (hasNegative) {
+        const maxAbs = Math.max(Math.abs(maxVal), Math.abs(minVal));
+        const limit = Math.ceil(maxAbs * 1.15 * 10) / 10;
+        yMin = -limit;
+        yMax = limit;
+      } else {
+        const limit = Math.ceil(maxVal * 1.15 * 10) / 10;
+        yMin = 0.0;
+        yMax = limit;
+      }
+
+      elements.chartYDomainBadge.innerText = `Eix Y: [${yMin.toFixed(1)}, ${yMax.toFixed(1)}]${yMin < 0 ? ' (Simètric)' : ''}`;
+
+      // Coordinates translators
+      const px = t => margin.left + ((t - xMin) / (xMax - xMin)) * plotWidth;
+      const py = v => margin.top + (1.0 - (v - yMin) / (yMax - yMin)) * plotHeight;
+
+      // X and Y Ticks
+      const xTicks = [];
+      const xStep = 2;
+      let startX = Math.floor(xMin / xStep) * xStep;
+      for (let t = startX; t <= xMax + 0.01; t += xStep) {
+        xTicks.push(parseFloat(t.toFixed(1)));
+      }
+      if (xMin <= 0 && xMax >= 0 && !xTicks.includes(0)) {
+        xTicks.push(0);
+      }
+      xTicks.sort((a,b)=>a-b);
+
+      const yTicks = [];
+      const span = yMax - yMin;
+      let yStep = 1;
+      if (span <= 2.2) yStep = 0.5;
+      else if (span <= 5.0) yStep = 1.0;
+      else if (span <= 10.0) yStep = 2.0;
+      else yStep = 5.0;
+
+      let startY = Math.floor(yMin / yStep) * yStep;
+      for (let val = startY; val <= yMax + 0.01; val += yStep) {
+        yTicks.push(parseFloat(val.toFixed(2)));
+      }
+      if (yMin <= 0 && yMax >= 0 && !yTicks.includes(0)) {
+        yTicks.push(0);
+      }
+      yTicks.sort((a,b)=>a-b);
+
+      // Render Grid Lines
+      let gridHTML = "";
+      // horizontal grids
+      yTicks.forEach(tick => {
+        const yCoord = py(tick);
+        gridHTML += `<line x1="${margin.left}" y1="${yCoord}" x2="${width - margin.right}" y2="${yCoord}" style="stroke: var(--neutral-100); stroke-width: 1;" />`;
+      });
+      // vertical grids
+      xTicks.forEach(tick => {
+        const xCoord = px(tick);
+        gridHTML += `<line x1="${xCoord}" y1="${margin.top}" x2="${xCoord}" y2="${height - margin.bottom}" style="stroke: var(--neutral-100); stroke-width: 1;" />`;
+      });
+      elements.gridLines.innerHTML = gridHTML;
+
+      // Draw highlighted 0 axes
+      if (xMin <= 0 && xMax >= 0) {
+        elements.zeroLineY.setAttribute('x1', px(0));
+        elements.zeroLineY.setAttribute('x2', px(0));
+        elements.zeroLineY.setAttribute('y1', margin.top);
+        elements.zeroLineY.setAttribute('y2', height - margin.bottom);
+        elements.zeroLineY.style.display = 'block';
+      } else {
+        elements.zeroLineY.style.display = 'none';
+      }
+
+      if (yMin <= 0 && yMax >= 0) {
+        elements.zeroLineX.setAttribute('x1', margin.left);
+        elements.zeroLineX.setAttribute('x2', width - margin.right);
+        elements.zeroLineX.setAttribute('y1', py(0));
+        elements.zeroLineX.setAttribute('y2', py(0));
+        elements.zeroLineX.style.display = 'block';
+      } else {
+        elements.zeroLineX.style.display = 'none';
+      }
+
+      // Draw axes labels
+      let labelsHTML = "";
+      xTicks.forEach(tick => {
+        labelsHTML += `<text x="${px(tick)}" y="${height - 8}" text-anchor="middle" style="font-family:'Inter', sans-serif; font-size:10px; fill:var(--neutral-500); font-weight:500;">${tick}</text>`;
+      });
+      yTicks.forEach(tick => {
+        labelsHTML += `<text x="${margin.left - 8}" y="${py(tick) + 3}" text-anchor="end" style="font-family:'Inter', sans-serif; font-size:10px; fill:var(--neutral-500); font-weight:500;">${tick.toFixed(1)}</text>`;
+      });
+      elements.axisLabels.innerHTML = labelsHTML;
+
+      // Draw Curves
+      function getPathD(points, yKey) {
+        if (points.length === 0) return "";
+        let dStr = "";
+        for (let i = 0; i < points.length; i++) {
+          const pt = points[i];
+          const xVal = px(pt.time);
+          const yVal = py(pt[yKey]);
+          if (i === 0) dStr += `M ${xVal} ${yVal}`;
+          else dStr += ` L ${xVal} ${yVal}`;
+        }
+        return dStr;
+      }
+
+      let pathsHTML = "";
+      pathsHTML += `<defs><clipPath id="chart-clip"><rect x="${margin.left}" y="${margin.top}" width="${plotWidth}" height="${plotHeight}" /></clipPath></defs>`;
+      pathsHTML += `<g clip-path="url(#chart-clip)">`;
+
+      // 1. Setpoint SP (Red line)
+      pathsHTML += `<path d="${getPathD(currentChartData, 'Setpoint')}" fill="none" stroke="#ef4444" stroke-width="2" stroke-dasharray="5 5" />`;
+
+      // 2. Sortida y(t) (Blue line)
+      pathsHTML += `<path d="${getPathD(currentChartData, 'Sortida')}" fill="none" stroke="#2563eb" stroke-width="3" />`;
+
+      // On-Off thresholds
+      if (controllerType === 'on-off') {
+        pathsHTML += `<path d="${getPathD(currentChartData, 'LlindarSuperior')}" fill="none" stroke="#3b82f6" stroke-width="1.25" stroke-dasharray="4 4" />`;
+        pathsHTML += `<path d="${getPathD(currentChartData, 'LlindarInferior')}" fill="none" stroke="#10b981" stroke-width="1.25" stroke-dasharray="4 4" />`;
+      }
+
+      // Control Signal
+      if (showControlSignal) {
+        pathsHTML += `<path d="${getPathD(currentChartData, 'Control')}" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-dasharray="3 3" />`;
+      }
+
+      pathsHTML += `</g>`;
+      elements.chartPaths.innerHTML = pathsHTML;
+
+      setupChartInteractions(margin, plotWidth, plotHeight, xMin, xMax, yMin, yMax, px, py);
+    }
+
+    function setupChartInteractions(margin, plotWidth, plotHeight, xMin, xMax, yMin, yMax, px, py) {
+      const svg = elements.simChart;
+
+      svg.onmousemove = null;
+      svg.onmouseleave = null;
+
+      svg.onmousemove = (e) => {
+        const rect = svg.getBoundingClientRect();
+        const mX = e.clientX - rect.left;
+        const mY = e.clientY - rect.top;
+
+        if (mX >= margin.left && mX <= rect.width - margin.right && currentChartData.length > 0) {
+          const t = xMin + ((mX - margin.left) / plotWidth) * (xMax - xMin);
+
+          let closestPt = currentChartData[0];
+          let minDiff = Math.abs(closestPt.time - t);
+          for (let i = 1; i < currentChartData.length; i++) {
+            const diff = Math.abs(currentChartData[i].time - t);
+            if (diff < minDiff) {
+              minDiff = diff;
+              closestPt = currentChartData[i];
+            }
+          }
+
+          if (closestPt) {
+            const ptX = px(closestPt.time);
+            
+            elements.hoverLine.setAttribute('x1', ptX);
+            elements.hoverLine.setAttribute('x2', ptX);
+            elements.hoverLine.setAttribute('y1', margin.top);
+            elements.hoverLine.setAttribute('y2', rect.height - margin.bottom);
+
+            elements.hoverDotSp.setAttribute('cx', ptX);
+            elements.hoverDotSp.setAttribute('cy', py(closestPt.Setpoint));
+
+            elements.hoverDotPv.setAttribute('cx', ptX);
+            elements.hoverDotPv.setAttribute('cy', py(closestPt.Sortida));
+
+            if (showControlSignal) {
+              elements.hoverDotCtrl.setAttribute('cx', ptX);
+              elements.hoverDotCtrl.setAttribute('cy', py(closestPt.Control));
+              elements.hoverDotCtrl.style.display = 'block';
+            } else {
+              elements.hoverDotCtrl.style.display = 'none';
+            }
+
+            if (controllerType === 'on-off') {
+              elements.hoverDotUp.setAttribute('cx', ptX);
+              elements.hoverDotUp.setAttribute('cy', py(closestPt.LlindarSuperior));
+              elements.hoverDotUp.style.display = 'block';
+
+              elements.hoverDotLo.setAttribute('cx', ptX);
+              elements.hoverDotLo.setAttribute('cy', py(closestPt.LlindarInferior));
+              elements.hoverDotLo.style.display = 'block';
+            } else {
+              elements.hoverDotUp.style.display = 'none';
+              elements.hoverDotLo.style.display = 'none';
+            }
+
+            elements.hoverGroup.style.display = 'block';
+
+            let htmlStr = `<div style="font-weight: 700; margin-bottom: 4px; color: var(--neutral-800);">Temps: ${closestPt.time.toFixed(2)} s</div>`;
+            htmlStr += `<div style="color: #ef4444; font-weight: 600;">Referència SP: ${closestPt.Setpoint.toFixed(2)}</div>`;
+            htmlStr += `<div style="color: #2563eb; font-weight: 600;">Sortida y(t): ${closestPt.Sortida.toFixed(4)}</div>`;
+            if (controllerType === 'on-off') {
+              htmlStr += `<div style="color: #3b82f6; font-size: 11px;">Llindar Sup: ${closestPt.LlindarSuperior.toFixed(2)}</div>`;
+              htmlStr += `<div style="color: #10b981; font-size: 11px;">Llindar Inf: ${closestPt.LlindarInferior.toFixed(2)}</div>`;
+            }
+            if (showControlSignal) {
+              htmlStr += `<div style="color: #a855f7; font-weight: 600;">Control u(t): ${closestPt.Control.toFixed(4)}</div>`;
+            }
+
+            const tooltip = elements.chartTooltip;
+            tooltip.innerHTML = htmlStr;
+            tooltip.style.display = 'block';
+
+            const tRect = tooltip.getBoundingClientRect();
+            let tooltipX = ptX + 15;
+            let tooltipY = mY - tRect.height / 2;
+
+            if (tooltipX + tRect.width > rect.width) {
+              tooltipX = ptX - tRect.width - 15;
+            }
+            if (tooltipY + tRect.height > rect.height) {
+              tooltipY = rect.height - tRect.height - 10;
+            }
+            if (tooltipY < 0) tooltipY = 10;
+
+            tooltip.style.left = tooltipX + 'px';
+            tooltip.style.top = tooltipY + 'px';
+          }
+        } else {
+          elements.hoverGroup.style.display = 'none';
+          elements.chartTooltip.style.display = 'none';
+        }
+      };
+
+      svg.onmouseleave = () => {
+        elements.hoverGroup.style.display = 'none';
+        elements.chartTooltip.style.display = 'none';
+      };
+    }
+
+    function recalculateAndRedraw() {
+      if (controlMode === 'step') {
+        calculateStaticSimulation();
+      }
+      updateKPIs();
+      drawChart();
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      drawChart();
+    });
+    resizeObserver.observe(elements.simChart);
+
+    window.onload = () => {
+      elements.chkIndHysteresis.checked = isHysteresisIndependent;
+      elements.chkClampPositive.checked = clampOutputPositive;
+      elements.chkShowControl.checked = showControlSignal;
+      syncSliderValues();
+      recalculateAndRedraw();
+    };
+
+  </script>
+</body>
+</html>
