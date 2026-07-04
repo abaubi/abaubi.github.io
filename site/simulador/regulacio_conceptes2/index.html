@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="ca" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conceptes 2: Dinàmica i modelat de sistemes de control</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    .grid-bg {
+      background-image: radial-gradient(#e2e8f0 1.2px, transparent 1.2px);
+      background-size: 24px 24px;
+    }
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      body {
+        background-color: white !important;
+        color: #0f172a !important;
+        font-size: 11pt !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans antialiased">
+
+  <!-- Capçalera principal -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center space-x-3">
+          <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-md shadow-indigo-200">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+          </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero banner -->
+  <section class="bg-slate-900 text-white relative py-12 px-4 overflow-hidden grid-bg">
+    <div class="absolute inset-0 bg-slate-900 opacity-90"></div>
+    <div class="relative max-w-5xl mx-auto z-10 text-center">
+      <span class="bg-indigo-500/20 text-indigo-300 text-xs font-semibold tracking-wider uppercase px-3 py-1 rounded-full border border-indigo-400/30">Cicle superior d'automatització i robòtica industrial</span>
+      <h2 class="text-3xl sm:text-4xl font-extrabold mt-4 mb-3 tracking-tight">Comprendre la dinàmica del món real</h2>
+      <p class="text-slate-300 text-base sm:text-lg max-w-3xl mx-auto leading-relaxed">
+        Per poder controlar de manera precisa qualsevol variable física (temperatura, velocitat, nivell), primer hem d'entendre com es comporta de manera nativa i quins factors limiten o deformen la seva resposta teòrica.
+      </p>
+    </div>
+  </section>
+
+  <!-- Contingut principal -->
+  <main class="flex-grow max-w-5xl w-full mx-auto px-4 py-10 sm:px-6 lg:px-8 space-y-12">
+
+    <!-- Introducció al concepte d'ordre -->
+    <div id="concepte-ordre" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-8">
+      <div class="flex flex-col md:flex-row gap-8 items-center">
+        <div class="flex-1 space-y-4">
+          <div class="flex items-center space-x-2 text-indigo-600 font-bold uppercase text-xs tracking-wider">
+            <span>Fonament matemàtic</span>
+            <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+          </div>
+          <h3 class="text-2xl font-bold text-slate-900">Què és l'ordre d'un sistema de control?</h3>
+          <p class="text-slate-600 leading-relaxed">
+            L'ordre d'un sistema de control ens indica el <strong>grau de complexitat de la seva dinàmica</strong>. Físicament, està determinat pel <strong>nombre d'elements capaços d'emmagatzemar energia</strong> o provocar retards que interactuen simultàniament dins de la planta.
+          </p>
+          <p class="text-slate-600 leading-relaxed">
+            Matemàticament, l'ordre ve definit de dues maneres totalment equivalents:
+          </p>
+          <ul class="space-y-2 text-sm text-slate-600">
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-indigo-500 mr-2 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span>El <strong>grau màxim de la derivada</strong> de la variable de sortida en l'equació diferencial que descriu el sistema físic.</span>
+            </li>
+            <li class="flex items-start">
+              <svg class="w-5 h-5 text-indigo-500 mr-2 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span>L'<strong>exponent més alt de la variable complexa <em>s</em></strong> present en el denominador de la seva funció de transferència <em>G(s)</em>.</span>
+            </li>
+          </ul>
+        </div>
+        <div class="w-full md:w-80 shrink-0 bg-slate-50 border border-slate-200 rounded-xl p-5 flex flex-col justify-center items-center text-center">
+          <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Funció de transferència genèrica</span>
+          <div class="my-4 text-slate-800 bg-white px-3 py-4 rounded border border-slate-200 shadow-sm flex justify-center items-center w-full overflow-x-auto">
+            <!-- Representació SVG nativa de la fórmula -->
+            <svg class="h-14 w-auto min-w-[210px]" viewBox="0 0 280 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <text x="5" y="36" fill="#0f172a" font-family="Georgia, serif" font-size="16" font-style="italic">G(s) =</text>
+              
+              <!-- Y(s)/U(s) -->
+              <text x="65" y="24" fill="#0f172a" font-family="Georgia, serif" font-size="14" font-style="italic" text-anchor="middle">Y(s)</text>
+              <line x1="50" y1="30" x2="80" y2="30" stroke="#0f172a" stroke-width="1.2" />
+              <text x="65" y="44" fill="#0f172a" font-family="Georgia, serif" font-size="14" font-style="italic" text-anchor="middle">U(s)</text>
+              
+              <text x="90" y="36" fill="#0f172a" font-family="Georgia, serif" font-size="16" font-style="italic">=</text>
+              
+              <!-- Numerador polinomi -->
+              <text x="110" y="24" fill="#0f172a" font-family="Georgia, serif" font-size="14" font-style="italic">b</text>
+              <text x="117" y="27" fill="#0f172a" font-family="Georgia, serif" font-size="9" font-style="italic">m</text>
+              <text x="125" y="24" fill="#0f172a" font-family="Georgia, serif" font-size="14" font-style="italic">s</text>
+              <text x="131" y="17" fill="#0f172a" font-family="Georgia, serif" font-size="9" font-style="italic">m</text>
+              <text x="142" y="24" fill="#0f172a" font-family="Georgia, serif" font-size="13">+</text>
+              <text x="154" y="24" fill="#0f172a" font-family="Georgia, serif" font-size="13">&middot;&middot;&middot;</text>
+              <text x="172" y="24" fill="#0f172a" font-family="Georgia, serif" font-size="13">+</text>
+              <text x="184" y="24" fill="#0f172a" font-family="Georgia, serif" font-size="14" font-style="italic">b</text>
+              <text x="191" y="27" fill="#0f172a" font-family="Georgia, serif" font-size="9" font-style="italic">0</text>
+              
+              <!-- Línia de fracció principal -->
+              <line x1="105" y1="30" x2="205" y2="30" stroke="#0f172a" stroke-width="1.2" />
+              
+              <!-- Denominador polinomi -->
+              <text x="110" y="44" fill="#0f172a" font-family="Georgia, serif" font-size="14" font-style="italic">a</text>
+              <text x="116" y="47" fill="#0f172a" font-family="Georgia, serif" font-size="9" font-style="italic">n</text>
+              <text x="123" y="44" fill="#0f172a" font-family="Georgia, serif" font-size="14" font-style="italic">s</text>
+              <text x="129" y="37" fill="#0f172a" font-family="Georgia, serif" font-size="9" font-style="italic">n</text>
+              <text x="139" y="44" fill="#0f172a" font-family="Georgia, serif" font-size="13">+</text>
+              <text x="151" y="44" fill="#0f172a" font-family="Georgia, serif" font-size="13">&middot;&middot;&middot;</text>
+              <text x="169" y="44" fill="#0f172a" font-family="Georgia, serif" font-size="13">+</text>
+              <text x="181" y="44" fill="#0f172a" font-family="Georgia, serif" font-size="14" font-style="italic">a</text>
+              <text x="187" y="47" fill="#0f172a" font-family="Georgia, serif" font-size="9" font-style="italic">0</text>
+            </svg>
+          </div>
+          <span class="text-xs text-slate-500">L'exponent <strong class="text-indigo-600 font-extrabold"><em>n</em></strong> del denominador defineix l'<strong>ordre</strong> del sistema de control.</span>
+        </div>
+      </div>
+
+      <!-- Nova secció: La relació entre entrada i sortida -->
+      <hr class="border-slate-200" />
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-center">
+        <div class="md:col-span-7 space-y-4">
+          <div class="flex items-center space-x-2 text-indigo-600 font-bold uppercase text-xs tracking-wider">
+            <span>Relació dinàmica</span>
+            <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+          </div>
+          <h4 class="text-xl font-bold text-slate-900">La funció de transferència com a vincle entre l'entrada i la sortida</h4>
+          <p class="text-slate-600 text-sm leading-relaxed">
+            Més enllà de la seva definició algebraica, la funció de transferència <strong>G(s)</strong> té un significat pràcial essencial: és l'<strong>operador matemàtic</strong> que connecta directament l'estímul aplicat a un sistema (l'entrada) amb la reacció física obtinguda (la sortida).
+          </p>
+          <p class="text-slate-600 text-sm leading-relaxed">
+            Si coneixem la funció de transferència d'una planta, podem predir matemàticament com respondrà davant de qualsevol canvi en les seves entrades. Al domini de Laplace, aquesta transformació es redueix a una multiplicació directa molt senzilla d'entendre:
+          </p>
+          <div class="bg-indigo-50 border-l-4 border-indigo-600 p-3.5 rounded-r-lg text-xs text-indigo-950">
+            <strong>Equació fonamental de la resposta:</strong> 
+            La variable de sortida és igual a l'ordre o entrada multiplicada pel bloc del sistema: 
+            <span class="font-serif italic font-semibold ml-1">Y(s) = G(s) &middot; U(s)</span>.
+          </div>
+        </div>
+        
+        <!-- Bloc gràfic de relació entrada/sortida -->
+        <div class="md:col-span-5 bg-slate-900 p-5 rounded-xl border border-slate-800 flex flex-col items-center">
+          <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-4">Flux de senyal de la planta</span>
+          
+          <svg class="w-full max-w-[280px] h-auto" viewBox="0 0 280 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Bloc del sistema G(s) -->
+            <rect x="95" y="20" width="90" height="45" rx="6" fill="#1e293b" stroke="#6366f1" stroke-width="2" />
+            <text x="140" y="47" fill="#818cf8" font-family="Georgia, serif" font-size="16" font-style="italic" font-weight="bold" text-anchor="middle">G(s)</text>
+            <text x="140" y="58" fill="#cbd5e1" font-size="7" text-anchor="middle">SISTEMA (PLANTA)</text>
+            
+            <!-- Entrada U(s) -->
+            <line x1="20" y1="42.5" x2="90" y2="42.5" stroke="#cbd5e1" stroke-width="2" />
+            <polygon points="92,42.5 85,38 85,47" fill="#cbd5e1" />
+            <text x="45" y="32" fill="#38bdf8" font-family="Georgia, serif" font-size="12" font-style="italic" text-anchor="middle">U(s)</text>
+            <text x="45" y="54" fill="#94a3b8" font-size="8" text-anchor="middle">Entrada</text>
+            
+            <!-- Sortida Y(s) -->
+            <line x1="185" y1="42.5" x2="255" y2="42.5" stroke="#cbd5e1" stroke-width="2" />
+            <polygon points="257,42.5 250,38 250,47" fill="#cbd5e1" />
+            <text x="225" y="32" fill="#34d399" font-family="Georgia, serif" font-size="12" font-style="italic" text-anchor="middle">Y(s)</text>
+            <text x="225" y="54" fill="#94a3b8" font-size="8" text-anchor="middle">Sortida</text>
+            
+            <!-- Fórmula multiplicativa inferior -->
+            <rect x="50" y="85" width="180" height="24" rx="4" fill="#0f172a" stroke="#334155" stroke-width="1" />
+            <text x="140" y="101" fill="#f8fafc" font-family="Georgia, serif" font-size="11" font-style="italic" text-anchor="middle">Y(s) = G(s) &middot; U(s)</text>
+          </svg>
+          <span class="text-[10px] text-slate-500 mt-2 text-center">La sortida és la transformació directa de l'entrada pel sistema.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Secció 1: Classificació per ordre -->
+    <div class="space-y-8">
+      <div class="border-l-4 border-indigo-600 pl-4">
+        <h3 class="text-2xl font-bold text-slate-950">Classificació de sistemes segons el seu ordre</h3>
+        <p class="text-slate-600 text-sm mt-1">Anàlisi detallada dels models físics i de comportament teòric més utilitzats a la indústria.</p>
+      </div>
+
+      <!-- Primer ordre -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+        <div class="p-6 sm:p-8 lg:col-span-7 space-y-4">
+          <div class="flex items-center space-x-2">
+            <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-full">1r ordre</span>
+            <span class="text-slate-400 text-xs">Un únic magatzem d'energia</span>
+          </div>
+          <h4 class="text-xl font-bold text-slate-900">Sistemes de primer ordre</h4>
+          <p class="text-slate-600 leading-relaxed text-sm">
+            Un sistema és de primer ordre quan conté <strong>un sol element capaç d'acumular energia</strong> (o que produeix una restricció en el flux d'energia). Es caracteritza per un comportament extremadament <strong>suau i estable</strong>; mai sota cap circumstància generarà oscil·lacions autònomes davant d'una entrada brusca de tipus esglaó de referència.
+          </p>
+          <div class="bg-amber-50 border-l-4 border-amber-500 p-4 rounded-r-lg text-xs leading-relaxed text-amber-900">
+            <strong>Paràmetre fonamental - La constant de temps (&tau;):</strong> 
+            És el temps requerit perquè la sortida del sistema assoleixi exactament el <strong>63.2%</strong> del seu canvi o valor total final. Es considera que el sistema s'estabilitza completament un cop transcorregut un temps equivalent a <strong>4&tau;</strong> o <strong>5&tau;</strong> (on assoleix entre el 98.2% i el 99.3% del valor final de règim permanent).
+          </div>
+          <div>
+            <span class="text-xs font-bold text-slate-500 uppercase block mb-1">Exemples clau a la indústria:</span>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                <strong class="text-xs text-indigo-700 block">Acceleració de vehicle</strong>
+                <span class="text-[11px] text-slate-500">La inèrcia de la massa oposa resistència, guanyant velocitat de forma exponencial fins a equilibrar-se.</span>
+              </div>
+              <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                <strong class="text-xs text-indigo-700 block">Termòmetre de bulb</strong>
+                <span class="text-[11px] text-slate-500">En submergir-lo en un medi calent, la lectura triga un temps logarítmic a equilibrar-se.</span>
+              </div>
+              <div class="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                <strong class="text-xs text-indigo-700 block">Circuit elèctric RC</strong>
+                <span class="text-[11px] text-slate-500">Un únic condensador emmagatzema càrrega elèctrica a través d'una resistència limitadora de corrent.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="lg:col-span-5 bg-slate-900 flex flex-col justify-center items-center p-6 border-t lg:border-t-0 lg:border-l border-slate-800">
+          <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Resposta d'un sistema de 1r ordre</span>
+          
+          <!-- Gràfica d'un sistema de 1r ordre en SVG -->
+          <svg class="w-full max-w-[340px] h-auto" viewBox="0 0 300 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Quadrícula de fons -->
+            <path d="M 30 140 L 280 140 M 30 100 L 280 100 M 30 60 L 280 60 M 110 20 L 110 180" stroke="#334155" stroke-width="0.5" stroke-dasharray="2 2" />
+            
+            <!-- Eixos -->
+            <line x1="30" y1="180" x2="280" y2="180" stroke="#94a3b8" stroke-width="1.5" />
+            <line x1="30" y1="20" x2="30" y2="190" stroke="#94a3b8" stroke-width="1.5" />
+            
+            <!-- Entrada de consigna (Esglaó a t=70) -->
+            <path d="M 30 180 L 70 180 L 70 60 L 280 60" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="3 3" />
+            
+            <!-- Resposta exponencial perfecta calculada -->
+            <path d="M 30 180 L 70 180 C 85 180, 95 130, 110 104.16 C 130 69.5, 150 61, 280 60" stroke="#10b981" stroke-width="3" fill="none" stroke-linecap="round" />
+            
+            <!-- Indicador de constant de temps tau (t = 70 + 40 = 110) -->
+            <line x1="110" y1="60" x2="110" y2="180" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="2 2" />
+            <!-- Línia horitzontal del 63.2% (y = 180 - 120 * 0.632 = 104.16) -->
+            <line x1="30" y1="104.16" x2="110" y2="104.16" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="2 2" />
+            
+            <!-- Indicador de temps d'estabilització (5 * tau = 200px -> t = 70 + 200 = 270) -->
+            <line x1="270" y1="60" x2="270" y2="180" stroke="#64748b" stroke-width="1" stroke-dasharray="2 2" />
+            
+            <!-- Etiquetes de text -->
+            <text x="280" y="195" fill="#94a3b8" font-size="9" text-anchor="end">Temps (t)</text>
+            <text x="20" y="25" fill="#94a3b8" font-size="9">Amplitud (y)</text>
+            <text x="75" y="52" fill="#3b82f6" font-size="9" font-weight="bold">Consigna</text>
+            <text x="155" y="85" fill="#10b981" font-size="9" font-weight="bold">Resposta</text>
+            
+            <!-- Substituïts caràcters LaTeX per entitats HTML d'alta definició dins de l'SVG -->
+            <text x="110" y="195" fill="#f59e0b" font-size="10" font-family="Georgia, serif" font-style="italic" text-anchor="middle">&tau;</text>
+            <text x="270" y="195" fill="#64748b" font-size="10" font-family="Georgia, serif" font-style="italic" text-anchor="middle">5&tau;</text>
+            <text x="22" y="107" fill="#f59e0b" font-size="9" text-anchor="end">63.2%</text>
+            <text x="22" y="63" fill="#3b82f6" font-size="9" text-anchor="end">100%</text>
+          </svg>
+          <div class="mt-4 text-center">
+            <code class="text-xs text-indigo-400 font-mono">G(s) = K / (&tau;&middot;s + 1)</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- Segon ordre -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+        <div class="p-6 sm:p-8 lg:col-span-7 space-y-4">
+          <div class="flex items-center space-x-2">
+            <span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2.5 py-0.5 rounded-full">2n ordre</span>
+            <span class="text-slate-400 text-xs">Dos elements d'energia interconnectats</span>
+          </div>
+          <h4 class="text-xl font-bold text-slate-900">Sistemas de segon ordre</h4>
+          <p class="text-slate-600 leading-relaxed text-sm">
+            Tenen <strong>dos elements acumuladors d'energia</strong> que interactuen de forma dinàmica (com una massa que acumula energia cinètica i un moll que acumula energia potencial). A causa d'aquest canvi o traspàs continu d'energia d'un element a l'altre, el sistema és capaç d'<strong>oscil·lar</strong> davant una pertorbació o canvi d'esglaó de referència.
+          </p>
+          <p class="text-slate-600 leading-relaxed text-sm">
+            La resposta d'un sistema de segon ordre depèn totalment d'un paràmetre crític de disseny anomenat <strong>coeficient d'amortiment (&zeta;)</strong>:
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
+            <div class="bg-rose-50 text-rose-950 p-2.5 rounded-lg border border-rose-100">
+              <strong class="block text-rose-800 font-bold mb-1">Subamortit (0 < &zeta; < 1)</strong>
+              <span>El sistema reacciona molt ràpidament però genera fortes oscil·lacions transitòries i un sobre-pic inicial (over-shoot).</span>
+            </div>
+            <div class="bg-emerald-50 text-emerald-950 p-2.5 rounded-lg border border-emerald-100">
+              <strong class="block text-emerald-800 font-bold mb-1">Críticament amortit (&zeta; = 1)</strong>
+              <span>El millor compromís de disseny. Arriba al valor de consigna el mais ràpid possible sense cap oscil·lació.</span>
+            </div>
+            <div class="bg-purple-50 text-purple-950 p-2.5 rounded-lg border border-purple-100">
+              <strong class="block text-purple-800 font-bold mb-1">Sobreamortit (&zeta; > 1)</strong>
+              <span>No té oscil·lació, pero la reacció és molt lenta i feixuga. El sistema se comporta com dos primer ordre lents en cascada.</span>
+            </div>
+          </div>
+          <div>
+            <span class="text-xs font-bold text-slate-500 uppercase block mb-1">Exemples clau a la indústria:</span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="bg-slate-50 p-3 rounded-lg border border-slate-100 flex items-center space-x-3">
+                <div class="bg-white p-2 rounded border border-slate-200 shrink-0">
+                  <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
+                </div>
+                <div>
+                  <strong class="text-xs text-indigo-700 block">La suspensió d'un vehicle</strong>
+                  <span class="text-[11px] text-slate-500">Molla helicoïdal (emmagatzema energia elàstica) i amortidor hidràulic limitador d'oscil·lació.</span>
+                </div>
+              </div>
+              <div class="bg-slate-50 p-3 rounded-lg border border-slate-100 flex items-center space-x-3">
+                <div class="bg-white p-2 rounded border border-slate-200 shrink-0">
+                  <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+                </div>
+                <div>
+                  <strong class="text-xs text-indigo-700 block">Un circuit elèctric RLC</strong>
+                  <span class="text-[11px] text-slate-500">La bobina (emmagatzema corrent magnètic) i el condensador (voltatge electroestàtic).</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="lg:col-span-5 bg-slate-900 flex flex-col justify-center items-center p-6 border-t lg:border-t-0 lg:border-l border-slate-800">
+          <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Comportaments segons &zeta;</span>
+          
+          <!-- Gràfica de 2n ordre en SVG -->
+          <svg class="w-full max-w-[340px] h-auto" viewBox="0 0 300 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 30 140 L 280 140 M 30 100 L 280 100 M 30 60 L 280 60" stroke="#334155" stroke-width="0.5" stroke-dasharray="2 2" />
+            
+            <line x1="30" y1="180" x2="280" y2="180" stroke="#94a3b8" stroke-width="1.5" />
+            <line x1="30" y1="20" x2="30" y2="190" stroke="#94a3b8" stroke-width="1.5" />
+            
+            <!-- Consigna d'esglaó a y=100 (distància real de l'eix és d'amplitud 80px) -->
+            <line x1="30" y1="100" x2="280" y2="100" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="3 3" />
+            
+            <!-- Resposta Subamortida (vermella, oscil·lació amortida real) -->
+            <path d="M 30 180 L 60 180 C 75 180, 80 80, 95 50 C 115 15, 130 135, 150 120 C 170 100, 190 85, 210 95 C 230 102, 250 100, 280 100" stroke="#f43f5e" stroke-width="2.5" fill="none" stroke-linecap="round" />
+            
+            <!-- Resposta Críticament Amortida (verda, transició ràpida ideal) -->
+            <path d="M 30 180 L 60 180 C 85 180, 105 130, 125 110 C 145 95, 175 100, 280 100" stroke="#10b981" stroke-width="2" fill="none" stroke-linecap="round" />
+            
+            <!-- Resposta Sobreamortida (lila, reacció molt lenta) -->
+            <path d="M 30 180 L 60 180 C 110 180, 140 150, 180 125 C 210 110, 240 102, 280 100" stroke="#a855f7" stroke-width="2" fill="none" stroke-linecap="round" />
+            
+            <!-- Llegenda i rètols -->
+            <text x="280" y="195" fill="#94a3b8" font-size="9" text-anchor="end">Temps (t)</text>
+            <text x="20" y="25" fill="#94a3b8" font-size="9">Amplitud (y)</text>
+            
+            <text x="100" y="40" fill="#f43f5e" font-size="8" font-weight="bold">Subamortit</text>
+            <text x="135" y="85" fill="#10b981" font-size="8" font-weight="bold">Críticament amortit</text>
+            <text x="200" y="140" fill="#a855f7" font-size="8" font-weight="bold">Sobreamortit</text>
+          </svg>
+          <div class="mt-4 text-center">
+            <code class="text-xs text-indigo-400 font-mono">G(s) = &omega;_n^2 / (s^2 + 2&zeta;&omega;_n&middot;s + &omega;_n^2)</code>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tercer ordre i superior -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden grid grid-cols-1 lg:grid-cols-12">
+        <div class="p-6 sm:p-8 lg:col-span-7 space-y-4">
+          <div class="flex items-center space-x-2">
+            <span class="bg-violet-100 text-violet-800 text-xs font-bold px-2.5 py-0.5 rounded-full">3r ordre o superior</span>
+            <span class="text-slate-400 text-xs">Sistemes complexos de resposta inestable</span>
+          </div>
+          <h4 class="text-xl font-bold text-slate-900">Sistemes de tercer ordre</h4>
+          <p class="text-slate-600 leading-relaxed text-sm">
+            Un sistema de tercer ordre conté <strong>tres elements capaços d'emmagatzemar energia</strong> de forma combinada. Normalment apareixen en connectar elements de menor ordre en cascada (com tres tancs de líquid on l'aigua es buida consecutivament de l'un a l'altre).
+          </p>
+          <p class="text-slate-600 leading-relaxed text-sm">
+            La presència de tres pols en la funció de transferència introdueix un perfil de resposta en forma de <strong>S molt pronunciada</strong> a causa dels retards acumulats en les diferents etapes físiques. El gran perill d'aquests sistemes é que, sota l'acció de la retroalimentació (control en llaç tancat), són <strong>molt propensos a la inestabilitat</strong> si el guany del regulador és massa elevat, provocant que les oscil·lacions creixin exponencialment fins a descontrolar la màquina.
+          </p>
+          <div>
+            <span class="text-xs font-bold text-slate-500 uppercase block mb-1">Exemples clau a la indústria:</span>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div class="bg-slate-50 p-3 rounded-lg border border-slate-100 flex items-center space-x-3">
+                <div class="bg-white p-2 rounded border border-slate-200 shrink-0">
+                  <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 100-6 3 3 0 000 6z" /></svg>
+                </div>
+                <div>
+                  <strong class="text-xs text-indigo-700 block">Motor amb transmissió elàstica</strong>
+                  <span class="text-[11px] text-slate-500">Combina la inèrcia de l'eix rotatiu, l'elasticitat de la corretja d'acoblament i la inèrcia pròpia de la càrrega.</span>
+                </div>
+              </div>
+              <div class="bg-slate-50 p-3 rounded-lg border border-slate-100 flex items-center space-x-3">
+                <div class="bg-white p-2 rounded border border-slate-200 shrink-0">
+                  <svg class="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>
+                </div>
+                <div>
+                  <strong class="text-xs text-indigo-700 block">Reactor de processos químics</strong>
+                  <span class="text-[11px] text-slate-500">Transpàs d'energia i calor consecutiu entre tres tancs d'emmagatzematge en línia de forma continuada.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="lg:col-span-5 bg-slate-900 flex flex-col justify-center items-center p-6 border-t lg:border-t-0 lg:border-l border-slate-800">
+          <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Comportament de tercer ordre</span>
+          
+          <!-- Gràfica de 3r ordre (Inestabilitat vs Estable) en SVG -->
+          <svg class="w-full max-w-[340px] h-auto" viewBox="0 0 300 220" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M 30 140 L 280 140 M 30 100 L 280 100 M 30 60 L 280 60" stroke="#334155" stroke-width="0.5" stroke-dasharray="2 2" />
+            
+            <line x1="30" y1="180" x2="280" y2="180" stroke="#94a3b8" stroke-width="1.5" />
+            <line x1="30" y1="20" x2="30" y2="190" stroke="#94a3b8" stroke-width="1.5" />
+            
+            <!-- Consigna -->
+            <line x1="30" y1="100" x2="280" y2="100" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="3 3" />
+            
+            <!-- Resposta Estable (Lòbul en S molt acentuat, retard inicial clar per pols múltiples) -->
+            <path d="M 30 180 L 60 180 C 95 180 115 175 130 145 C 150 110 175 100 280 100" stroke="#10b981" stroke-width="2.5" fill="none" stroke-linecap="round" />
+            
+            <!-- Resposta Inestable (oscil·lació divergent creixent vermella amb pics clarament creixents) -->
+            <!-- Punts: Inici a t=60. Pic 1 a t=100 (y=80), Vall 1 a t=140 (y=130), Pic 2 a t=180 (y=40), Vall 2 a t=220 (y=170), Pic 3 a t=260 (y=10) -->
+            <path d="M 30 180 L 60 180 C 80 180, 90 90, 100 80 C 110 70, 120 125, 130 130 C 145 135, 160 50, 175 40 C 190 30, 205 160, 220 170 C 235 180, 250 20, 265 10" stroke="#ef4444" stroke-width="2.5" fill="none" stroke-linecap="round" />
+            
+            <!-- Marcadors d'inestabilitat creixent -->
+            <circle cx="100" cy="80" r="3" fill="#ef4444" />
+            <circle cx="175" cy="40" r="3" fill="#ef4444" />
+            <circle cx="265" cy="10" r="4" fill="#ef4444" />
+            
+            <!-- Etiquetes de text -->
+            <text x="280" y="195" fill="#94a3b8" font-size="9" text-anchor="end">Temps (t)</text>
+            <text x="20" y="25" fill="#94a3b8" font-size="9">Amplitud (y)</text>
+            
+            <text x="145" y="65" fill="#ef4444" font-size="8" font-weight="bold">Llaç tancat inestable</text>
+            <text x="175" y="145" fill="#10b981" font-size="8" font-weight="bold">Llaç obert estable (en S)</text>
+          </svg>
+          <div class="mt-4 text-center">
+            <code class="text-xs text-indigo-400 font-mono">G(s) = K / [(&tau;_1&middot;s+1)(&tau;_2&middot;s+1)(&tau;_3&middot;s+1)]</code>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Secció 2: Aspectes addicionals que afecten al model -->
+    <div class="space-y-8">
+      <div class="border-l-4 border-indigo-600 pl-4">
+        <h3 class="text-2xl font-bold text-slate-950">Quins altres aspectes afecten al món real?</h3>
+        <p class="text-slate-600 text-sm mt-1">Quan dissenyem un model matemàtic lineal ideal, simplifiquem en excés la planta. Els següents elements s'han de considerar.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+        <!-- Retard pur (temps mort) -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center space-x-2">
+              <span class="p-1.5 bg-rose-50 border border-rose-100 text-rose-600 rounded-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0y" /></svg>
+              </span>
+              <h4 class="font-bold text-slate-900 text-base">1. El retard pur (temps mort)</h4>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Representa el decalatge des que es realitza una acció des del controlador fins que el sensor de mesura registra algun canvi. No prové d'acumular energia, sinó del pur <strong>temps de transport físic</strong> (com el desplaçament d'un fluid per una canonada). És un factor molt crític que pot inestabilitzar qualsevol llaç de control tancat.
+            </p>
+          </div>
+          <div class="bg-slate-900 rounded-lg p-3 flex flex-col items-center my-2">
+            <svg class="w-full max-w-[280px] h-32" viewBox="0 0 250 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <line x1="20" y1="100" x2="230" y2="100" stroke="#475569" stroke-width="1.5" />
+              <line x1="20" y1="15" x2="20" y2="105" stroke="#475569" stroke-width="1.5" />
+              
+              <!-- Entrada esglaó a t=50 -->
+              <path d="M 20 100 L 50 100 L 50 40 L 230 40" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="2 2" fill="none" />
+              <!-- Resposta retardada fins a t=100 on comença a reaccionar -->
+              <path d="M 20 100 L 100 100 C 115 100, 125 70, 145 50 C 165 40, 185 40, 230 40" stroke="#ef4444" stroke-width="2" fill="none" stroke-linecap="round" />
+              
+              <!-- Fletxa de retard -->
+              <path d="M 50 100 L 100 100" stroke="#eab308" stroke-width="3" />
+              <line x1="50" y1="90" x2="50" y2="105" stroke="#eab308" stroke-width="1" />
+              <line x1="100" y1="90" x2="100" y2="105" stroke="#eab308" stroke-width="1" />
+              
+              <text x="75" y="85" fill="#eab308" font-size="8" font-weight="bold" text-anchor="middle">Temps mort (td)</text>
+              <text x="145" y="32" fill="#3b82f6" font-size="8">Ordre de control</text>
+            </svg>
+          </div>
+          <p class="text-[11px] text-slate-500 leading-normal">
+            <strong>Exemple:</strong> L'aigua temperada de la dutxa triga uns segons a sortir des que obrim l'aixeta perquè l'aigua tèbia ha de recórrer físicament tota la línia de canonades.
+          </p>
+        </div>
+
+        <!-- Les no-linealitats -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center space-x-2">
+              <span class="p-1.5 bg-amber-50 border border-amber-100 text-amber-600 rounded-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+              </span>
+              <h4 class="font-bold text-slate-900 text-base">2. Les no-linealitats físiques</h4>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              En sistemes reals, els components s'allunyen de la linealitat matemàtica ideal. Això s'explica mitjançant tres fenòmens fonamentals:
+            </p>
+            <ul class="space-y-2 text-xs text-slate-600">
+              <li class="bg-slate-50 p-2.5 rounded border border-slate-100">
+                <strong class="text-indigo-800 block mb-0.5">Saturació:</strong>
+                <span>Ocorre quan un actuador assoleix el seu límit físic operatiu de potència, pressió o desplaçament. Per molt que el regulador demani augmentar l'acció de control, el sistema no podrà donar més de si (per exemple, una vàlvula oberta completament al 100% o la velocitat límit d'un motor pel voltatge de la xarxa elèctrica).</span>
+              </li>
+              <li class="bg-slate-50 p-2.5 rounded border border-slate-100">
+                <strong class="text-indigo-800 block mb-0.5">Zona morta:</strong>
+                <span>És un rang de valors de l'entrada on la sortida no respon gens. Es deu generalment a la fricció estàtica mecànica que bloqueja el moviment inicial o a llindars mínims de conducció de components elèctrics. L'actuador requereix rebre un nivell de senyal mínim per començar a respondre.</span>
+              </li>
+              <li class="bg-slate-50 p-2.5 rounded border border-slate-100">
+                <strong class="text-indigo-800 block mb-0.5">Histèresi:</strong>
+                <span>Fenomen on la resposta d'un component depèn de la direcció en què evoluciona el senyal de control (si puja o si baixa). Es manifesta habitualment en components magnètics (com relés i transformadors) i en la folga física d'engranatges mecànics (backlash), on la transició de tornada no segueix el mateix camí que la d'anada.</span>
+              </li>
+            </ul>
+          </div>
+          <!-- Gràfics SVG natius i comparatius de les tres no-linealitats -->
+          <div class="bg-slate-900 rounded-lg p-2.5 flex flex-col items-center space-y-2 my-2">
+            <span class="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Perfils de no-linealitat</span>
+            <svg class="w-full max-w-[340px] h-40" viewBox="0 0 340 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Subplot 1: Saturació (x: 10 a 100, y: 10 a 110) -->
+              <text x="55" y="15" fill="#f59e0b" font-size="8" font-weight="bold" text-anchor="middle">Saturació</text>
+              <line x1="15" y1="75" x2="95" y2="75" stroke="#475569" stroke-width="1" />
+              <line x1="55" y1="25" x2="55" y2="125" stroke="#475569" stroke-width="1" />
+              <!-- Corba de saturació -->
+              <path d="M 20 110 L 40 110 L 70 40 L 90 40" stroke="#38bdf8" stroke-width="2" fill="none" stroke-linecap="round" />
+              <text x="90" y="36" fill="#cbd5e1" font-size="7">Límit</text>
+
+              <!-- Subplot 2: Zona morta (x: 120 a 210, y: 10 a 110) -->
+              <text x="165" y="15" fill="#f59e0b" font-size="8" font-weight="bold" text-anchor="middle">Zona morta</text>
+              <line x1="125" y1="75" x2="205" y2="75" stroke="#475569" stroke-width="1" />
+              <line x1="165" y1="25" x2="165" y2="125" stroke="#475569" stroke-width="1" />
+              <!-- Corba de zona morta -->
+              <path d="M 130 110 L 150 75 L 180 75 L 200 40" stroke="#38bdf8" stroke-width="2" fill="none" stroke-linecap="round" />
+              <text x="165" y="85" fill="#cbd5e1" font-size="7" text-anchor="middle">Silenci</text>
+
+              <!-- Subplot 3: Histèresi (x: 230 a 320, y: 10 a 110) -->
+              <text x="275" y="15" fill="#f59e0b" font-size="8" font-weight="bold" text-anchor="middle">Histèresi</text>
+              <line x1="235" y1="75" x2="315" y2="75" stroke="#475569" stroke-width="1" />
+              <line x1="275" y1="25" x2="275" y2="125" stroke="#475569" stroke-width="1" />
+              <!-- Bucle d'histèresi amb sentits de fletxes -->
+              <!-- Camí de pujada (dreta) -->
+              <path d="M 245 110 C 265 110, 280 85, 290 40" stroke="#ef4444" stroke-width="1.5" fill="none" stroke-linecap="round" />
+              <!-- Camí de baixada (esquerra) -->
+              <path d="M 290 40 C 270 40, 255 65, 245 110" stroke="#10b981" stroke-width="1.5" fill="none" stroke-linecap="round" />
+              <!-- Fletxes indicatives d'evolució -->
+              <polygon points="274,60 277,65 271,65" fill="#ef4444" /> <!-- Pujada -->
+              <polygon points="261,90 258,85 264,85" fill="#10b981" /> <!-- Baixada -->
+              <text x="290" y="55" fill="#cbd5e1" font-size="6">Pujada</text>
+              <text x="240" y="95" fill="#cbd5e1" font-size="6">Tornada</text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Pertorbacions i soroll -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center space-x-2">
+              <span class="p-1.5 bg-emerald-50 border border-emerald-100 text-emerald-600 rounded-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+              </span>
+              <h4 class="font-bold text-slate-900 text-base">3. Pertorbacions i soroll de mesura</h4>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Les pertorbacions són inputs no desitjats que modifiquen la sortida de la planta de manera imprevista (com un cop de vent a un dron). D'altra banda, el soroll són distorsions electromagnètiques o vibracions d'alta freqüència que alteren la fidelitat dels sensors de realimentació.
+            </p>
+          </div>
+          <div class="bg-slate-900 rounded-lg p-3 my-2">
+            <!-- Corregit el flux: la pertorbació entra directament al bloc de la planta -->
+            <svg class="w-full h-24" viewBox="0 0 320 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Regulador -->
+              <rect x="55" y="30" width="55" height="30" rx="4" fill="#3b82f6" stroke="#2563eb" stroke-width="1.5" />
+              <text x="82.5" y="48" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">Regulador</text>
+              
+              <!-- Planta -->
+              <rect x="160" y="30" width="55" height="30" rx="4" fill="#10b981" stroke="#059669" stroke-width="1.5" />
+              <text x="187.5" y="48" fill="#ffffff" font-size="8" font-weight="bold" text-anchor="middle">Planta (procés)</text>
+              
+              <!-- Flux de senyal -->
+              <line x1="10" y1="45" x2="55" y2="45" stroke="#cbd5e1" stroke-width="1.5" />
+              <line x1="110" y1="45" x2="160" y2="45" stroke="#cbd5e1" stroke-width="1.5" />
+              <line x1="215" y1="45" x2="280" y2="45" stroke="#cbd5e1" stroke-width="1.5" />
+              
+              <!-- Fletxa de pertorbació entrant DIRECTAMENT a la planta (sistema) -->
+              <line x1="187.5" y1="5" x2="187.5" y2="27" stroke="#ef4444" stroke-width="1.5" />
+              <polygon points="187.5,27 184.5,22 190.5,22" fill="#ef4444" />
+              <text x="187.5" y="1" fill="#ef4444" font-size="7" font-weight="bold" text-anchor="middle">Pertorbació</text>
+              
+              <!-- Canal de realimentació amb soroll de mesura -->
+              <path d="M 260 45 L 260 85 L 15 85 L 15 53" stroke="#cbd5e1" stroke-width="1.5" fill="none" />
+              <circle cx="15" cy="45" r="8" fill="#1e293b" stroke="#94a3b8" stroke-width="1.5" />
+              <text x="15" y="48" fill="#94a3b8" font-size="9" font-weight="bold" text-anchor="middle">-</text>
+              
+              <!-- Senyal de soroll de sensor -->
+              <line x1="260" y1="85" x2="260" y2="75" stroke="#eab308" stroke-width="1" />
+              <path d="M 255 75 L 257 73 L 259 77 L 261 73 L 263 77 L 265 75" stroke="#eab308" stroke-width="1.5" fill="none" />
+              <text x="280" y="73" fill="#eab308" font-size="7" font-weight="bold">Soroll sensor</text>
+              
+              <text x="280" y="38" fill="#94a3b8" font-size="8">Sortida (y)</text>
+              <text x="10" y="38" fill="#94a3b8" font-size="8">Consigna (r)</text>
+            </svg>
+          </div>
+          <p class="text-[11px] text-slate-500 leading-normal">
+            <strong>Exemple:</strong> Un cop de vent (pertorbació) sobre l'aspa d'un aerogenerador, o les interferències provocades per un variador de freqüència sobre els cables d'un sensor PT100 (soroll).
+          </p>
+        </div>
+
+        <!-- Paràmetres variants en el temps -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4 flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="flex items-center space-x-2">
+              <span class="p-1.5 bg-violet-50 border border-violet-100 text-violet-600 rounded-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0y" /></svg>
+              </span>
+              <h4 class="font-bold text-slate-900 text-base">4. Paràmetres variants en el temps</h4>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              Els components d'una planta no es mantenen immutables amb el pas del temps. L'envelliment elèctric, la temperatura ambiental i el desgast físic modifiquen paràmetres dinàmics crítics com el guany de potència, la massa o les constants de fricció.
+            </p>
+          </div>
+          <div class="bg-slate-900 rounded-lg p-2.5 my-2">
+            <svg class="w-full h-32" viewBox="0 0 320 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Esquema Motor Escalfeu-se -->
+              <rect x="15" y="35" width="45" height="40" rx="3" fill="#334155" stroke="#475569" stroke-width="1" />
+              <circle cx="37.5" cy="55" r="14" fill="#1e293b" stroke="#38bdf8" stroke-width="2" />
+              <text x="37.5" y="58" fill="#38bdf8" font-size="8" font-weight="bold" text-anchor="middle">M</text>
+              <path d="M 12 30 L 18 20 M 15 30 L 21 20 M 60 40 L 68 32 M 58 45 L 66 37" stroke="#ef4444" stroke-width="1.5" />
+              <text x="37.5" y="93" fill="#94a3b8" font-size="8" text-anchor="middle">R(t) augmenta amb T&ordm;</text>
+              
+              <!-- Divisor central -->
+              <line x1="85" y1="15" x2="85" y2="105" stroke="#334155" stroke-dasharray="2 2" />
+              
+              <!-- Eixos de Gràfica -->
+              <line x1="105" y1="100" x2="295" y2="100" stroke="#475569" stroke-width="1" />
+              <line x1="105" y1="15" x2="105" y2="105" stroke="#475569" stroke-width="1" />
+              
+              <!-- Corba ideal vs Corba real per escalfament -->
+              <path d="M 105 100 C 130 100, 140 45, 290 45" stroke="#10b981" stroke-width="1.5" fill="none" />
+              <path d="M 105 100 C 130 100, 155 70, 290 70" stroke="#f43f5e" stroke-width="2" fill="none" />
+              
+              <text x="210" y="38" fill="#10b981" font-size="7" font-weight="bold">Model lineal (Fred)</text>
+              <text x="210" y="85" fill="#f43f5e" font-size="7" font-weight="bold">Model variant (Calent)</text>
+              <text x="295" y="112" fill="#94a3b8" font-size="7" text-anchor="end">Temps (t)</text>
+              <text x="110" y="12" fill="#94a3b8" font-size="7">Velocitat (&omega;)</text>
+            </svg>
+          </div>
+          <p class="text-[11px] text-slate-500 leading-normal">
+            <strong>Exemple:</strong> En un motor elèctric sotmès a treball intensiu, el bobinat s'escalfa. L'increment de temperatura augmenta la resistència elèctrica interna de l'eura, alterant la dinàmica de corrent i limitant el seu parell.
+          </p>
+        </div>
+
+        <!-- Acoblament en sistemes multivariables -->
+        <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-5 space-y-4 flex flex-col justify-between col-span-1 md:col-span-2">
+          <div class="space-y-3">
+            <div class="flex items-center space-x-2">
+              <span class="p-1.5 bg-indigo-50 border border-indigo-100 text-indigo-600 rounded-lg">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" /></svg>
+              </span>
+              <h4 class="font-bold text-slate-900 text-base">5. Acoblament en sistemes de múltiples variables (MIMO)</h4>
+            </div>
+            <p class="text-xs text-slate-600 leading-relaxed">
+              En la majoria de processos industrials reals no treballem amb variables aïllades. Parlem de sistemes de múltiples entrades i múltiples sortides (MIMO). El fenomen de l'<strong>acoblament creuat</strong> passa quan modificar un actuador pensat per controlar una variable de sortida concreta acaba alterant de forma inherent altres variables de la planta.
+            </p>
+          </div>
+          <div class="bg-slate-900 rounded-lg p-4 my-2 flex justify-center">
+            <!-- Gràfic MIMO simplificat, totalment reorganitzat per evitar línies creuades o superposades -->
+            <svg class="w-full max-w-[500px] h-36" viewBox="0 0 500 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Senyals d'entrada -->
+              <text x="10" y="24" fill="#60a5fa" font-size="9" font-weight="bold">Entrada 1: Gas (u1)</text>
+              <text x="10" y="124" fill="#c084fc" font-size="9" font-weight="bold">Entrada 2: Aire (u2)</text>
+              
+              <!-- Blocs Directes -->
+              <rect x="140" y="10" width="80" height="26" rx="4" fill="#1e293b" stroke="#3b82f6" stroke-width="2" />
+              <text x="180" y="26" fill="#60a5fa" font-size="8" font-weight="bold" text-anchor="middle">Canal G11</text>
+              
+              <rect x="140" y="100" width="80" height="26" rx="4" fill="#1e293b" stroke="#a855f7" stroke-width="2" />
+              <text x="180" y="116" fill="#c084fc" font-size="8" font-weight="bold" text-anchor="middle">Canal G22</text>
+              
+              <!-- Blocs Creuats d'Acoblament (desplaçats per evitar línies sobreposades) -->
+              <rect x="250" y="42" width="80" height="22" rx="4" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="2 2" />
+              <text x="290" y="55" fill="#f87171" font-size="7" font-weight="bold" text-anchor="middle">Creuat G12</text>
+              
+              <rect x="250" y="74" width="80" height="22" rx="4" fill="#1e293b" stroke="#f43f5e" stroke-width="1.5" stroke-dasharray="2 2" />
+              <text x="290" y="87" fill="#f87171" font-size="7" font-weight="bold" text-anchor="middle">Creuat G21</text>
+              
+              <!-- Sumadors finals abans de les sortides -->
+              <circle cx="380" cy="23" r="8" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5" />
+              <text x="380" y="26" fill="#cbd5e1" font-size="10" font-weight="bold" text-anchor="middle">+</text>
+              
+              <circle cx="380" cy="113" r="8" fill="#1e293b" stroke="#cbd5e1" stroke-width="1.5" />
+              <text x="380" y="116" fill="#cbd5e1" font-size="10" font-weight="bold" text-anchor="middle">+</text>
+              
+              <!-- Senyals de sortida -->
+              <text x="490" y="24" fill="#34d399" font-size="9" font-weight="bold" text-anchor="end">Temperatura (y1)</text>
+              <text x="490" y="124" fill="#34d399" font-size="9" font-weight="bold" text-anchor="end">Pressió (y2)</text>
+              
+              <!-- Connexions del Canal 1 (Blau) -->
+              <path d="M 100 23 L 140 23" stroke="#3b82f6" stroke-width="1.5" />
+              <path d="M 220 23 L 372 23" stroke="#3b82f6" stroke-width="1.5" />
+              <!-- Camí de desviament cap al procés creuat inferior G21 -->
+              <path d="M 115 23 L 115 85 L 250 85" stroke="#f87171" stroke-width="1" stroke-dasharray="2 2" />
+              
+              <!-- Connexions del Canal 2 (Lila) -->
+              <path d="M 100 113 L 140 113" stroke="#a855f7" stroke-width="1.5" />
+              <path d="M 220 113 L 372 113" stroke="#a855f7" stroke-width="1.5" />
+              <!-- Camí de desviament cap al procés creuat superior G12 -->
+              <path d="M 125 113 L 125 53 L 250 53" stroke="#f87171" stroke-width="1" stroke-dasharray="2 2" />
+              
+              <!-- Connexions de sortida dels Blocs Creuats als Sumadors de forma totalment neta -->
+              <path d="M 330 53 L 355 53 L 355 28 L 373 28" stroke="#f87171" stroke-width="1.2" />
+              <path d="M 330 85 L 350 85 L 350 108 L 373 108" stroke="#f87171" stroke-width="1.2" />
+              
+              <!-- Connexions sortida final -->
+              <line x1="388" y1="23" x2="410" y2="23" stroke="#34d399" stroke-width="1.5" />
+              <line x1="388" y1="113" x2="410" y2="113" stroke="#34d399" stroke-width="1.5" />
+            </svg>
+          </div>
+          <p class="text-[11px] text-slate-500 leading-normal">
+            <strong>Exemple:</strong> En un cremador de planta química, per pujar la temperatura (y1) hem d'obrir la vàlvula d'entrada de gas (u1). Això, de forma immediata, altera també la ràtio de combustió i conseqüentment pertorbarà la pressió de la cambra (y2), requeri'nt un control multivariable complex per desacoblar les accions.
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Secció 3: Autoavaluació interactiva -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+      <div class="flex items-center space-x-3">
+        <div class="p-2 bg-indigo-50 rounded-lg border border-indigo-100 text-indigo-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        </div>
+        <div>
+          <h3 class="text-xl font-bold text-slate-900">Autoavaluació de conceptes</h3>
+          <p class="text-xs text-slate-500">Posa a prova la teva comprensió dels cinc aspectes que afecten al modelat amb aquestes preguntes d'opció múltiple.</p>
+        </div>
+      </div>
+
+      <!-- Formulari del test d'avaluació interactiu (5 preguntes amb 4 opcions per a cadascun dels aspectes del punt 2) -->
+      <div id="quiz-container" class="space-y-6">
+        
+        <!-- Pregunta 1: Retard pur -->
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <span class="text-xs font-semibold text-indigo-600 uppercase tracking-widest block">Pregunta 1 - El retard pur</span>
+          <p class="text-sm font-bold text-slate-800">Quina és la conseqüència directa d'introduir un retard pur (temps mort) molt gran en un llaç de control tancat?</p>
+          <div class="grid grid-cols-1 gap-2">
+            <button onclick="checkAnswer(1, 'A', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">A) El sistema reacciona de manera immediata eliminant qualsevol possible sobre-pic d'oscil·lació.</button>
+            <button onclick="checkAnswer(1, 'B', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">B) El regulador pot aplicar un sobre-esforç continuat en no veure resposta immediata, desestabilitzant i fent oscil·lar el sistema.</button>
+            <button onclick="checkAnswer(1, 'C', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">C) El soroll elèctric d'alta freqüència queda completament filtrat i eliminat per defecte físic.</button>
+            <button onclick="checkAnswer(1, 'D', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">D) S'incrementa el valor de la constant de temps fins a assolir un comportament de primer ordre ideal.</button>
+          </div>
+          <p id="feedback-1" class="text-xs font-medium hidden mt-2"></p>
+        </div>
+
+        <!-- Pregunta 2: Les no-linealitats -->
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <span class="text-xs font-semibold text-indigo-600 uppercase tracking-widest block">Pregunta 2 - Les no-linealitats</span>
+          <p class="text-sm font-bold text-slate-800">Quin fenomen físic descriu un retard en la resposta d'un engranatge quan s'inverteix el sentit de gir per culpa d'una folga mecànica?</p>
+          <div class="grid grid-cols-1 gap-2">
+            <button onclick="checkAnswer(2, 'A', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">A) La saturació del parell màxim del motor acoblat.</button>
+            <button onclick="checkAnswer(2, 'B', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">B) La zona morta generada exclusivament per la fricció estàtica de Coulomb.</button>
+            <button onclick="checkAnswer(2, 'C', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">C) L'efecte de la histèresi mecànica provocat pel backlash o joc de dents de les peces.</button>
+            <button onclick="checkAnswer(2, 'D', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">D) Un retard pur purament relacionat amb el transport de materials.</button>
+          </div>
+          <p id="feedback-2" class="text-xs font-medium hidden mt-2"></p>
+        </div>
+
+        <!-- Pregunta 3: Pertorbacions i soroll -->
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <span class="text-xs font-semibold text-indigo-600 uppercase tracking-widest block">Pregunta 3 - Pertorbacions i soroll</span>
+          <p class="text-sm font-bold text-slate-800">Quina és la diferència principal entre una pertorbació de procés i el soroll de mesura en un llaç de control?</p>
+          <div class="grid grid-cols-1 gap-2">
+            <button onclick="checkAnswer(3, 'A', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">A) La pertorbació altera directament l'estat físic del procés, mentre que el soroll només distorsiona el senyal de realimentació del sensor.</button>
+            <button onclick="checkAnswer(3, 'B', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">B) El soroll es pot controlar modificant els paràmetres del PID, mentre que les pertorbacions són impossibles d'atenuar.</button>
+            <button onclick="checkAnswer(3, 'C', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">C) Les pertorbacions només tenen lloc en alta freqüència, mentre que el soroll és un fenomen purament estàtic de baixa freqüència.</button>
+            <button onclick="checkAnswer(3, 'D', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">D) No hi ha cap diferència; ambdós conceptes es representen exactament pel mateix bloc dinàmic de retard.</button>
+          </div>
+          <p id="feedback-3" class="text-xs font-medium hidden mt-2"></p>
+        </div>
+
+        <!-- Pregunta 4: Paràmetres variants en el temps -->
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <span class="text-xs font-semibold text-indigo-600 uppercase tracking-widest block">Pregunta 4 - Paràmetres variants en el temps</span>
+          <p class="text-sm font-bold text-slate-800">Quin d'aquests fenòmens industrials representa un sistema amb paràmetres que canvien significativament amb el temps?</p>
+          <div class="grid grid-cols-1 gap-2">
+            <button onclick="checkAnswer(4, 'A', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">A) Un amplificador operacional integrat que funciona en condicions ideals de laboratori tancat.</button>
+            <button onclick="checkAnswer(4, 'B', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">B) Un motor on el bobinat es va escalfant durant l'operació continuada, canviant la seva resistència de coure de forma tèrmica.</button>
+            <button onclick="checkAnswer(4, 'C', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">C) Un circuit elèctric RC tancat on el valor del condensador s'ajusta només manualment en un banc de proves.</button>
+            <button onclick="checkAnswer(4, 'D', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">D) Un sensor òptic de proximitat industrial que respon instantàniament davant de la detecció d'un obstacle fix.</button>
+          </div>
+          <p id="feedback-4" class="text-xs font-medium hidden mt-2"></p>
+        </div>
+
+        <!-- Pregunta 5: Acoblament MIMO -->
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <span class="text-xs font-semibold text-indigo-600 uppercase tracking-widest block">Pregunta 5 - Acoblament multivariable</span>
+          <p class="text-sm font-bold text-slate-800">Què implica la presència d'acoblament en un procés amb múltiples entrades i múltiples sortides (MIMO)?</p>
+          <div class="grid grid-cols-1 gap-2">
+            <button onclick="checkAnswer(5, 'A', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">A) Que cada entrada del sistema només pot modificar de manera completament lliure i aïllada la seva sortida corresponent.</button>
+            <button onclick="checkAnswer(5, 'B', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">B) Que l'esglaó d'entrada genera un retard pur de tipus temps mort unificat per a totes les variables de la planta.</button>
+            <button onclick="checkAnswer(5, 'C', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">C) Que modificar un actuador destinat a regular una sortida genera un efecte secundari inherent sobre altres variables controlades.</button>
+            <button onclick="checkAnswer(5, 'D', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">D) Que el guany estàtic global del regulador PID es reparteix equitativament dividint-se entre els camins de retorn.</button>
+          </div>
+          <p id="feedback-5" class="text-xs font-medium hidden mt-2"></p>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Peu de pàgina -->
+  <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-400 no-print">
+    <div class="max-w-7xl mx-auto px-4">
+      <p>Material de suport conceptual generat per a pràctiques de control de sistemes.</p>
+      <p class="mt-1">Cicle Superior d'Automatització i Robòtica Industrial - Institut de Tecnologies Industrials.</p>
+    </div>
+  </footer>
+
+  <!-- Scripts d'assistència de renderitzat matemàtic (Definits abans d'importar el script) -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es6/mathjax.js"></script>
+
+  <script>
+    function checkAnswer(questionNum, selectedOption, buttonElement) {
+      const parentDiv = buttonElement.parentNode;
+      const feedbackP = document.getElementById(`feedback-${questionNum}`);
+      
+      const buttons = parentDiv.querySelectorAll('button');
+      buttons.forEach(btn => {
+        btn.disabled = true;
+        btn.classList.add('opacity-60');
+        btn.classList.remove('hover:bg-slate-100');
+      });
+
+      // Respostes correctes per a cadascuna de les 5 preguntes
+      const correctAnswers = {
+        1: 'B',
+        2: 'C',
+        3: 'A',
+        4: 'B',
+        5: 'C'
+      };
+
+      const explanations = {
+        1: "Correcte! Un retard pur gran causa que l'acció reguladora continuï empenyent abans de notar canvis, portant el llaç a forts cicles d'oscil·lació.",
+        2: "Molt bé! La histèresi descriu exactament aquesta discrepància de trajectòries de pujada i baixada provocada per les folgues en acoblaments.",
+        3: "Excel·lent! Aquesta és la clau teòrica bàsica. Les pertorbacions mouen físicament la variable, el soroll és només una lectura deformada.",
+        4: "Brillant! L'efecte Joule és l'exemple perfecte de com un paràmetre variant per temperatura (resistència de l'induït) altera el comportament dinàmic.",
+        5: "Correcte! L'acoblament MIMO defineix aquesta interferència mútua entre canals de la planta on un canvi en gas afecta la pressió de forma inherent."
+      };
+
+      const isCorrect = selectedOption === correctAnswers[questionNum];
+
+      buttonElement.classList.remove('opacity-60');
+      buttonElement.classList.add('disabled:opacity-100');
+
+      if (isCorrect) {
+        buttonElement.classList.add('bg-emerald-50', 'border-emerald-500', 'text-emerald-800', 'font-semibold');
+        feedbackP.textContent = explanations[questionNum];
+        feedbackP.className = "text-xs font-medium text-emerald-600 mt-2 block";
+      } else {
+        buttonElement.classList.add('bg-rose-50', 'border-rose-500', 'text-rose-800', 'font-semibold');
+        feedbackP.textContent = `Incorrecte. Intenta repassar el punt teòric corresponent de la guia de dalt per trobar la resposta correcta.`;
+        feedbackP.className = "text-xs font-medium text-rose-600 mt-2 block";
+        
+        buttons.forEach(btn => {
+          if (btn.textContent.trim().startsWith(correctAnswers[questionNum])) {
+            btn.classList.add('bg-emerald-50/50', 'border-emerald-300', 'text-emerald-800');
+          }
+        });
+      }
+    }
+  </script>
+
+</body>
+</html>
