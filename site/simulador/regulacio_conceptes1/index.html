@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="ca" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Conceptes 1: Fonaments de la regulació automàtica</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    .grid-bg {
+      background-image: radial-gradient(#e2e8f0 1.2px, transparent 1.2px);
+      background-size: 24px 24px;
+    }
+    @media print {
+      .no-print {
+        display: none !important;
+      }
+      body {
+        background-color: white !important;
+        color: #0f172a !important;
+        font-size: 11pt !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans antialiased">
+
+  <!-- Capçalera principal -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30 no-print">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center space-x-3">
+          <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-md shadow-indigo-200">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+          </div>
+          <div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-indigo-600 block">Unitat didàctica</span>
+            <h1 class="text-lg font-bold text-slate-900 leading-tight font-sans">Conceptes 1: Fonaments de la regulació</h1>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero banner -->
+  <section class="bg-slate-900 text-white relative py-12 px-4 overflow-hidden grid-bg">
+    <div class="absolute inset-0 bg-slate-900 opacity-90"></div>
+    <div class="relative max-w-5xl mx-auto z-10 text-center">
+      <span class="bg-indigo-500/20 text-indigo-300 text-xs font-semibold tracking-wider uppercase px-3 py-1 rounded-full border border-indigo-400/30">Cicle superior d'automatització i robòtica industrial</span>
+      <h2 class="text-3xl sm:text-4xl font-extrabold mt-4 mb-3 tracking-tight font-sans">Introducció a la regulació automàtica de processos</h2>
+      <p class="text-slate-300 text-base sm:text-lg max-w-3xl mx-auto leading-relaxed">
+        Abans de poder dissenyar estratègies de regulació dinàmiques complexes, cal entendre què és una planta física, com es mesuren els senyals reals del camp i quins són els elements reguladors clau per tancar el bucle de control.
+      </p>
+    </div>
+  </section>
+
+  <!-- Contingut principal -->
+  <main class="flex-grow max-w-5xl w-full mx-auto px-4 py-10 sm:px-6 lg:px-8 space-y-12">
+
+    <!-- Secció 1: Fonaments de la planta física -->
+    <div id="planta-física" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+      <div class="flex flex-col lg:flex-row gap-8 items-center">
+        <div class="flex-1 space-y-4">
+          <div class="flex items-center space-x-2 text-indigo-600 font-bold uppercase text-xs tracking-wider">
+            <span>Sistemes de regulació</span>
+            <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+          </div>
+          <h3 class="text-2xl font-bold text-slate-900">Què és una planta?</h3>
+          <p class="text-slate-600 leading-relaxed text-sm">
+            En automatització industrial, una <strong>planta</strong> és qualsevol equip, màquina o procés físic la variable de la qual es pretén mantenir regulada sota unas condicions estables de funcionament. Qualsevol planta opera sota una interacció dinàmica de senyals d'entrada que canvien o alteren un estat intern per produir un conjunt de respostes de sortida.
+          </p>
+          <ul class="space-y-2 text-xs text-slate-600">
+            <li class="flex items-start">
+              <span class="font-bold text-indigo-600 mr-2">Entrades del procés:</span>
+              <span>Són els fluxos físics, corrents elèctrics o forces mecàniques aplicades que modifiquen el comportament intern de la planta de forma intencionada (acció de control) o aleatòria (pertorbacions).</span>
+            </li>
+            <li class="flex items-start">
+              <span class="font-bold text-indigo-600 mr-2">Sortides del procés:</span>
+              <span>Corresponen a les variables físiques resultants de la dinàmica interna de la planta que podem mesurar i analitzar mitjançant l'ús de sensors de camp.</span>
+            </li>
+            <li class="flex items-start">
+              <span class="font-bold text-indigo-600 mr-2">L'acció de regular:</span>
+              <span>Consisteix a aplicar una estratègia mecànica o elèctrica calculada perquè el valor de la sortida real s'iguali de manera permanent a un valor desitjat preestablert, adaptant l'entrada per cancel·lar qualsevol desviació provocada per l'entorn.</span>
+            </li>
+          </ul>
+        </div>
+        <div class="w-full lg:w-96 bg-slate-900 p-5 rounded-xl border border-slate-800 flex flex-col items-center shrink-0">
+          <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-4">Esquema funcional de la planta</span>
+          <!-- SVG: Planta modificat sense la fletxa de pertorbació -->
+          <svg class="w-full h-32" viewBox="0 0 320 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="110" y="45" width="100" height="50" rx="6" fill="#1e293b" stroke="#4f46e5" stroke-width="2" />
+            <text x="160" y="70" fill="#f8fafc" font-size="10" font-weight="bold" text-anchor="middle">Planta</text>
+            <text x="160" y="82" fill="#818cf8" font-size="8" text-anchor="middle">(sistema físic)</text>
+
+            <!-- Entrades controlades -->
+            <line x1="20" y1="70" x2="102" y2="70" stroke="#3b82f6" stroke-width="1.5" />
+            <polygon points="104,70 97,66 97,74" fill="#3b82f6" />
+            <text x="25" y="62" fill="#60a5fa" font-size="8" font-weight="bold">Acció de control</text>
+
+            <!-- Sortida -->
+            <line x1="210" y1="70" x2="292" y2="70" stroke="#10b981" stroke-width="1.5" />
+            <polygon points="294,70 287,66 287,74" fill="#10b981" />
+            <text x="290" y="62" fill="#34d399" font-size="8" font-weight="bold" text-anchor="end">Sortida real</text>
+          </svg>
+          <span class="text-[10px] text-slate-500 mt-2">La planta rep l'acció de control i es mesura la seva sortida real.</span>
+        </div>
+      </div>
+
+      <!-- Exemples reals -->
+      <div class="pt-4 border-t border-slate-100">
+        <span class="text-xs font-bold text-slate-400 uppercase tracking-widest block mb-3">Aplicacions de control industrial i domèstic</span>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div class="flex items-center space-x-2 text-indigo-600 mb-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              <h4 class="font-bold text-sm text-slate-800">El termòstat domèstic</h4>
+            </div>
+            <p class="text-xs text-slate-600 leading-normal">
+              La planta és l'habitació. L'entrada controlada és el flux d'aigua calenta cap al radiador i la sortida és la temperatura mitjana de l'aire de l'estança. Les pertorbacions són el fred exterior o l'apertura de portes.
+            </p>
+          </div>
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div class="flex items-center space-x-2 text-indigo-600 mb-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+              <h4 class="font-bold text-sm text-slate-800">Regulador de velocitat</h4>
+            </div>
+            <p class="text-xs text-slate-600 leading-normal">
+              La planta és el vehicle. L'entrada és la vàlvula d'injecció de carburant i la sortida és la velocitat de desplaçament real del vehicle. La pertorbació principal és el desnivell o pendent de la carretera.
+            </p>
+          </div>
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
+            <div class="flex items-center space-x-2 text-indigo-600 mb-2">
+              <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+              <h4 class="font-bold text-sm text-slate-800">Processos industrials</h4>
+            </div>
+            <p class="text-xs text-slate-600 leading-normal">
+              La planta és una columna de destil·lació o dipòsit químic on es barregen reactius. L'entrada controlada és l'apertura de vàlvules de cabal d'entrada de reactius, i la sortida correspon al pH o concentració de la barreja.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Secció 2: Llaç obert i llaç tancat, sistemes tot o res i proporcional PID -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+      <div class="border-l-4 border-indigo-600 pl-4">
+        <h3 class="text-2xl font-bold text-slate-950">Llaç obert i llaç tancat</h3>
+        <p class="text-slate-600 text-sm mt-1">Diferència de disseny del llaç de control i comportament de control tipus Tot o Res amb histèresi.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-600 leading-relaxed">
+        <div class="space-y-4">
+          <div>
+            <h4 class="font-bold text-slate-900 text-base mb-1">Llaç obert vs. Llaç tancat</h4>
+            <p class="text-xs leading-relaxed text-slate-600">
+              En un sistema de <strong>llaç obert</strong>, el controlador aplica un senyal precalculat sobre els actuadors sense verificar en cap moment si la sortida ha assolit l'objectiu real (com un temporitzador d'un forn que s'encén 10 minuts independentment de la temperatura real). 
+            </p>
+            <p class="text-xs leading-relaxed text-slate-600 mt-2">
+              En un sistema de <strong>llaç tancat (realimentat)</strong>, s'incorpora la lectura constant del sensor, tancant el bucle i generant una resposta d'ajustament dinàmica i continuada basada en la desviació real (error) del procés.
+            </p>
+          </div>
+          <div class="bg-amber-50 border-l-4 border-amber-500 p-3 text-xs text-amber-900 rounded-r-lg">
+            <strong>L'acció tot o res amb histèresi:</strong> Un regulador d'encesa/apagada (on/off) pur és ineficient perquè commuta contínuament al voltant del setpoint, danyant els preactuadors mecànics. Per evitar aquest "flickeig" constant, s'introdueix una <strong>banda d'histèresi</strong> (límit de fot de tall superior i d'encesa inferior).
+          </div>
+        </div>
+
+        <div class="space-y-4 flex flex-col justify-between">
+          <div>
+            <h4 class="font-bold text-slate-900 text-base mb-1">Comportament de la regulació PID</h4>
+            <p class="text-xs leading-relaxed text-slate-600">
+              Per aconseguir un control de precisió, s'utilitzen algorismes com el <strong>Proporcional-Integral-Derivatiu (PID)</strong>:
+            </p>
+            <ul class="space-y-1.5 text-xs text-slate-600 mt-2">
+              <li class="flex items-start">
+                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1.5 mr-2"></span>
+                <span><strong>Acció proporcional (P):</strong> Corregeix l'actuador de forma directament proporcional a l'error actual (a major error, més energia s'aplica).</span>
+              </li>
+              <li class="flex items-start">
+                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1.5 mr-2"></span>
+                <span><strong>Acció integral (I):</strong> Elimina l'error acumulat en el temps, evitant desviacions persistents de règim permanent (ofegament).</span>
+              </li>
+              <li class="flex items-start">
+                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1.5 mr-2"></span>
+                <span><strong>Acció derivativa (D):</strong> Anticipa la velocitat del canvi de l'error, frenant o accelerant el sistema per evitar forts sobre-pics d'oscil·lació.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- SVG: Comparativa de Llaç Obert i Llaç Tancat en blocs + Histèresi (Amb MV inserit correctament sobre els llaços de control) -->
+      <div class="bg-slate-900 rounded-xl p-5 grid grid-cols-1 md:grid-cols-2 gap-6 border border-slate-800">
+        <div class="flex flex-col items-center">
+          <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Sistemes de llaç obert vs llaç tancat</span>
+          <svg class="w-full max-w-[340px] h-36" viewBox="0 0 300 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- Llaç obert -->
+            <text x="10" y="15" fill="#f59e0b" font-size="8" font-weight="bold">Llaç obert (Sense realimentació)</text>
+            <rect x="50" y="25" width="55" height="20" rx="3" fill="#1e293b" stroke="#475569" stroke-width="1" />
+            <text x="77.5" y="37" fill="#cbd5e1" font-size="7" text-anchor="middle">Controlador</text>
+            
+            <rect x="145" y="25" width="55" height="20" rx="3" fill="#1e293b" stroke="#475569" stroke-width="1" />
+            <text x="172.5" y="37" fill="#cbd5e1" font-size="7" text-anchor="middle">Planta</text>
+            
+            <line x1="15" y1="35" x2="50" y2="35" stroke="#cbd5e1" stroke-width="1" />
+            <polygon points="50,35 45,32 45,38" fill="#cbd5e1" />
+            <text x="32.5" y="29" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="middle">SP</text>
+
+            <!-- Línia i etiqueta MV Llaç Obert -->
+            <line x1="105" y1="35" x2="145" y2="35" stroke="#cbd5e1" stroke-width="1" />
+            <polygon points="145,35 140,32 140,38" fill="#cbd5e1" />
+            <text x="125" y="29" fill="#eab308" font-size="7" font-weight="bold" text-anchor="middle">MV</text>
+
+            <line x1="200" y1="35" x2="245" y2="35" stroke="#cbd5e1" stroke-width="1" />
+            <polygon points="245,35 240,32 240,38" fill="#cbd5e1" />
+            <text x="222.5" y="29" fill="#10b981" font-size="7" font-weight="bold" text-anchor="middle">PV</text>
+
+            <!-- Llaç tancat -->
+            <text x="10" y="75" fill="#10b981" font-size="8" font-weight="bold">Llaç tancat (Amb realimentació i PID)</text>
+            
+            <circle cx="35" cy="100" r="6" fill="#1e293b" stroke="#cbd5e1" stroke-width="1" />
+            <text x="35" y="103" fill="#cbd5e1" font-size="8" text-anchor="middle">+</text>
+            <text x="35" y="112" fill="#cbd5e1" font-size="6" text-anchor="middle">-</text>
+
+            <rect x="65" y="90" width="55" height="20" rx="3" fill="#1e293b" stroke="#10b981" stroke-width="1" />
+            <text x="92.5" y="102" fill="#cbd5e1" font-size="7" font-weight="bold" text-anchor="middle">Ctrl (PID)</text>
+            
+            <rect x="155" y="90" width="55" height="20" rx="3" fill="#1e293b" stroke="#10b981" stroke-width="1" />
+            <text x="182.5" y="102" fill="#cbd5e1" font-size="7" text-anchor="middle">Planta</text>
+            
+            <line x1="10" y1="100" x2="29" y2="100" stroke="#cbd5e1" stroke-width="1" />
+            <polygon points="29,100 24,97 24,103" fill="#cbd5e1" />
+            <text x="20" y="92" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="middle">SP</text>
+
+            <line x1="41" y1="100" x2="65" y2="100" stroke="#cbd5e1" stroke-width="1" />
+            <polygon points="65,100 60,97 60,103" fill="#cbd5e1" />
+
+            <!-- Línia i etiqueta MV Llaç Tancat -->
+            <line x1="120" y1="100" x2="155" y2="100" stroke="#cbd5e1" stroke-width="1" />
+            <polygon points="155,100 150,97 150,103" fill="#cbd5e1" />
+            <text x="137.5" y="94" fill="#eab308" font-size="7" font-weight="bold" text-anchor="middle">MV</text>
+
+            <line x1="210" y1="100" x2="265" y2="100" stroke="#cbd5e1" stroke-width="1" />
+            <polygon points="265,100 260,97 260,103" fill="#cbd5e1" />
+            <text x="250" y="94" fill="#10b981" font-size="7" font-weight="bold" text-anchor="middle">PV</text>
+
+            <!-- Llaç de retorn -->
+            <path d="M 235 100 L 235 130 L 35 130 L 35 106" stroke="#cbd5e1" stroke-width="1" fill="none" />
+            <polygon points="35,106 32,111 38,111" fill="#cbd5e1" />
+            <text x="135" y="127" fill="#cbd5e1" font-size="6" text-anchor="middle">Realimentació de PV</text>
+          </svg>
+        </div>
+
+        <div class="flex flex-col items-center">
+          <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">Comportament del control Tot o Res</span>
+          <svg class="w-full max-w-[340px] h-36" viewBox="0 0 300 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="30" y1="120" x2="280" y2="120" stroke="#475569" stroke-width="1" />
+            <line x1="30" y1="15" x2="30" y2="125" stroke="#475569" stroke-width="1" />
+
+            <!-- Consigna -->
+            <line x1="30" y1="65" x2="280" y2="65" stroke="#3b82f6" stroke-width="1.2" stroke-dasharray="2 2" />
+            <text x="280" y="60" fill="#3b82f6" font-size="7" font-weight="bold" text-anchor="end">Consigna (SP)</text>
+
+            <!-- Banda histèresi -->
+            <line x1="30" y1="50" x2="280" y2="50" stroke="#f59e0b" stroke-width="0.8" stroke-dasharray="1 1" />
+            <line x1="30" y1="80" x2="280" y2="80" stroke="#f59e0b" stroke-width="0.8" stroke-dasharray="1 1" />
+            <text x="280" y="46" fill="#f59e0b" font-size="6" text-anchor="end">Límit d'apagada</text>
+            <text x="280" y="88" fill="#f59e0b" font-size="6" text-anchor="end">Límit d'encesa</text>
+
+            <!-- Corba d'oscil·lació histèresi -->
+            <path d="M 30 115 C 50 115 65 40 85 45 C 100 50 115 85 130 80 C 145 75 160 40 175 45 C 190 50 205 85 220 80 C 235 75 250 40 265 45" stroke="#10b981" stroke-width="2" fill="none" />
+            
+            <text x="280" y="129" fill="#94a3b8" font-size="7" text-anchor="end">Temps (t)</text>
+            <text x="20" y="20" fill="#94a3b8" font-size="7">Variable (PV)</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Secció 3: Vocabulari i maquinari de camp -->
+    <div id="maquinari-control" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-8">
+      
+      <!-- S'afegeix primer de tot el Vocabulari Clau -->
+      <div class="space-y-4">
+        <div class="flex items-center space-x-2 text-indigo-600 font-bold uppercase text-xs tracking-wider">
+          <span>Sintaxi i nomenclatura</span>
+          <span class="w-2 h-2 rounded-full bg-indigo-600"></span>
+        </div>
+        <h3 class="text-2xl font-bold text-slate-900">El vocabulari de variables del procés</h3>
+        <p class="text-slate-600 text-sm leading-relaxed">
+          Per analitzar qualsevol tipus de planta o instrumentació de camp industrial, s'utilitza una nomenclatura precisa normalitzada internacionalment per representar el flux d'informació de control:
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+            <strong class="text-indigo-800 font-bold block mb-1">Setpoint o valor de consigna (SP):</strong>
+            <span class="text-xs text-slate-600">El valor de destinació de referència que es tria fixar desitjar per a la seva variable de procés (per exemple, voler fixar la temperatura de la cambra a 120&ordm;C).</span>
+          </div>
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+            <strong class="text-indigo-800 font-bold block mb-1">Variable de procés o variable controlada (PV):</strong>
+            <span class="text-xs text-slate-600">El valor mesurat real a temps real de la variable que s'està controlant dins de la planta, obtingut directament dels transmissors i sensors de realimentació.</span>
+          </div>
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+            <strong class="text-indigo-800 font-bold block mb-1">Variable manipulada o d'acció de control (MV):</strong>
+            <span class="text-xs text-slate-600">El senyal de potència calculat pel controlador que s'aplica sobre els actuadors de la planta per tal de forçar el canvi físic necessari.</span>
+          </div>
+          <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 shadow-sm">
+            <strong class="text-indigo-800 font-bold block mb-1">Error de regulació (e):</strong>
+            <span class="text-xs text-slate-600">La diferència instantània calculada contínuament entre el valor desitjat i el real obtingut en cada moment operatiu de la màquina: <em>e = SP - PV</em>.</span>
+          </div>
+        </div>
+      </div>
+
+      <hr class="border-slate-200" />
+
+      <!-- Continuació amb els components del maquinari -->
+      <div class="space-y-4">
+        <h4 class="text-xl font-bold text-slate-900">Els elements físics del maquinari de control</h4>
+        <p class="text-slate-600 text-sm leading-relaxed">
+          Tota planta mecànica necessita connectar-se al regulador mitjançant una sèrie d'elements de potència i lectura que adapten els senyals. Els elements principals del maquinari industrial són:
+        </p>
+        <ul class="space-y-3 text-xs text-slate-600">
+          <li class="flex items-start">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1.5 mr-2"></span>
+            <span><strong>Transmissor:</strong> Conté el sensor de camp. Transforma la variable física (calor, pressió, força) en un senyal normalitzat industrial compatible (com 4-20 mA o 0-10 V) per evitar pèrdues de tensió o corrent elèctric al llarg de la línia.</span>
+          </li>
+          <li class="flex items-start">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1.5 mr-2"></span>
+            <span><strong>Controlador:</strong> Dispositiu elèctric digital (un autòmat programable PLC o un regulador electrònic integrat) que realitza les operacions lògiques, compara les variables i envia les instruccions correctores.</span>
+          </li>
+          <li class="flex items-start">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1.5 mr-2"></span>
+            <span><strong>Preactuador:</strong> Permet demanar o canviar el camí de grans fluxos d'alimentació elèctrica utilitzant un corrent o voltatge molt baix d'excitació (relés de potència, relés d'estat sòlid SSR, variadors de velocitat).</span>
+          </li>
+          <li class="flex items-start">
+            <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1.5 mr-2"></span>
+            <span><strong>Actuador final:</strong> Transforma la potència subministrada del preactuador en acció física directa sobre la planta (resistència de calefacció, motor elèctric rotatiu, vàlvula de regulació).</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- SVG: Components corregits (La línia del transmissor arriba netament al controlador CPU) -->
+      <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 flex flex-col items-center justify-center">
+        <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-4">Arquitectura de la cadena de control (Components de camp)</span>
+        <svg class="w-full max-w-[700px] h-36 mx-auto" viewBox="0 0 700 140" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <!-- Entrada de consigna SP -->
+          <line x1="10" y1="45" x2="35" y2="45" stroke="#3b82f6" stroke-width="1.5" />
+          <polygon points="35,45 30,41 30,49" fill="#3b82f6" />
+          <text x="22" y="35" fill="#3b82f6" font-size="8" font-weight="bold" text-anchor="middle">SP</text>
+
+          <!-- Controlador (rect x="35" y="30" width="80" height="30" -> mig inferior és x=75, y=60) -->
+          <rect x="35" y="30" width="80" height="30" rx="4" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5" />
+          <text x="75" y="45" fill="#60a5fa" font-size="8" font-weight="bold" text-anchor="middle">Controlador</text>
+          <text x="75" y="54" fill="#cbd5e1" font-size="7" text-anchor="middle">(PLC / CPU)</text>
+
+          <!-- Preactuador -->
+          <rect x="175" y="30" width="80" height="30" rx="4" fill="#1e293b" stroke="#a855f7" stroke-width="1.5" />
+          <text x="215" y="45" fill="#a855f7" font-size="8" font-weight="bold" text-anchor="middle">Preactuador</text>
+          <text x="215" y="54" fill="#cbd5e1" font-size="7" text-anchor="middle">(SSR / Variador)</text>
+
+          <!-- Actuador -->
+          <rect x="315" y="30" width="80" height="30" rx="4" fill="#1e293b" stroke="#eab308" stroke-width="1.5" />
+          <text x="355" y="45" fill="#eab308" font-size="8" font-weight="bold" text-anchor="middle">Actuador</text>
+          <text x="355" y="54" fill="#cbd5e1" font-size="7" text-anchor="middle">(Motor / Resistència)</text>
+
+          <!-- Planta -->
+          <rect x="455" y="30" width="80" height="30" rx="4" fill="#1e293b" stroke="#10b981" stroke-width="2" />
+          <text x="495" y="48" fill="#34d399" font-size="9" font-weight="bold" text-anchor="middle">Planta</text>
+
+          <!-- Transmissor (camí de realimentació) -->
+          <rect x="315" y="90" width="80" height="30" rx="4" fill="#1e293b" stroke="#14b8a6" stroke-width="1.5" />
+          <text x="355" y="105" fill="#14b8a6" font-size="8" font-weight="bold" text-anchor="middle">Transmissor</text>
+          <text x="355" y="114" fill="#cbd5e1" font-size="7" text-anchor="middle">(Sensor + Circuit)</text>
+
+          <!-- Fletxa d'ordre de control (MV) -->
+          <line x1="115" y1="45" x2="175" y2="45" stroke="#eab308" stroke-width="1.5" />
+          <polygon points="175,45 170,41 170,49" fill="#eab308" />
+          <text x="145" y="37" fill="#eab308" font-size="8" font-weight="bold" text-anchor="middle">MV</text>
+
+          <!-- Fletxes secundaries de connexió -->
+          <line x1="255" y1="45" x2="315" y2="45" stroke="#cbd5e1" stroke-width="1.2" />
+          <polygon points="315,45 310,41 310,49" fill="#cbd5e1" />
+
+          <line x1="395" y1="45" x2="455" y2="45" stroke="#cbd5e1" stroke-width="1.2" />
+          <polygon points="455,45 450,41 450,49" fill="#cbd5e1" />
+
+          <!-- Realimentació i variable de procés PV -->
+          <path d="M 535 45 L 565 45 L 530 45" stroke="#cbd5e1" stroke-width="1.2" />
+          <line x1="535" y1="45" x2="570" y2="45" stroke="#cbd5e1" stroke-width="1.5" />
+          <polygon points="570,45 565,41 565,49" fill="#cbd5e1" />
+          <text x="585" y="48" fill="#10b981" font-size="8" font-weight="bold" text-anchor="middle">PV</text>
+
+          <!-- Branca de retorn cap al transmissor -->
+          <path d="M 550 45 L 550 105 L 395 105" stroke="#cbd5e1" stroke-width="1.2" fill="none" />
+          <polygon points="395,105 400,101 400,109" fill="#cbd5e1" />
+
+          <!-- Branca corregida del transmissor cap al controlador per tancar el llaç (Arriba exactament a x=75, y=60 per sota) -->
+          <path d="M 315 105 L 75 105 L 75 60" stroke="#cbd5e1" stroke-width="1.2" fill="none" />
+          <polygon points="75,60 71,65 79,65" fill="#cbd5e1" />
+        </svg>
+      </div>
+    </div>
+
+    <!-- Secció 4: Règims de resposta, estabilitat i error permanent -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+      <div class="border-l-4 border-indigo-600 pl-4">
+        <h3 class="text-2xl font-bold text-slate-950">Règims de la resposta temporal i estabilitat</h3>
+        <p class="text-slate-600 text-sm mt-1">Comprendre com evoluciona una variable des que s'aplica el canvi fins que s'estabilitza.</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-600 leading-relaxed">
+        <div class="space-y-4">
+          <p>
+            Quan un sistema de control respon davant d'una entrada tipus esglaó, la seva dinàmica es divideix de forma estricta en dues grans regions temporals diferenciades:
+          </p>
+          <ul class="space-y-3 text-xs">
+            <li class="bg-slate-50 p-3 rounded-lg border border-slate-100 shadow-sm">
+              <strong class="text-indigo-800 block mb-0.5">Règim transitori:</strong>
+              <span>És l'etapa inicial on el sistema es troba en transició des de l'estat de repòs cap al nou estat d'equilibri. Durant aquest règim s'avalua la velocitat de reacció, el primer sobre-pic i els cicles d'oscil·lació.</span>
+            </li>
+            <li class="bg-slate-50 p-3 rounded-lg border border-slate-100 shadow-sm">
+              <strong class="text-indigo-800 block mb-0.5">Règim permanent o estacionari:</strong>
+              <span>Comença un cop s'han extingit completament totes les oscil·lacions transitòries de la resposta i la sortida s'estabilitza al voltant d'un valor final constant de règim.</span>
+            </li>
+            <li class="bg-slate-50 p-3 rounded-lg border border-slate-100 shadow-sm">
+              <strong class="text-indigo-800 block mb-0.5">Error en règim permanent:</strong>
+              <span>És la diferència física o desviació constant que perdura entre el valor de consigna triat (SP) i la sortida del sistema (PV) de forma indeterminada en règim estacionari.</span>
+            </li>
+            <li class="bg-slate-50 p-3 rounded-lg border border-slate-100 shadow-sm">
+              <strong class="text-indigo-800 block mb-0.5">Estabilitat:</strong>
+              <span>Representa l'aptitud dinàmica d'un sistema perquè la seva sortida assoleixi un valor fix sans créixer indefinidament de manera divergent (oscil·lacions infinites), evitant el col·lapse o dany en els equips de camp.</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="bg-slate-900 p-5 rounded-xl border border-slate-800 flex flex-col items-center justify-center">
+          <span class="text-slate-400 text-xs font-bold uppercase tracking-wider mb-4">Zones de la resposta temporal de control</span>
+          <!-- SVG: Règims de la resposta temporal corregit amb una corba subamortida harmònica real i neta -->
+          <svg class="w-full max-w-[340px] h-52" viewBox="0 0 300 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <line x1="30" y1="160" x2="280" y2="160" stroke="#475569" stroke-width="1.5" />
+            <line x1="30" y1="20" x2="30" y2="170" stroke="#475569" stroke-width="1.5" />
+
+            <!-- Consigna (SP) a y=70 -->
+            <line x1="30" y1="70" x2="280" y2="70" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="3 3" />
+            <text x="280" y="65" fill="#3b82f6" font-size="8" font-weight="bold" text-anchor="end">Consigna (SP)</text>
+
+            <!-- Línia de valor final de sortida y=85 (Hi ha un error en permanent d'amplitud 15px) -->
+            <line x1="160" y1="85" x2="280" y2="85" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="2 2" />
+
+            <!-- Corba de resposta temporal subamortida amb oscil·lació harmònica corregida i nítida (Bézier continu) -->
+            <path d="M 30 160 H 50 C 70 160, 80 30, 95 30 C 115 30, 130 110, 145 105 C 165 100, 180 75, 195 80 C 215 85, 230 85, 280 85" stroke="#10b981" stroke-width="2.5" fill="none" stroke-linecap="round" />
+
+            <!-- Divisor entre règim transitori i permanent -->
+            <line x1="160" y1="20" x2="160" y2="160" stroke="#64748b" stroke-width="1" stroke-dasharray="2 2" />
+
+            <!-- Fletxa de sobre-pic (Overshoot) al primer pic (y=30) respecte al de consigna (y=70) -->
+            <line x1="95" y1="30" x2="95" y2="70" stroke="#ef4444" stroke-width="1" />
+            <polygon points="95,30 92,35 98,35" fill="#ef4444" />
+            <polygon points="95,70 92,65 98,65" fill="#ef4444" />
+            <text x="100" y="50" fill="#f87171" font-size="7" font-weight="bold">Sobre-pic</text>
+
+            <!-- Fletxa d'error permanent -->
+            <line x1="260" y1="70" x2="260" y2="85" stroke="#ef4444" stroke-width="1" />
+            <polygon points="260,70 258,75 262,75" fill="#ef4444" />
+            <polygon points="260,85 258,80 262,85" fill="#ef4444" />
+            <text x="250" y="78" fill="#f87171" font-size="6" font-weight="bold" text-anchor="end">Error permanent</text>
+
+            <!-- Rètols de regions temporals -->
+            <text x="95" y="173" fill="#64748b" font-size="8" font-weight="bold" text-anchor="middle">Règim transitori</text>
+            <text x="220" y="173" fill="#64748b" font-size="8" font-weight="bold" text-anchor="middle">Règim permanent</text>
+
+            <text x="280" y="153" fill="#94a3b8" font-size="8" text-anchor="end">Temps (t)</text>
+            <text x="20" y="25" fill="#94a3b8" font-size="8">PV (y)</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+
+    <!-- Secció 5: Autoavaluació interactiva de conceptes inicials (5 preguntes sobre els 5 temes unificats) -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
+      <div class="flex items-center space-x-3">
+        <div class="p-2 bg-indigo-50 rounded-lg border border-indigo-100 text-indigo-600">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+        </div>
+        <div>
+          <h3 class="text-xl font-bold text-slate-900">Autoavaluació de conceptes inicials</h3>
+          <p class="text-xs text-slate-500">Posa a prova la teva base teòrica responent a cadascuna de les preguntes basades en els cinc punts explicats.</p>
+        </div>
+      </div>
+
+      <!-- Formulari del test d'avaluació interactiu (5 preguntes de 4 opcions, 1 per cada secció) -->
+      <div id="quiz-container" class="space-y-6">
+        
+        <!-- Pregunta 1: Planta i objectiu de la regulació -->
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <span class="text-xs font-semibold text-indigo-600 uppercase tracking-widest block">Pregunta 1 - Planta i l'acció de regulació</span>
+          <p class="text-sm font-bold text-slate-800">Què entenem exactament per voler "regular" una planta en l'àmbit industrial?</p>
+          <div class="grid grid-cols-1 gap-2">
+            <button onclick="checkAnswer(1, 'A', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">A) Mesurar contínuament un valor de manera passiva sense intervenir per a res en el medi.</button>
+            <button onclick="checkAnswer(1, 'B', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">B) Modificar periòdicament l'alimentació física d'un element mitjançant intervencions exclusivament manuals de l'operari.</button>
+            <button onclick="checkAnswer(1, 'C', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">C) Mantenir determinades variables del procés en uns valors de consigna desitjats de forma automàtica davant la presència de pertorbacions.</button>
+            <button onclick="checkAnswer(1, 'D', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">D) Aturar o engegar completament l'actuador principal a intervals de temps estrictament fixats.</button>
+          </div>
+          <p id="feedback-1" class="text-xs font-medium hidden mt-2"></p>
+        </div>
+
+        <!-- Pregunta 2: Llaç obert i llaç tancat, tot o res, histèresi -->
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <span class="text-xs font-semibold text-indigo-600 uppercase tracking-widest block">Pregunta 2 - Llaç obert vs Llaç tancat</span>
+          <p class="text-sm font-bold text-slate-800">Per què s'utilitza una histèresi en el funcionament d'un termòstat de tipus tot o res en lloc d'un únic tall rígid?</p>
+          <div class="grid grid-cols-1 gap-2">
+            <button onclick="checkAnswer(2, 'A', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">A) Per augmentar de manera lineal la velocitat màxima d'operació de la planta mecànica.</button>
+            <button onclick="checkAnswer(2, 'B', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">B) Perquè el sistema funcioni exclusivament com un dispositiu de mesura de la temperatura ambient de l'entorn.</button>
+            <button onclick="checkAnswer(2, 'C', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">C) Per impedir que el preactuador s'encengui i s'apagui contínuament (flickeig o desgast prematur) per xicotetes variacions al costat del setpoint.</button>
+            <button onclick="checkAnswer(2, 'D', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">D) Per tal de garantir un error d'estat de règim permanent estrictament igual a zero.</button>
+          </div>
+          <p id="feedback-2" class="text-xs font-medium hidden mt-2"></p>
+        </div>
+
+        <!-- Pregunta 3: Vocabulari i Maquinari de camp -->
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <span class="text-xs font-semibold text-indigo-600 uppercase tracking-widest block">Pregunta 3 - Elements del llaç de control</span>
+          <p class="text-sm font-bold text-slate-800">Quina és la funció d'un preactuador (com per exemple un variador de freqüència o un relé d'estat sòlid) en la cadena de control?</p>
+          <div class="grid grid-cols-1 gap-2">
+            <button onclick="checkAnswer(3, 'A', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">A) Mesurar directament el valor actual de la variable i transmetre'l de forma amplificada.</button>
+            <button onclick="checkAnswer(3, 'B', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">B) Calcular la diferència o error físic entre la consigna i la mesura de la planta.</button>
+            <button onclick="checkAnswer(3, 'C', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">C) Adaptar i governar el senyal de baixa potència del regulador per poder actuar sobre els d'alta potència de l'actuador final.</button>
+            <button onclick="checkAnswer(3, 'D', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">D) Rebre exclusivament el senyal físic de l'exterior de forma directa sense realimentació.</button>
+          </div>
+          <p id="feedback-3" class="text-xs font-medium hidden mt-2"></p>
+        </div>
+
+        <!-- Pregunta 4: Vocabulari (SP, PV, MV...) -->
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <span class="text-xs font-semibold text-indigo-600 uppercase tracking-widest block">Pregunta 4 - Vocabulari industrial</span>
+          <p class="text-sm font-bold text-slate-800">En una caldera de vapor controlada, què representa el corrent enviat a la resistència d'escalfament (MV) en relació amb el setpoint (SP)?</p>
+          <div class="grid grid-cols-1 gap-2">
+            <button onclick="checkAnswer(4, 'A', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">A) La MV és la variable manipulada per ajustar el sistema, mentre que el SP és el valor de temperatura objectiu desitjat.</button>
+            <button onclick="checkAnswer(4, 'B', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">B) El SP és el valor del soroll del corrent elèctric, mentre que la MV és la lectura real obtinguda del sensor de pressió de vapor.</button>
+            <button onclick="checkAnswer(4, 'C', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">C) Ambdues representen la consigna, la qual cosa indica que són variables equivalents.</button>
+            <button onclick="checkAnswer(4, 'D', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">D) Representa la variació imprevista de la càrrega ambiental exterior.</button>
+          </div>
+          <p id="feedback-4" class="text-xs font-medium hidden mt-2"></p>
+        </div>
+
+        <!-- Pregunta 5: Règims i Estabilitat -->
+        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+          <span class="text-xs font-semibold text-indigo-600 uppercase tracking-widest block">Pregunta 5 - Estabilitat i règims de resposta</span>
+          <p class="text-sm font-bold text-slate-800">Què s'entén per "error en règim permanent" d'un sistema estabilitzat en el temps?</p>
+          <div class="grid grid-cols-1 gap-2">
+            <button onclick="checkAnswer(5, 'A', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">A) L'error que es produeix exclusivament durant el pic d'oscil·lació inicial transitori.</button>
+            <button onclick="checkAnswer(5, 'B', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">B) La desviació que es manté de forma constant entre el valor de consigna desitjat (SP) i el valor real obtingut una vegada eliminades les oscil·lacions transitòries.</button>
+            <button onclick="checkAnswer(5, 'C', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">C) El marge de seguretat mínim d'immunitat de l'actuador per canvis ràpids.</button>
+            <button onclick="checkAnswer(5, 'D', this)" class="w-full text-left text-xs p-3 bg-white border border-slate-200 rounded-lg hover:bg-slate-100 transition duration-150">D) L'increment descontrolat de l'amplitud de sortida que porta a la fallada de la planta.</button>
+          </div>
+          <p id="feedback-5" class="text-xs font-medium hidden mt-2"></p>
+        </div>
+
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Peu de pàgina -->
+  <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-400 no-print">
+    <div class="max-w-7xl mx-auto px-4">
+      <p>Material de suport conceptual generat per a pràctiques de control de sistemes.</p>
+      <p class="mt-1">Cicle Superior d'Automatització i Robòtica Industrial - Institut de Tecnologies Industrials.</p>
+    </div>
+  </footer>
+
+  <script>
+    function checkAnswer(questionNum, selectedOption, buttonElement) {
+      const parentDiv = buttonElement.parentNode;
+      const feedbackP = document.getElementById(`feedback-${questionNum}`);
+      
+      const buttons = parentDiv.querySelectorAll('button');
+      buttons.forEach(btn => {
+        btn.disabled = true;
+        btn.classList.add('opacity-60');
+        btn.classList.remove('hover:bg-slate-100');
+      });
+
+      // Respostes correctes per a cadascuna de les 5 preguntes
+      const correctAnswers = {
+        1: 'C',
+        2: 'C',
+        3: 'C',
+        4: 'A',
+        5: 'B'
+      };
+
+      const explanations = {
+        1: "Correcte! Regular consisteix precisament a portar una variable fins a la consigna de forma autònoma i mantenir-la allà malgrat les pertorbacions.",
+        2: "Molt bé! La histèresi crea aquesta banda de transició que prevé el flickeig continuat del relé o del cremador, estalviant desgast de màquina.",
+        3: "Excel·lent! Un preactuador permet que un senyal de control feble obri o tanqui circuits d'alta càrrega de corrent de potència de l'actuador.",
+        4: "Brillant! L'obertura de gas (MV) canvia la font d'energia tèrmica directa per modificar la caldera a la temperatura de consigna (SP).",
+        5: "Correcte! L'error permanent mesura aquest espai de desajust continuat i d'ofegament en permanent, per exemple per falta de component d'acció integral."
+      };
+
+      const isCorrect = selectedOption === correctAnswers[questionNum];
+
+      buttonElement.classList.remove('opacity-60');
+      buttonElement.classList.add('disabled:opacity-100');
+
+      if (isCorrect) {
+        buttonElement.classList.add('bg-emerald-50', 'border-emerald-500', 'text-emerald-800', 'font-semibold');
+        feedbackP.textContent = explanations[questionNum];
+        feedbackP.className = "text-xs font-medium text-emerald-600 mt-2 block";
+      } else {
+        buttonElement.classList.add('bg-rose-50', 'border-rose-500', 'text-rose-800', 'font-semibold');
+        feedbackP.textContent = `Incorrecte. Intenta repassar el punt teòric corresponent de la guia de dalt per recordar el concepte.`;
+        feedbackP.className = "text-xs font-medium text-rose-600 mt-2 block";
+        
+        buttons.forEach(btn => {
+          if (btn.textContent.trim().startsWith(correctAnswers[questionNum])) {
+            btn.classList.add('bg-emerald-50/50', 'border-emerald-300', 'text-emerald-800');
+          }
+        });
+      }
+    }
+  </script>
+
+  <!-- Configura MathJax de forma prèvia al script asíncron per evitar conflictes -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es6/mathjax.js"></script>
+
+</body>
+</html>
