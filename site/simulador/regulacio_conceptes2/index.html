@@ -46,6 +46,11 @@
               <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
             </svg>
           </div>
+          <div>
+            <span class="text-xs font-semibold uppercase tracking-wider text-indigo-600 block">Unitat didàctica</span>
+            <h1 class="text-lg font-bold text-slate-900 leading-tight">Conceptes 2: Dinàmica i modelat</h1>
+          </div>
+        </div>
       </div>
     </div>
   </header>
@@ -94,7 +99,7 @@
         <div class="w-full md:w-80 shrink-0 bg-slate-50 border border-slate-200 rounded-xl p-5 flex flex-col justify-center items-center text-center">
           <span class="text-xs font-bold text-slate-400 uppercase tracking-widest">Funció de transferència genèrica</span>
           <div class="my-4 text-slate-800 bg-white px-3 py-4 rounded border border-slate-200 shadow-sm flex justify-center items-center w-full overflow-x-auto">
-            <!-- Representació SVG nativa de la fórmula -->
+            <!-- Representació SVG nativa i responsive de la fórmula per a visualització garantida -->
             <svg class="h-14 w-auto min-w-[210px]" viewBox="0 0 280 60" fill="none" xmlns="http://www.w3.org/2000/svg">
               <text x="5" y="36" fill="#0f172a" font-family="Georgia, serif" font-size="16" font-style="italic">G(s) =</text>
               
@@ -200,7 +205,7 @@
         <div class="p-6 sm:p-8 lg:col-span-7 space-y-4">
           <div class="flex items-center space-x-2">
             <span class="bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-full">1r ordre</span>
-            <span class="text-slate-400 text-xs">Un únic magatzem d'energia</span>
+            <span class="text-slate-400 text-xs">Un único magatzem d'energia</span>
           </div>
           <h4 class="text-xl font-bold text-slate-900">Sistemes de primer ordre</h4>
           <p class="text-slate-600 leading-relaxed text-sm">
@@ -289,7 +294,7 @@
           <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-xs">
             <div class="bg-rose-50 text-rose-950 p-2.5 rounded-lg border border-rose-100">
               <strong class="block text-rose-800 font-bold mb-1">Subamortit (0 < &zeta; < 1)</strong>
-              <span>El sistema reacciona molt ràpidament però genera fortes oscil·lacions transitòries i un sobre-pic inicial (over-shoot).</span>
+              <span>El sistema reacciona molt ràpidament peró genera fortes oscil·lacions transitòries i un sobre-pic inicial (over-shoot).</span>
             </div>
             <div class="bg-emerald-50 text-emerald-950 p-2.5 rounded-lg border border-emerald-100">
               <strong class="block text-emerald-800 font-bold mb-1">Críticament amortit (&zeta; = 1)</strong>
@@ -428,7 +433,7 @@
             <text x="20" y="25" fill="#94a3b8" font-size="9">Amplitud (y)</text>
             
             <text x="145" y="65" fill="#ef4444" font-size="8" font-weight="bold">Llaç tancat inestable</text>
-            <text x="175" y="145" fill="#10b981" font-size="8" font-weight="bold">Llaç obert estable (en S)</text>
+            <text x="175" y="145" fill="#10b981" font-size="8" font-weight="bold">Llaç obert stable (en S)</text>
           </svg>
           <div class="mt-4 text-center">
             <code class="text-xs text-indigo-400 font-mono">G(s) = K / [(&tau;_1&middot;s+1)(&tau;_2&middot;s+1)(&tau;_3&middot;s+1)]</code>
@@ -847,7 +852,7 @@
       const explanations = {
         1: "Correcte! Un retard pur gran causa que l'acció reguladora continuï empenyent abans de notar canvis, portant el llaç a forts cicles d'oscil·lació.",
         2: "Molt bé! La histèresi descriu exactament aquesta discrepància de trajectòries de pujada i baixada provocada per les folgues en acoblaments.",
-        3: "Excel·lent! Aquesta és la clau teòrica bàsica. Les pertorbacions mouen físicament la variable, el soroll és només una lectura deformada.",
+        3: "Excel·lent! Aquesta és la clau teòrica bàsica. Les pertorbacions mouen físicament la variable, el soroll é només una lectura deformada.",
         4: "Brillant! L'efecte Joule és l'exemple perfecte de com un paràmetre variant per temperatura (resistència de l'induït) altera el comportament dinàmic.",
         5: "Correcte! L'acoblament MIMO defineix aquesta interferència mútua entre canals de la planta on un canvi en gas afecta la pressió de forma inherent."
       };
@@ -863,7 +868,7 @@
         feedbackP.className = "text-xs font-medium text-emerald-600 mt-2 block";
       } else {
         buttonElement.classList.add('bg-rose-50', 'border-rose-500', 'text-rose-800', 'font-semibold');
-        feedbackP.textContent = `Incorrecte. Intenta repassar el punt teòric corresponent de la guia de dalt per trobar la resposta correcta.`;
+        feedbackP.textContent = `Incorrecte. Intenta repassar el qüestionari i els punts teòrics anteriors per comprovar on és l'error.`;
         feedbackP.className = "text-xs font-medium text-rose-600 mt-2 block";
         
         buttons.forEach(btn => {
