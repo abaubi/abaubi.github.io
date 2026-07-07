@@ -595,8 +595,9 @@
 
         <!-- Tipus de Controlador -->
         <div class="segmented-control">
-          <button id="type-pid-btn" class="segmented-btn active" onclick="setControllerType('pid')">Controlador PID</button>
+          <button id="type-pid-btn" class="segmented-btn active" onclick="setControllerType('pid')">PID</button>
           <button id="type-onoff-btn" class="segmented-btn" onclick="setControllerType('on-off')">Tot o res / Histèresi</button>
+          <button id="type-openloop-btn" class="segmented-btn" onclick="setControllerType('open-loop')">Bucle Obert</button>
         </div>
 
         <!-- PID CONTROLS CONTAINER -->
@@ -702,6 +703,22 @@
                 <span id="val-hyst-lo" class="badge badge-accent">0.10</span>
               </div>
               <input id="slider-hyst-lo" class="accent-purple" type="range" min="0.00" max="2.00" step="0.01" value="0.10" oninput="updateParam('hysteresisLower', this.value)">
+            </div>
+          </div>
+        </div>
+
+        <!-- OPEN-LOOP CONTROLS CONTAINER -->
+        <div id="openloop-controls-group" class="hidden">
+          <div style="padding: 0.75rem; background-color: var(--neutral-50); border-radius: 0.5rem; border: 1px solid var(--neutral-200); display: flex; flex-direction: column; gap: 0.5rem;">
+            <p style="font-size: 0.725rem; color: var(--neutral-600); line-height: 1.4;">
+              En <strong>Bucle Obert</strong>, no hi ha realimentació. El senyal de control <strong>u(t)</strong> és independent de la sortida <strong>y(t)</strong> del sistema i es defineix a partir de la referència (Setpoint SP).
+            </p>
+            <div class="form-group" style="margin-top: 0.5rem;">
+              <div class="form-label-row">
+                <label for="slider-openloop-gain">Multiplicador del senyal u(t) (K_bo)</label>
+                <span id="val-openloop-gain" class="badge badge-primary">1.0</span>
+              </div>
+              <input id="slider-openloop-gain" type="range" min="0.1" max="5.0" step="0.1" value="1.0" oninput="updateParam('openLoopGain', this.value)">
             </div>
           </div>
         </div>
@@ -952,6 +969,33 @@
           <div id="calc-val-onoff-exp" class="calc-box-value" style="font-size: 0.65rem; font-family: sans-serif; font-weight: 500; line-height: 1.3;">Esperant...</div>
         </div>
       </div>
+
+      <!-- OPEN-LOOP MATH SHOWCASE -->
+      <div id="calc-openloop-boxes" class="calc-grid hidden">
+        <div class="calc-box">
+          <span class="calc-box-title" style="color: var(--amber-600)">Error Actual</span>
+          <span class="calc-box-formula">e[k] = SP - PV</span>
+          <div id="calc-val-openloop-err" class="calc-box-value">1.00 - 0.00 = 1.00</div>
+        </div>
+        <div class="calc-box">
+          <span class="calc-box-title" style="color: var(--primary)">Referència SP</span>
+          <span class="calc-box-formula">Entrada de referència</span>
+          <div id="calc-val-openloop-sp" class="calc-box-value">SP = 1.00</div>
+        </div>
+        <div class="calc-box">
+          <span class="calc-box-title" style="color: var(--emerald-600)">Multiplicador K_bo</span>
+          <span class="calc-box-formula">Guany de bucle obert</span>
+          <div id="calc-val-openloop-kbo" class="calc-box-value">K_bo = 1.0</div>
+        </div>
+        <div class="calc-box">
+          <span class="calc-box-title" style="color: var(--purple-600); display:flex; justify-content:space-between;">
+            <span>Actuador u[k]</span>
+            <span class="badge" style="background-color: var(--purple-100); color: var(--purple-700);">Bucle Obert</span>
+          </span>
+          <span class="calc-box-formula">u[k] = SP · K_bo</span>
+          <div id="calc-val-openloop-u" class="calc-box-value">u = 1.00</div>
+        </div>
+      </div>
     </div>
 
     <!-- CHART CARD -->
@@ -1027,6 +1071,7 @@
     let hysteresisSymmetric = 0.1;
     let hysteresisUpper = 0.1;
     let hysteresisLower = 0.1;
+    let openLoopGain = 1.0;
 
     let kp = 1.8;
     let ki = 0.6;
@@ -1076,8 +1121,10 @@
     const elements = {
       typePidBtn: document.getElementById('type-pid-btn'),
       typeOnoffBtn: document.getElementById('type-onoff-btn'),
+      typeOpenloopBtn: document.getElementById('type-openloop-btn'),
       pidGroup: document.getElementById('pid-controls-group'),
       onoffGroup: document.getElementById('onoff-controls-group'),
+      openloopGroup: document.getElementById('openloop-controls-group'),
       chkIndHysteresis: document.getElementById('chk-ind-hysteresis'),
       groupSymmetricHyst: document.getElementById('group-symmetric-hysteresis'),
       groupIndependentHyst: document.getElementById('group-independent-hysteresis'),
@@ -1102,6 +1149,7 @@
       calcStepInfo: document.getElementById('calc-step-info'),
       calcPidBoxes: document.getElementById('calc-pid-boxes'),
       calcOnoffBoxes: document.getElementById('calc-onoff-boxes'),
+      calcOpenloopBoxes: document.getElementById('calc-openloop-boxes'),
       chartMainTitle: document.getElementById('chart-main-title'),
       chartSubTitle: document.getElementById('chart-sub-title'),
       chartYDomainBadge: document.getElementById('chart-y-domain-badge'),
@@ -1161,6 +1209,9 @@
       document.getElementById('val-hyst-sym').innerText = hysteresisSymmetric.toFixed(2);
       document.getElementById('val-hyst-up').innerText = hysteresisUpper.toFixed(2);
       document.getElementById('val-hyst-lo').innerText = hysteresisLower.toFixed(2);
+      if (document.getElementById('val-openloop-gain')) {
+        document.getElementById('val-openloop-gain').innerText = openLoopGain.toFixed(1);
+      }
       document.getElementById('val-gain').innerText = plantGain.toFixed(1);
       document.getElementById('val-tau1').innerText = plantTau1.toFixed(1) + ' s';
       document.getElementById('val-tau2').innerText = plantTau2.toFixed(1) + ' s';
@@ -1212,6 +1263,7 @@
       else if (param === 'hysteresisSymmetric') { hysteresisSymmetric = val; }
       else if (param === 'hysteresisUpper') { hysteresisUpper = val; }
       else if (param === 'hysteresisLower') { hysteresisLower = val; }
+      else if (param === 'openLoopGain') { openLoopGain = val; }
       else if (param === 'plantGain') { plantGain = val; }
       else if (param === 'plantTau1') { plantTau1 = val; }
       else if (param === 'plantTau2') { plantTau2 = val; }
@@ -1248,6 +1300,7 @@
       recalculateAndRedraw();
     }
 
+    // Toggle showing control signal line
     function toggleShowControl(checked) {
       showControlSignal = checked;
       elements.chkShowControl.checked = checked;
@@ -1314,21 +1367,19 @@
     // Set controller type
     function setControllerType(type) {
       controllerType = type;
-      if (controllerType === 'pid') {
-        elements.typePidBtn.classList.add('active');
-        elements.typeOnoffBtn.classList.remove('active');
-        elements.pidGroup.classList.remove('hidden');
-        elements.onoffGroup.classList.add('hidden');
-        elements.calcPidBoxes.classList.remove('hidden');
-        elements.calcOnoffBoxes.classList.add('hidden');
-      } else {
-        elements.typePidBtn.classList.remove('active');
-        elements.typeOnoffBtn.classList.add('active');
-        elements.pidGroup.classList.add('hidden');
-        elements.onoffGroup.classList.remove('hidden');
-        elements.calcPidBoxes.classList.add('hidden');
-        elements.calcOnoffBoxes.classList.remove('hidden');
-      }
+      
+      elements.typePidBtn.classList.toggle('active', type === 'pid');
+      elements.typeOnoffBtn.classList.toggle('active', type === 'on-off');
+      elements.typeOpenloopBtn.classList.toggle('active', type === 'open-loop');
+
+      elements.pidGroup.classList.toggle('hidden', type !== 'pid');
+      elements.onoffGroup.classList.toggle('hidden', type !== 'on-off');
+      elements.openloopGroup.classList.toggle('hidden', type !== 'open-loop');
+
+      elements.calcPidBoxes.classList.toggle('hidden', type !== 'pid');
+      elements.calcOnoffBoxes.classList.toggle('hidden', type !== 'on-off');
+      elements.calcOpenloopBoxes.classList.toggle('hidden', type !== 'open-loop');
+
       resetLiveSimulation();
       recalculateAndRedraw();
     }
@@ -1418,7 +1469,11 @@
         const e = currentSP - y;
         let u = 0.0;
 
-        if (controllerType === 'on-off') {
+        if (controllerType === 'open-loop') {
+          u = currentSP * openLoopGain;
+          if (u > uMax) u = uMax;
+          if (u < uMin) u = uMin;
+        } else if (controllerType === 'on-off') {
           const deltaS = isHysteresisIndependent ? hysteresisUpper : hysteresisSymmetric;
           const deltaI = isHysteresisIndependent ? hysteresisLower : hysteresisSymmetric;
           const upperThreshold = currentSP + deltaS;
@@ -1524,6 +1579,7 @@
     }
 
     function getInitialTrace(sp) {
+      const initialU = controllerType === 'open-loop' ? sp * openLoopGain : kp * sp;
       return {
         sp: sp,
         pv: 0.0,
@@ -1537,9 +1593,9 @@
         kd: kd,
         prevE: sp,
         dVal: 0.0,
-        uVal: kp * sp,
-        uRaw: kp * sp,
-        isSaturated: (kp * sp) > uMax,
+        uVal: initialU,
+        uRaw: initialU,
+        isSaturated: controllerType === 'pid' ? (kp * sp) > uMax : (initialU > uMax),
         integrate: true,
         onOffExplanation: "L'estat inicial és d'engegada."
       };
@@ -1569,7 +1625,14 @@
       let integrate = true;
       let explanation = "";
 
-      if (controllerType === 'on-off') {
+      if (controllerType === 'open-loop') {
+        u = currentSP * openLoopGain;
+        uRaw = u;
+        const uMin = -uMax;
+        if (u > uMax) u = uMax;
+        if (u < uMin) u = uMin;
+        explanation = `En bucle obert, el senyal de control u és la referència SP multiplicada per K_bo (${openLoopGain.toFixed(1)}).`;
+      } else if (controllerType === 'on-off') {
         const lastPoint = liveState.data.length > 0 ? liveState.data[liveState.data.length - 1] : null;
         let uActive = lastPoint ? (lastPoint.Control > 0) : (liveState.y < currentSP);
 
@@ -1719,7 +1782,7 @@
       const trace = liveState.trace;
       if (!trace) return;
 
-      elements.calcStepInfo.innerText = `Pas actual t = ${liveState.time.toFixed(2)}s | Mode: ${controllerType === 'pid' ? 'PID' : 'Tot o res'}`;
+      elements.calcStepInfo.innerText = `Pas actual t = ${liveState.time.toFixed(2)}s | Mode: ${controllerType === 'pid' ? 'PID' : (controllerType === 'on-off' ? 'Tot o res' : 'Bucle Obert')}`;
 
       if (controllerType === 'pid') {
         document.getElementById('calc-val-err').innerText = `${trace.sp.toFixed(2)} - ${trace.pv.toFixed(2)} = ${trace.e.toFixed(2)}`;
@@ -1732,7 +1795,7 @@
 
         document.getElementById('calc-windup-badge').style.display = trace.integrate ? 'none' : 'block';
         document.getElementById('calc-sat-badge').style.display = trace.isSaturated ? 'block' : 'none';
-      } else {
+      } else if (controllerType === 'on-off') {
         const deltaS = isHysteresisIndependent ? hysteresisUpper : hysteresisSymmetric;
         const deltaI = isHysteresisIndependent ? hysteresisLower : hysteresisSymmetric;
 
@@ -1753,6 +1816,11 @@
         }
 
         document.getElementById('calc-val-onoff-exp').innerText = trace.onOffExplanation;
+      } else if (controllerType === 'open-loop') {
+        document.getElementById('calc-val-openloop-err').innerText = `${trace.sp.toFixed(2)} - ${trace.pv.toFixed(2)} = ${trace.e.toFixed(2)}`;
+        document.getElementById('calc-val-openloop-sp').innerText = `SP = ${trace.sp.toFixed(2)}`;
+        document.getElementById('calc-val-openloop-kbo').innerText = `K_bo = ${openLoopGain.toFixed(1)}`;
+        document.getElementById('calc-val-openloop-u').innerText = `u = ${trace.sp.toFixed(2)} · ${openLoopGain.toFixed(1)} = ${trace.uVal.toFixed(2)}`;
       }
     }
 
