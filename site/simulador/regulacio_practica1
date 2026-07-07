@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="ca" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pràctica 1: Resposta temporal de la planta</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    @media print {
+      @page {
+        size: A4;
+        margin: 20mm 15mm 20mm 15mm;
+      }
+      body {
+        background-color: white !important;
+        color: #0f172a !important; /* slate-900 */
+        font-size: 11pt !important;
+        line-height: 1.6 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      /* Ensure the report section takes the full printable width and is formatted beautifully */
+      #studentReportSection {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+        display: block !important;
+      }
+      #studentReportSection > div {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        background: transparent !important;
+      }
+      /* Title and student card styling in print */
+      .print-header {
+        border-bottom: 3px solid #0f172a !important;
+        padding-bottom: 12px !important;
+        margin-bottom: 24px !important;
+      }
+      .print-student-grid {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 16px !important;
+        background-color: #f8fafc !important; /* slate-50 */
+        border: 1px solid #e2e8f0 !important; /* slate-200 */
+        padding: 16px !important;
+        border-radius: 8px !important;
+        margin-bottom: 24px !important;
+      }
+      /* Prevent card contents from breaking across pages */
+      .print-card {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        margin-bottom: 28px !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 16px !important;
+        border-radius: 8px !important;
+        background-color: #ffffff !important;
+      }
+      h2 {
+        font-size: 15pt !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+      }
+      h3 {
+        font-size: 12pt !important;
+        font-weight: 700 !important;
+        color: #0f172a !important;
+        margin-bottom: 8px !important;
+      }
+      p {
+        font-size: 10pt !important;
+        color: #334155 !important; /* slate-700 */
+      }
+      /* Student written answer in print */
+      .print-textarea-fallback {
+        display: block !important;
+        background-color: #f8fafc !important; /* slate-50 */
+        border-left: 4px solid #0d9488 !important; /* teal-600 dynamic accent bar */
+        border-top: 1px solid #e2e8f0 !important;
+        border-right: 1px solid #e2e8f0 !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+        padding: 12px !important;
+        border-radius: 0 6px 6px 0 !important;
+        font-size: 10.5pt !important;
+        font-family: inherit !important;
+        color: #0f172a !important;
+        margin-top: 10px !important;
+        white-space: pre-wrap !important;
+        min-height: 80px !important;
+      }
+      .textarea-to-print {
+        display: none !important;
+      }
+      /* Hide file inputs and image actions in print */
+      input[type="file"], .no-print-element {
+        display: none !important;
+      }
+      /* Page break control */
+      .print-page-break {
+        page-break-before: always !important;
+        break-before: page !important;
+      }
+      /* Ensure screenshots look crisp and scale correctly */
+      img {
+        max-width: 100% !important;
+        max-height: 220px !important;
+        object-fit: contain !important;
+        border-radius: 6px !important;
+        margin-top: 12px !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+    }
+    
+    .print-textarea-fallback {
+      display: none;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col">
+
+  <!-- Capçalera del document -->
+  <header class="bg-slate-900 text-white py-6 px-4 sm:px-8 border-b border-slate-800 no-print">
+    <div class="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div>
+        <span class="text-xs font-semibold uppercase tracking-wider text-teal-400">Mòdul de mesura i regulació</span>
+        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight mt-1">Pràctica 1: Resposta temporal de la planta</h1>
+        <p class="text-slate-400 text-sm mt-1">Sistemes de primer, segon i tercer ordre en bucle obert (Per a electricistes i electrònics)</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="prepararIImprimir()" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-all flex items-center gap-2 text-xs sm:text-sm">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+          </svg>
+          Generar PDF / Imprimir
+        </button>
+        <button onclick="exportarHTML()" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-all flex items-center gap-2 text-xs sm:text-sm" title="Descarrega el teu treball com a fitxer html llest per a obrir i desar directament en PDF">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+          </svg>
+          Desar document (.html)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contingut principal: Guia didàctica en format centrat i elegant -->
+  <main class="max-w-4xl w-full mx-auto p-4 sm:p-8 space-y-8 flex-grow no-print">
+      
+      <!-- Secció 1: Enunciat -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 print-shadow-none">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">1</span>
+          Enunciat de l'activitat
+        </h2>
+        <p class="text-slate-700 leading-relaxed mb-4">
+          L'objectiu d'aquesta pràctica és analitzar com es comporta la sortida d'un equip o "planta" de treball quan li donem energia de cop. Això es coneix com aplicar un canvi en <b>escaló</b> (com tancar l'interruptor que alimenta un circuit o engegar una resistència calefactora al 100%).
+        </p>
+        <p class="text-slate-700 leading-relaxed">
+          Com que estem en <b>bucle obert</b>, vol dir que observem el sistema lliurement, sense cap termòstat o regulador automàtic que s'encarregui de tallar o modular l'energia per mantenir una temperatura constant. Simplement donem corrent i mirem què passa.
+        </p>
+        <div class="mt-4 p-4 bg-teal-50 border border-teal-200 rounded-lg text-teal-950 text-xs sm:text-sm flex items-start gap-2.5">
+          <svg class="w-5 h-5 text-teal-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <div>
+            <strong class="font-bold">Indicació per a la pràctica:</strong> Per dur a terme l'anàlisi de la planta, utilitzeu el <strong>simulador de control extern</strong> indicat pel vostre docent. Obtingueu les corbes corresponents a cadascuna de les activitats, feu captures de pantalla nítides del vostre programari de simulació i pugeu-les directament a l'informe inferior fent servir els camps de selecció de fitxer habilitats.
+          </div>
+        </div>
+      </div>
+
+      <!-- Secció 2: Fonaments teòrics adaptats -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 print-shadow-none">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">2</span>
+          Explicació fàcil (Per a electricistes i electrònics)
+        </h2>
+        <div class="space-y-6 text-slate-700 text-sm leading-relaxed">
+          <p>
+            Per entendre què passa quan alimentem qualsevol màquina o planta industrial, primer hem de fixar-nos en tres conceptes molt senzills:
+          </p>
+          
+          <!-- Bloc Guany Kp -->
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="text-teal-600">&bull;</span>
+              Guany de la planta (<i>K<sub>p</sub></i>) — L'amplificació final
+            </h3>
+            <p>
+              Ens diu quant canvia la sortida segons l'energia que injectem a l'entrada.
+            </p>
+            <p class="text-xs text-slate-500 italic">
+              <strong>Exemple real:</strong> Imagina un forn elèctric de l'aula. Si li fiquem 1 Volt d'entrada a la seva resistència, la temperatura de l'habitacle puja 2&deg;C. Si li fiquem 3 Volts, pujarà 6&deg;C. El guany (<i>K<sub>p</sub></i>) d'aquest forn és de 2 (sempre es multiplica l'entrada pel guany per saber el valor final).
+            </p>
+          </div>
+
+          <!-- Bloc 1r ordre amb circuit RC -->
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="text-teal-600">&bull;</span>
+              Sistemes de 1r ordre — La càrrega d'un sol condensador
+            </h3>
+            <p>
+              Quan alimentes aquest sistema, la sortida comença a reaccionar <strong>a l'instant</strong> (pendent màxim). No hi ha cap retard d'arrencada.
+            </p>
+            
+            <!-- Circuit elèctric equivalent en format dibuix SVG NORMALITZAT -->
+            <div class="bg-white p-3 rounded-lg border border-slate-200 flex flex-col items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Dibuix 1: Equivalent elèctric d'1r Ordre (Filtre RC normalitzat)</span>
+              <svg class="w-full max-w-sm h-28 bg-slate-50/50 rounded border border-slate-100" viewBox="0 0 320 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Switch -->
+                <path d="M 20 60 L 50 60" stroke="#475569" stroke-width="2" />
+                <path d="M 50 60 L 72 45" stroke="#475569" stroke-width="2" stroke-linecap="round" />
+                <circle cx="50" cy="60" r="3" fill="#475569" />
+                <circle cx="75" cy="60" r="3" fill="#475569" />
+                <!-- Resistor (Format Rectangular CEI/IEC standard) -->
+                <path d="M 75 60 L 105 60" stroke="#ea580c" stroke-width="2" />
+                <rect x="105" y="51" width="40" height="18" rx="1" fill="#ffedd5" stroke="#ea580c" stroke-width="2" />
+                <path d="M 145 60 L 190 60" stroke="#ea580c" stroke-width="2" />
+                <text x="110" y="42" fill="#ea580c" font-size="11" font-weight="bold">Resistència (R)</text>
+                
+                <!-- Condensador (Format plates paral·leles CEI/IEC standard) -->
+                <path d="M 190 60 L 230 60" stroke="#0284c7" stroke-width="2" />
+                <!-- Node de connexió a C -->
+                <circle cx="230" cy="60" r="3" fill="#0284c7" />
+                <path d="M 230 60 L 230 72" stroke="#0284c7" stroke-width="2" />
+                <!-- Placa superior condensador -->
+                <path d="M 215 72 L 245 72" stroke="#0284c7" stroke-width="3" stroke-linecap="square" />
+                <!-- Placa inferior condensador -->
+                <path d="M 215 79 L 245 79" stroke="#0284c7" stroke-width="3" stroke-linecap="square" />
+                <!-- Connexió a terra -->
+                <path d="M 230 79 L 230 100" stroke="#0284c7" stroke-width="2" />
+                <text x="250" y="81" fill="#0284c7" font-size="11" font-weight="bold">C (Condensador)</text>
+
+                <!-- Línies auxiliars de sortida i d'entrada -->
+                <path d="M 230 60 L 290 60" stroke="#475569" stroke-width="1.5" />
+                <circle cx="290" cy="60" r="2.5" fill="#475569" />
+                
+                <!-- Línia de retorn / Ground -->
+                <path d="M 20 100 L 290 100" stroke="#475569" stroke-width="1.5" />
+                <!-- Símbol de terra normalitzat -->
+                <path d="M 150 100 L 150 106 M 142 106 L 158 106 M 145 110 L 155 110 M 148 114 L 152 114" stroke="#475569" stroke-width="1.5" />
+
+                <!-- Textos explicatius -->
+                <text x="10" y="40" fill="#475569" font-size="10" font-weight="bold">Interruptor</text>
+                <text x="255" y="53" fill="#475569" font-size="10" font-weight="bold">SORTIDA (V)</text>
+              </svg>
+            </div>
+
+            <p class="text-xs">
+              <strong>Com funciona?</strong> Segur que t'enrecordes dels condensadors. En el segon exacte en què tanques l'interruptor (l'escaló d'entrada), el condensador comença a carregar-se de manera molt ràpida. Després es va frenant a poc a poc a mesura que s'omple.
+            </p>
+            <p class="text-xs font-semibold text-teal-700 bg-teal-50 p-2 rounded">
+              La constant de temps (&tau;<sub>1</sub> = R&middot;C): és el temps que triga el condensador a carregar-se fins al 63,2% de la seva capacitat final. Si R &middot; C = 3 segons, al segon 3 de rellotge tindrem exactament el 63,2% de la tensió final!
+            </p>
+          </div>
+
+          <!-- Bloc 2n i 3r ordre amb cascada de filtres -->
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="text-teal-600">&bull;</span>
+              Sistemes de 2n i 3r ordre — Inèrcies i retards en cadena
+            </h3>
+            <p>
+              Què passa si en lloc d'un sol filtre RC, col·loquem tres filtres un darrere l'altre connectats en cascada?
+            </p>
+
+            <!-- Circuit equivalent amb inèrcia 3r ordre dibuix SVG normalitzat -->
+            <div class="bg-white p-3 rounded-lg border border-slate-200 flex flex-col items-center gap-2">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Dibuix 2: Equivalent elèctric de 3r Ordre (3 filtres RC en cascada normalitzats)</span>
+              <svg class="w-full max-w-sm h-32 bg-slate-50/50 rounded border border-slate-100" viewBox="0 0 320 130" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Input wire -->
+                <path d="M 10 50 L 25 50" stroke="#475569" stroke-width="1.5" />
+                
+                <!-- R1 -->
+                <rect x="25" y="44" width="25" height="12" rx="1" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5" />
+                <text x="32" y="37" fill="#ea580c" font-size="8" font-weight="bold">R1</text>
+                
+                <!-- Node 1 -->
+                <path d="M 50 50 L 80 50" stroke="#475569" stroke-width="1.5" />
+                <circle cx="80" cy="50" r="2.5" fill="#0284c7" />
+                
+                <!-- C1 -->
+                <path d="M 80 50 L 80 60" stroke="#0284c7" stroke-width="1.5" />
+                <!-- Placa superior C1 -->
+                <path d="M 70 60 L 90 60" stroke="#0284c7" stroke-width="2.5" stroke-linecap="square" />
+                <!-- Placa inferior C1 -->
+                <path d="M 70 66 L 90 66" stroke="#0284c7" stroke-width="2.5" stroke-linecap="square" />
+                <path d="M 80 66 L 80 90" stroke="#0284c7" stroke-width="1.5" />
+                <text x="94" y="65" fill="#0284c7" font-size="8" font-weight="bold">C1</text>
+
+                <!-- R2 -->
+                <path d="M 80 50 L 115 50" stroke="#475569" stroke-width="1.5" />
+                <rect x="115" y="44" width="25" height="12" rx="1" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5" />
+                <text x="122" y="37" fill="#ea580c" font-size="8" font-weight="bold">R2</text>
+
+                <!-- Node 2 -->
+                <path d="M 140 50 L 170 50" stroke="#475569" stroke-width="1.5" />
+                <circle cx="170" cy="50" r="2.5" fill="#0284c7" />
+
+                <!-- C2 -->
+                <path d="M 170 50 L 170 60" stroke="#0284c7" stroke-width="1.5" />
+                <!-- Placa superior C2 -->
+                <path d="M 160 60 L 180 60" stroke="#0284c7" stroke-width="2.5" stroke-linecap="square" />
+                <!-- Placa inferior C2 -->
+                <path d="M 160 66 L 180 66" stroke="#0284c7" stroke-width="2.5" stroke-linecap="square" />
+                <path d="M 170 66 L 170 90" stroke="#0284c7" stroke-width="1.5" />
+                <text x="184" y="65" fill="#0284c7" font-size="8" font-weight="bold">C2</text>
+
+                <!-- R3 -->
+                <path d="M 170 50 L 205 50" stroke="#475569" stroke-width="1.5" />
+                <rect x="205" y="44" width="25" height="12" rx="1" fill="#ffedd5" stroke="#ea580c" stroke-width="1.5" />
+                <text x="212" y="37" fill="#ea580c" font-size="8" font-weight="bold">R3</text>
+
+                <!-- Node 3 -->
+                <path d="M 230 50 L 260 50" stroke="#475569" stroke-width="1.5" />
+                <circle cx="260" cy="50" r="2.5" fill="#0284c7" />
+
+                <!-- C3 -->
+                <path d="M 260 50 L 260 60" stroke="#0284c7" stroke-width="1.5" />
+                <!-- Placa superior C3 -->
+                <path d="M 250 60 L 270 60" stroke="#0284c7" stroke-width="2.5" stroke-linecap="square" />
+                <!-- Placa inferior C3 -->
+                <path d="M 250 66 L 270 66" stroke="#0284c7" stroke-width="2.5" stroke-linecap="square" />
+                <path d="M 260 66 L 260 90" stroke="#0284c7" stroke-width="1.5" />
+                <text x="274" y="65" fill="#0284c7" font-size="8" font-weight="bold">C3</text>
+
+                <!-- Connection out -->
+                <path d="M 260 50 L 300 50" stroke="#475569" stroke-width="1.5" />
+                <circle cx="300" cy="50" r="2" fill="#475569" />
+                <text x="280" y="42" fill="#475569" font-size="8">Sortida</text>
+
+                <!-- Common Ground wire -->
+                <path d="M 10 90 L 300 90" stroke="#475569" stroke-width="1.5" />
+                <!-- Ground symbol -->
+                <path d="M 150 90 L 150 96 M 145 96 L 155 96 M 147 100 L 153 100 M 149 104 L 151 104" stroke="#475569" stroke-width="1.5" />
+              </svg>
+            </div>
+
+            <p class="text-xs">
+              <strong>El retard de l'S:</strong> Com que el condensador 1 ha de començar a carregar-se primer, la tensió de sortida del condensador 2 triga a pujar, i el condensador 3 encara més.
+            </p>
+            <p class="text-xs">
+              Això en el món real és una <strong>inèrcia tèrmica</strong> o mecànica. Engeguem la resistència elèctrica (escaló d'entrada), però la calor ha de travessar la ceràmica, després l'acer del blindatge i després l'aire abans d'arribar al sensor. Al segon inicial, la temperatura no puja gens; dibuixa un pendent zero de sortida que genera la típica <b>corba en forma d'S</b>.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secció 3: Guia pas a pas -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 print-shadow-none">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">3</span>
+          Guia de treball pas a pas
+        </h2>
+        <div class="space-y-4 text-slate-700 text-sm leading-relaxed">
+          <div class="border-l-4 border-teal-500 pl-3 py-1 bg-teal-50/50 rounded-r">
+            <h3 class="font-bold text-slate-900">Pas 1: Prova el sistema senzill (1r Ordre)</h3>
+            <p class="mt-1 text-slate-600">
+              Per simular un sol filtre RC elèctric, posa &tau;<sub>2</sub> = 0 s i &tau;<sub>3</sub> = 0 s (desactivats). Posa un guany <i>K<sub>p</sub></i> = 2.0 i una constant &tau;<sub>1</sub> = 3.0 s. Deixa l'escaló d'amplitud a 1.0. Fixa't com la corba comença a pujar cap amunt immediatament.
+            </p>
+          </div>
+          <div class="border-l-4 border-teal-500 pl-3 py-1 bg-teal-50/50 rounded-r">
+            <h3 class="font-bold text-slate-900">Pas 2: Canvia l'energia del regulador (Efecte del Guany)</h3>
+            <p class="mt-1 text-slate-600">
+              Sense tocar les constants de temps, mou el slider del guany <i>K<sub>p</sub></i> del simulador. Mira com influeix en l'alçada final de la gràfica. Prova de posar <i>K<sub>p</sub></i> = 4.0 i després <i>K<sub>p</sub></i> = 1.0. És exactament igual que augmentar la tensió de la línia.
+            </p>
+          </div>
+          <div class="border-l-4 border-teal-500 pl-3 py-1 bg-teal-50/50 rounded-r">
+            <h3 class="font-bold text-slate-900">Pas 3: Activa els filtres consecutius (La forma en "S")</h3>
+            <p class="mt-1 text-slate-600">
+              Deixa el guany a 2.0 i &tau;<sub>1</sub> a 3.0 s. Ara activa un segon condensador posant &tau;<sub>2</sub> a 2.5 s. Finalment, connecta el tercer filtre posant &tau;<sub>3</sub> a 1.5 s. Observa el segon d'inici de la gràfica. Ya no comença ràpidament; ara té un inici lent en "S".
+            </p>
+          </div>
+        </div>
+      </div>
+
+  </main>
+
+  <!-- SECCIÓ DE L'INFORME DE L'ALUMNE (S'adapta perfectament al PDF de sortida) -->
+  <section id="studentReportSection" class="max-w-4xl w-full mx-auto p-4 sm:p-8 pt-0">
+    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 print-shadow-none">
+      
+      <!-- Capçalera de lliurament -->
+      <div class="border-b-2 border-slate-900 pb-4 mb-6 print-header">
+        <h2 class="text-xl font-bold text-slate-900 uppercase tracking-tight">Informe de pràctiques: Respostes de l'estudiant</h2>
+        <p class="text-xs text-slate-500 mt-1">L'estudiant ha de completar tots els camps i preguntes de manera raonada. Un cop finalitzat, utilitzeu els botons superiors per imprimir o descarregar el fitxer HTML i desar-lo en PDF.</p>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-5 print-student-grid">
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Nom i cognoms de l'alumne/a</label>
+            <input id="studentName" type="text" placeholder="Escriu aquí el teu nom complet" class="w-full p-2.5 border border-slate-300 rounded focus:border-teal-500 focus:outline-none text-sm bg-slate-50/50">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Grup de classe</label>
+            <input id="studentGroup" type="text" placeholder="Ex: 2n Instal·lacions Elèctriques - A" class="w-full p-2.5 border border-slate-300 rounded focus:border-teal-500 focus:outline-none text-sm bg-slate-50/50">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase text-slate-600 mb-1">Data del lliurament</label>
+            <input id="studentDate" type="date" class="w-full p-2.5 border border-slate-300 rounded focus:border-teal-500 focus:outline-none text-sm bg-slate-50/50">
+          </div>
+        </div>
+      </div>
+
+      <!-- Pregunta 1 -->
+      <div class="mb-8 print-card">
+        <h3 class="text-md font-bold text-slate-900 mb-2 flex items-center gap-1.5">
+          <span>Activitat 1: Anàlisi de la resposta de primer ordre (El filtre RC elèctric)</span>
+        </h3>
+        <p class="text-sm text-slate-600 mb-3 leading-relaxed">
+          Configureu el sistema amb un sol filtre actiu (&tau;<sub>1</sub> = 3s, &tau;<sub>2</sub> = 0s, &tau;<sub>3</sub> = 0s, <i>K<sub>p</sub></i> = 2, Entrada = 1.0). Expliqueu què li passa a la línia de resposta de la planta quan el rellotge de simulació marca exactament 3 segons des que s'aplica l'entrada. Quina tensió de sortida s'obté? Es compleix la famosa regla que el condensador s'ha de carregar fins al 63,2% de la seva capacitat final? Demostra els teus càlculs.
+        </p>
+        <textarea id="q1Textarea" oninput="syncPrintText('q1Textarea', 'q1PrintText')" rows="4" placeholder="Escriu aquí les teves observacions, càlculs i explicacions d'enginyeria..." class="textarea-to-print w-full p-3 border border-slate-300 rounded focus:border-teal-500 focus:outline-none text-sm"></textarea>
+        <div id="q1PrintText" class="print-textarea-fallback bg-slate-50 p-4 border border-slate-300 rounded min-h-[100px] text-sm whitespace-pre-wrap text-slate-800"></div>
+        
+        <!-- Zona de càrrega de captura 1 -->
+        <div class="mt-4 no-print">
+          <label class="block text-xs font-bold text-slate-700 mb-1">Captura de pantalla d'aquesta simulació (1r Ordre):</label>
+          <div class="flex items-center gap-4">
+            <input type="file" accept="image/*" onchange="previewImage(event, 'preview1')" class="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 cursor-pointer">
+          </div>
+        </div>
+        <div id="preview1Container" class="mt-3 hidden max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-100 relative group">
+          <img id="preview1" class="w-full object-contain max-h-72" src="#" alt="Captura 1">
+          <button onclick="removeImage('preview1Container', 'preview1')" class="no-print absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded px-2.5 py-1 text-xs transition-colors shadow">Eliminar imatge</button>
+        </div>
+      </div>
+
+      <!-- Pregunta 2 -->
+      <div class="mb-8 print-card">
+        <h3 class="text-md font-bold text-slate-900 mb-2">Activitat 2: Com influeix el Guany de Planta (La tensió d'entrada)</h3>
+        <p class="text-sm text-slate-600 mb-3 leading-relaxed">
+          Què passa exactament amb el valor màxim final quan aumentem el guany de planta <i>K<sub>p</sub></i>? Imagina que tenim un escaló d'amplitud 1.5 volts d'entrada i un guany <i>K<sub>p</sub></i> configurat a 3.0. Fent servir una multiplicació senzilla, quin hauria de ser el valor de voltatge final de la corba quan el condensador s'estabilitzi del tot? Comprova-ho amb el simulador i digues si surt idèntic.
+        </p>
+        <textarea id="q2Textarea" oninput="syncPrintText('q2Textarea', 'q2PrintText')" rows="4" placeholder="Escriu aquí les teves conclusions i els resultats de les proves..." class="textarea-to-print w-full p-3 border border-slate-300 rounded focus:border-teal-500 focus:outline-none text-sm"></textarea>
+        <div id="q2PrintText" class="print-textarea-fallback bg-slate-50 p-4 border border-slate-300 rounded min-h-[100px] text-sm whitespace-pre-wrap text-slate-800"></div>
+        
+        <!-- Zona de càrrega de captura 2 -->
+        <div class="mt-4 no-print">
+          <label class="block text-xs font-bold text-slate-700 mb-1">Captura de pantalla d'aquesta simulació (Variació de Guany):</label>
+          <div class="flex items-center gap-4">
+            <input type="file" accept="image/*" onchange="previewImage(event, 'preview2')" class="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 cursor-pointer">
+          </div>
+        </div>
+        <div id="preview2Container" class="mt-3 hidden max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-100 relative group">
+          <img id="preview2" class="w-full object-contain max-h-72" src="#" alt="Captura 2">
+          <button onclick="removeImage('preview2Container', 'preview2')" class="no-print absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded px-2.5 py-1 text-xs transition-colors shadow">Eliminar imatge</button>
+        </div>
+      </div>
+
+      <!-- Pregunta 3 -->
+      <div class="mb-8 print-card">
+        <h3 class="text-md font-bold text-slate-900 mb-2">Activitat 3: Els retards industrials (La forma de la corba en "S")</h3>
+        <p class="text-sm text-slate-600 mb-3 leading-relaxed">
+          Compara de forma visual el comportament d'un sistema de primer ordre amb un de tercer ordre (&tau;<sub>1</sub> = 3s, &tau;<sub>2</sub> = 2.5s, &tau;<sub>3</sub> = 1.5s). Per què la resposta del sistema ara triga tant a arrencar a l'instant de tancar l'interruptor (segons inicials)? Com s'explica això en un sistema industrial real com una resistència elèctrica blindada que ha d'escalfar aigua?
+        </p>
+        <textarea id="q3Textarea" oninput="syncPrintText('q3Textarea', 'q3PrintText')" rows="4" placeholder="Escriu aquí la teva explicació detallada de la forma en S d'ordre superior..." class="textarea-to-print w-full p-3 border border-slate-300 rounded focus:border-teal-500 focus:outline-none text-sm"></textarea>
+        <div id="q3PrintText" class="print-textarea-fallback bg-slate-50 p-4 border border-slate-300 rounded min-h-[100px] text-sm whitespace-pre-wrap text-slate-800"></div>
+        
+        <!-- Zona de càrrega de captura 3 -->
+        <div class="mt-4 no-print">
+          <label class="block text-xs font-bold text-slate-700 mb-1">Captura de pantalla d'aquesta simulació (Perfil en "S"):</label>
+          <div class="flex items-center gap-4">
+            <input type="file" accept="image/*" onchange="previewImage(event, 'preview3')" class="text-xs text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-teal-50 file:text-teal-700 hover:file:bg-teal-100 cursor-pointer">
+          </div>
+        </div>
+        <div id="preview3Container" class="mt-3 hidden max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-100 relative group">
+          <img id="preview3" class="w-full object-contain max-h-72" src="#" alt="Captura 3">
+          <button onclick="removeImage('preview3Container', 'preview3')" class="no-print absolute top-2 right-2 bg-red-600 hover:bg-red-700 text-white rounded px-2.5 py-1 text-xs transition-colors shadow">Eliminar imatge</button>
+        </div>
+      </div>
+
+      <!-- Conclusió final -->
+      <div class="pt-4 border-t border-slate-200 print-card">
+        <h3 class="text-md font-bold text-slate-900 mb-2">Conclusió de l'aprenentatge</h3>
+        <p class="text-sm text-slate-600 mb-3 leading-relaxed">
+          En resum: com a professional elèctric, per què creus que és molt important entendre el retard d'una planta abans de dissenyar el quadre de regulació automàtica d'una instal·lació?
+        </p>
+        <textarea id="qFinalTextarea" oninput="syncPrintText('qFinalTextarea', 'qFinalPrintText')" rows="3" placeholder="Redacta un resum d'idees clau extretes d'aquesta pràctica..." class="textarea-to-print w-full p-3 border border-slate-300 rounded focus:border-teal-500 focus:outline-none text-sm"></textarea>
+        <div id="qFinalPrintText" class="print-textarea-fallback bg-slate-50 p-4 border border-slate-300 rounded min-h-[80px] text-sm whitespace-pre-wrap text-slate-800"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Peu de pàgina de l'aplicació -->
+  <footer class="bg-slate-900 text-slate-400 py-6 text-center text-xs mt-auto border-t border-slate-800 no-print">
+    <p>Material docent per al mòdul de mesura i regulació - Cicle de Grau Superior d'Automatització i Robòtica Industrial.</p>
+  </footer>
+
+  <!-- MODAL DE DIÀLEG D'AJUDA (S'activa quan el sandbox d'Iframe bloqueja window.print) -->
+  <div id="sandboxModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden no-print">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 relative">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="p-2 bg-amber-100 text-amber-800 rounded-full">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Bloqueig d'entorn segur detectat</h3>
+          <p class="text-xs text-slate-500 mt-1">El navegador no permet la impressió directa perquè aquesta aplicació s'està executant dins d'un entorn de proves (Sandbox).</p>
+        </div>
+      </div>
+      
+      <div class="bg-slate-50 rounded-lg p-3 border border-slate-200 text-xs text-slate-700 space-y-2 mb-5">
+        <p class="font-semibold">Com pots desar el teu treball en PDF?</p>
+        <ol class="list-decimal pl-4 space-y-1">
+          <li>Fes clic al botó blau de dalt: <b class="text-blue-600">"Desar document (.html)"</b>.</li>
+          <li>Desaràs un fitxer complet amb totes les teves captures i respostes escrites.</li>
+          <li>Obre aquest fitxer descarregat a qualsevol pestanya normal del teu navegador.</li>
+          <li>Prem <b class="font-mono bg-slate-200 px-1 rounded">Ctrl + P</b> (o Cmd+P a Mac) per desar-lo com a PDF de forma perfecta!</li>
+        </ol>
+      </div>
+
+      <div class="flex justify-end gap-2">
+        <button onclick="exportarHTML(); tancarModal();" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-colors">
+          Desar document ara
+        </button>
+        <button onclick="tancarModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold transition-colors">
+          Entesos, tancar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lògica de l'informe, exportació i gestió de captures de pantalla -->
+  <script>
+    function previewImage(event, previewId) {
+      const file = event.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+          const preview = document.getElementById(previewId);
+          const container = document.getElementById(previewId + 'Container');
+          if (preview) {
+            preview.src = e.target.result;
+          }
+          if (container) {
+            container.classList.remove('hidden');
+          }
+        }
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function removeImage(containerId, imgId) {
+      const container = document.getElementById(containerId);
+      const img = document.getElementById(imgId);
+      if (img) img.src = '#';
+      if (container) container.classList.add('hidden');
+    }
+
+    function syncPrintText(textareaId, printDivId) {
+      const textarea = document.getElementById(textareaId);
+      const printDiv = document.getElementById(printDivId);
+      if (textarea && printDiv) {
+        printDiv.textContent = textarea.value || "L'alumne/a encara no ha aportat cap resposta escrita per a aquest apartat de la pràctica.";
+      }
+    }
+
+    function syncAllAnswers() {
+      syncPrintText('q1Textarea', 'q1PrintText');
+      syncPrintText('q2Textarea', 'q2PrintText');
+      syncPrintText('q3Textarea', 'q3PrintText');
+      syncPrintText('qFinalTextarea', 'qFinalPrintText');
+    }
+
+    function prepararIImprimir() {
+      syncAllAnswers();
+      try {
+        window.print();
+      } catch (err) {
+        console.warn("La impressió directa està bloquejada per l'iframe sandbox:", err);
+        obrirModal();
+      }
+    }
+
+    function obrirModal() {
+      document.getElementById('sandboxModal').classList.remove('hidden');
+    }
+
+    function tancarModal() {
+      document.getElementById('sandboxModal').classList.add('hidden');
+    }
+
+    function exportarHTML() {
+      syncAllAnswers();
+      
+      const name = document.getElementById('studentName').value || "(No especificat)";
+      const group = document.getElementById('studentGroup').value || "(No especificat)";
+      const date = document.getElementById('studentDate').value || "(No especificada)";
+      
+      const q1Ans = document.getElementById('q1Textarea').value || "No s'ha aportat cap resposta.";
+      const q2Ans = document.getElementById('q2Textarea').value || "No s'ha aportat cap resposta.";
+      const q3Ans = document.getElementById('q3Textarea').value || "No s'ha aportat cap resposta.";
+      const qFinalAns = document.getElementById('qFinalTextarea').value || "No s'ha aportat cap resposta.";
+
+      // Comprova si les imatges previsualitzades existeixen i són visibles
+      const img1Src = document.getElementById('preview1').src;
+      const img1Visible = !document.getElementById('preview1Container').classList.contains('hidden') && img1Src !== '#';
+      
+      const img2Src = document.getElementById('preview2').src;
+      const img2Visible = !document.getElementById('preview2Container').classList.contains('hidden') && img2Src !== '#';
+      
+      const img3Src = document.getElementById('preview3').src;
+      const img3Visible = !document.getElementById('preview3Container').classList.contains('hidden') && img3Src !== '#';
+
+      const img1HTML = img1Visible 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg overflow-hidden bg-slate-50 p-2 max-w-2xl"><img src="${img1Src}" class="max-h-72 object-contain w-full" alt="Captura 1"></div>` 
+        : '<p class="text-xs text-amber-600 italic mt-2">No s\'ha adjuntat cap captura de pantalla per a aquesta activitat.</p>';
+      const img2HTML = img2Visible 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg overflow-hidden bg-slate-50 p-2 max-w-2xl"><img src="${img2Src}" class="max-h-72 object-contain w-full" alt="Captura 2"></div>` 
+        : '<p class="text-xs text-amber-600 italic mt-2">No s\'ha adjuntat cap captura de pantalla per a aquesta activitat.</p>';
+      const img3HTML = img3Visible 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg overflow-hidden bg-slate-50 p-2 max-w-2xl"><img src="${img3Src}" class="max-h-72 object-contain w-full" alt="Captura 3"></div>` 
+        : '<p class="text-xs text-amber-600 italic mt-2">No s\'ha adjuntat cap captura de pantalla per a aquesta activitat.</p>';
+
+      const standaloneHTML = `<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Lliurament Pràctica 1 - ${name}</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+        }
+      }
+    }
+  <\/script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    @media print {
+      @page {
+        size: A4;
+        margin: 20mm 15mm 20mm 15mm;
+      }
+      .no-print {
+        display: none !important;
+      }
+      body {
+        background-color: white !important;
+        color: #0f172a !important;
+      }
+      .print-card {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 16px !important;
+        border-radius: 8px !important;
+        margin-bottom: 24px !important;
+        background-color: #ffffff !important;
+      }
+      .print-header {
+        border-bottom: 3px solid #0f172a !important;
+        padding-bottom: 12px !important;
+        margin-bottom: 24px !important;
+      }
+      .print-student-grid {
+        display: grid !important;
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+        gap: 16px !important;
+        background-color: #f8fafc !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 16px !important;
+        border-radius: 8px !important;
+        margin-bottom: 24px !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen p-4 sm:p-8">
+
+  <div class="max-w-4xl mx-auto bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 print:shadow-none print:border-none print:p-0">
+    
+    <!-- Botó superior no-print per facilitar la impressió -->
+    <div class="flex justify-between items-center mb-6 pb-4 border-b border-slate-200 no-print">
+      <div class="flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-teal-500"></span>
+        <span class="text-xs font-semibold uppercase tracking-wider text-slate-500">Document d'Informe de Pràctiques</span>
+      </div>
+      <button onclick="window.print()" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg font-medium shadow transition-all flex items-center gap-2 text-xs sm:text-sm">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
+        </svg>
+        Imprimir / Desar PDF
+      </button>
+    </div>
+
+    <!-- Capçalera de l'informe -->
+    <div class="border-b-2 border-slate-900 pb-4 mb-6 print-header">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-teal-600">Mòdul de mesura i regulació</span>
+        <h1 class="text-2xl font-bold text-slate-900 mt-1 uppercase tracking-tight">Pràctica 1: Resposta temporal de la planta</h1>
+        <p class="text-slate-500 text-sm mt-1">Sistemes de primer, segon i tercer ordre en bucle obert (Informe de l'Estudiant)</p>
+      </div>
+      
+      <!-- Informació de l'alumne en grid professional -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 bg-slate-50 p-4 rounded-lg border border-slate-200 print-student-grid">
+        <div>
+          <span class="block text-[10px] uppercase font-bold text-slate-500 tracking-wide">Nom de l'alumne/a</span>
+          <span class="text-sm font-semibold text-slate-900">${name}</span>
+        </div>
+        <div>
+          <span class="block text-[10px] uppercase font-bold text-slate-500 tracking-wide">Grup de classe</span>
+          <span class="text-sm font-semibold text-slate-900">${group}</span>
+        </div>
+        <div>
+          <span class="block text-[10px] uppercase font-bold text-slate-500 tracking-wide">Data de lliurament</span>
+          <span class="text-sm font-semibold text-slate-900">${date}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pregunta 1 -->
+    <div class="mb-8 print-card">
+      <h3 class="text-md font-bold text-slate-900 mb-2 flex items-center gap-1.5">
+        <span class="flex items-center justify-center w-5 h-5 rounded-full bg-slate-900 text-white text-[10px] font-bold">1</span>
+        Activitat 1: Anàlisi de la resposta de primer ordre (El filtre RC elèctric)
+      </h3>
+      <p class="text-xs text-slate-600 mb-3 bg-slate-50 p-3 rounded border border-slate-100">
+        Configureu el sistema amb un sol filtre actiu (&tau;1 = 3s, &tau;2 = 0s, &tau;3 = 0s, Kp = 2, Entrada = 1.0). Expliqueu què li passa a la línia de resposta de la planta quan el rellotge de simulació marca exactament 3 segons des que s'aplica l'entrada. Quina tensió de sortida s'obté? Es compleix la famosa regla que el condensador s'ha de carregar fins al 63,2% de la seva capacitat final? Demostra els teus càlculs.
+      </p>
+      <div class="bg-slate-50/50 p-4 border border-slate-200 rounded-lg min-h-[80px] text-sm whitespace-pre-wrap text-slate-900 leading-relaxed">
+        ${q1Ans}
+      </div>
+      ${img1HTML}
+    </div>
+
+    <!-- Pregunta 2 -->
+    <div class="mb-8 print-card">
+      <h3 class="text-md font-bold text-slate-900 mb-2 flex items-center gap-1.5">
+        <span class="flex items-center justify-center w-5 h-5 rounded-full bg-slate-900 text-white text-[10px] font-bold">2</span>
+        Activitat 2: Com influeix el Guany de Planta (La tensió d'entrada)
+      </h3>
+      <p class="text-xs text-slate-600 mb-3 bg-slate-50 p-3 rounded border border-slate-100">
+        Què passa exactament amb el valor màxim final quan aumentem el guany de planta Kp? Imagina que tenim un escaló d'amplitud 1.5 volts d'entrada i un guany Kp configurat a 3.0. Fent servir una multiplicació senzilla, quin hauria de ser el valor de voltatge final de la corba quan el condensador s'estabilitzi del tot? Comprova-ho amb els sliders del simulador i digues si surt idèntic.
+      </p>
+      <div class="bg-slate-50/50 p-4 border border-slate-200 rounded-lg min-h-[80px] text-sm whitespace-pre-wrap text-slate-900 leading-relaxed">
+        ${q2Ans}
+      </div>
+      ${img2HTML}
+    </div>
+
+    <!-- Pregunta 3 -->
+    <div class="mb-8 print-card">
+      <h3 class="text-md font-bold text-slate-900 mb-2 flex items-center gap-1.5">
+        <span class="flex items-center justify-center w-5 h-5 rounded-full bg-slate-900 text-white text-[10px] font-bold">3</span>
+        Activitat 3: Els retards industrials (La forma de la corba en "S")
+      </h3>
+      <p class="text-xs text-slate-600 mb-3 bg-slate-50 p-3 rounded border border-slate-100">
+        Compara de forma visual el comportament d'un sistema de primer ordre amb un de tercer ordre (&tau;1 = 3s, &tau;2 = 2.5s, &tau;3 = 1.5s). Per què la resposta del sistema ara triga tant a arrencar a l'instant de tancar l'interruptor (segons inicials)? Com s'explica això en un sistema industrial real com una resistència elèctrica blindada que ha d'escalfar aigua?
+      </p>
+      <div class="bg-slate-50/50 p-4 border border-slate-200 rounded-lg min-h-[80px] text-sm whitespace-pre-wrap text-slate-900 leading-relaxed">
+        ${q3Ans}
+      </div>
+      ${img3HTML}
+    </div>
+
+    <!-- Conclusió final -->
+    <div class="pt-4 border-t border-slate-200 print-card">
+      <h3 class="text-md font-bold text-slate-900 mb-2 flex items-center gap-1.5">
+        <span class="flex items-center justify-center w-5 h-5 rounded-full bg-slate-900 text-white text-[10px] font-bold">4</span>
+        Conclusió de l'aprenentatge
+      </h3>
+      <p class="text-xs text-slate-600 mb-3 bg-slate-50 p-3 rounded border border-slate-100">
+        En resum: com a professional elèctric, per què creus que és molt important entendre el retard d'una planta abans de dissenyar el quadre de regulació automàtica d'una instal·lació?
+      </p>
+      <div class="bg-slate-50/50 p-4 border border-slate-200 rounded-lg min-h-[80px] text-sm whitespace-pre-wrap text-slate-900 leading-relaxed">
+        ${qFinalAns}
+      </div>
+    </div>
+
+    <div class="mt-8 pt-6 border-t border-slate-200 text-center text-[10px] text-slate-400">
+      <p>Material de pràctiques d'examen generat automàticament - Cicle Superior d'Automatització i Robòtica Industrial.</p>
+    </div>
+
+  </div>
+
+</body>
+</html>`;
+
+      const blob = new Blob([standaloneHTML], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = "Practica_1_Mesura_i_Regulacio_" + name.trim().replace(/\s+/g, '_') + ".html";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    window.onload = function() {
+      syncAllAnswers();
+    };
+  </script>
+</body>
+</html>
