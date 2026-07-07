@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="ca" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pràctica 2: L'efecte del temps mort o retard en els sistemes de control</title>
+  
+  <!-- Preconnect to Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    /* Premium CSS Print Media Rules for school report lliurament */
+    @media print {
+      @page {
+        size: A4;
+        margin: 15mm 15mm 15mm 15mm;
+      }
+      
+      body {
+        background-color: white !important;
+        color: #0f172a !important; /* slate-900 */
+        font-family: 'Inter', -apple-system, sans-serif !important;
+        font-size: 11.5pt !important;
+        line-height: 1.5 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+      }
+
+      /* Hide interactive simulator, headers, sliders, scales, and buttons when printing */
+      .print\:hidden, 
+      header, 
+      footer, 
+      section.lg\:col-span-5, 
+      section.lg\:col-span-7, 
+      main, 
+      button, 
+      input[type="file"],
+      .no-print {
+        display: none !important;
+      }
+
+      /* Allow student report section to expand and print in full width */
+      section#studentReportSection,
+      section {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        display: block !important;
+      }
+
+      /* Avoid cards/activities splitting across pages in middle of a paragraph */
+      .print-card {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        border: 1px solid #cbd5e1 !important; /* slate-300 */
+        padding: 24px !important;
+        border-radius: 8px !important;
+        margin-bottom: 24px !important;
+        background-color: #ffffff !important;
+      }
+
+      /* Title styling inside print report */
+      h2 {
+        font-size: 14pt !important;
+        font-weight: 800 !important;
+        color: #0f172a !important;
+        border-bottom: 2px solid #0f172a !important;
+        padding-bottom: 6px !important;
+      }
+
+      h3 {
+        font-size: 11pt !important;
+        font-weight: 700 !important;
+        color: #1e293b !important;
+        margin-bottom: 8px !important;
+      }
+
+      p {
+        font-size: 9.5pt !important;
+        color: #334155 !important; /* slate-700 */
+        line-height: 1.5 !important;
+      }
+
+      /* Hide form textareas and display the print-only div with text content */
+      textarea {
+        display: none !important;
+      }
+
+      .print-textarea-fallback {
+        display: block !important;
+        background-color: #f8fafc !important; /* slate-50 */
+        border-left: 4px solid #0d9488 !important; /* teal-600 */
+        border-top: 1px solid #cbd5e1 !important;
+        border-right: 1px solid #cbd5e1 !important;
+        border-bottom: 1px solid #cbd5e1 !important;
+        padding: 16px !important;
+        border-radius: 0 8px 8px 0 !important;
+        font-size: 10pt !important;
+        color: #0f172a !important;
+        white-space: pre-wrap !important;
+        min-height: 100px !important;
+        line-height: 1.6 !important;
+      }
+
+      /* Sizing images crisp on page */
+      img {
+        max-width: 100% !important;
+        max-height: 240px !important;
+        object-fit: contain !important;
+        border-radius: 6px !important;
+        margin-top: 12px !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+      }
+
+      /* Page break controls */
+      .page-break {
+        page-break-before: always !important;
+        break-before: page !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen">
+  
+  <!-- Mountpoint for React Vite app -->
+  <div id="root"></div>
+
+  <script type="module" src="/src/main.tsx"></script>
+
+</body>
+</html>
