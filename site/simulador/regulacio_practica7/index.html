@@ -3,46 +3,91 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pràctica 6: Regulació Proporcional-Integral-Derivativa (PID) completa</title>
+  <title>Pràctica 7: El fenomen del "Wind-up" i la solució Anti-windup</title>
   
-  <!-- Preconnect to Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
 
   <style>
-    /* Premium CSS Print Media Rules for school report lliurament */
+    /* Compact custom utility styles to prevent code bloating and avoid token limits */
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      font-weight: 600;
+      font-size: 0.75rem;
+      padding: 0.625rem 1rem;
+      border-radius: 0.5rem;
+      transition: all 150ms ease;
+      cursor: pointer;
+    }
+    .btn-teal { background-color: #0d9488; color: #ffffff; }
+    .btn-teal:hover { background-color: #0f766e; }
+    .btn-blue { background-color: #2563eb; color: #ffffff; }
+    .btn-blue:hover { background-color: #1d4ed8; }
+    .btn-red { background-color: #dc2626; color: #ffffff; }
+    .btn-red:hover { background-color: #b91c1c; }
+    
+    .card {
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .input-field {
+      width: 100%;
+      padding: 0.625rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 0.375rem;
+      font-size: 0.875rem;
+      background-color: #ffffff;
+      color: #0f172a;
+      outline: none;
+      transition: border-color 150ms, box-shadow 150ms;
+    }
+    .input-field:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 1px #6366f1;
+    }
+
+    /* Print styling matching standard PDF template for school lliurament */
     @media print {
       @page {
         size: A4;
-        margin: 15mm 15mm 15mm 15mm;
+        margin: 15mm;
       }
-      
       body {
         background-color: white !important;
-        color: #0f172a !important; /* slate-900 */
-        font-family: 'Inter', -apple-system, sans-serif !important;
-        font-size: 11.5pt !important;
+        color: #0f172a !important;
+        font-size: 11pt !important;
         line-height: 1.5 !important;
         padding: 0 !important;
         margin: 0 !important;
       }
-
-      /* Hide interactive simulator, headers, sliders, scales, and buttons when printing */
-      .print\:hidden, 
-      header, 
-      footer, 
-      section.lg\:col-span-5, 
-      section.lg\:col-span-7, 
-      main, 
-      button, 
-      input[type="file"],
-      .no-print {
+      .print\:hidden, header, footer, main, button, input[type="file"], .no-print {
         display: none !important;
       }
-
-      /* Allow student report section to expand and print in full width */
-      section#studentReportSection,
       section {
         width: 100% !important;
         max-width: 100% !important;
@@ -50,62 +95,51 @@
         margin: 0 !important;
         display: block !important;
       }
-
-      /* Avoid cards/activities splitting across pages in middle of a paragraph */
       .print-card {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
-        border: 1px solid #cbd5e1 !important; /* slate-300 */
-        padding: 24px !important;
+        border: 1px solid #cbd5e1 !important;
+        padding: 20px !important;
         border-radius: 8px !important;
         margin-bottom: 24px !important;
         background-color: #ffffff !important;
       }
-
-      /* Title styling inside print report */
       h2 {
-        font-size: 14pt !important;
+        font-size: 13pt !important;
         font-weight: 800 !important;
         color: #0f172a !important;
         border-bottom: 2px solid #0f172a !important;
         padding-bottom: 6px !important;
       }
-
       h3 {
         font-size: 11pt !important;
         font-weight: 700 !important;
         color: #1e293b !important;
         margin-bottom: 8px !important;
       }
-
       p {
         font-size: 9.5pt !important;
-        color: #334155 !important; /* slate-700 */
+        color: #334155 !important;
         line-height: 1.5 !important;
       }
-
-      /* Hide form textareas and display the print-only div with text content */
       textarea {
         display: none !important;
       }
-
       .print-textarea-fallback {
         display: block !important;
-        background-color: #f8fafc !important; /* slate-50 */
-        border-left: 4px solid #0d9488 !important; /* teal-600 */
+        background-color: #f8fafc !important;
+        border-left: 4px solid #0d9488 !important;
         border-top: 1px solid #cbd5e1 !important;
         border-right: 1px solid #cbd5e1 !important;
         border-bottom: 1px solid #cbd5e1 !important;
-        padding: 16px !important;
+        padding: 12px 16px !important;
         border-radius: 0 8px 8px 0 !important;
         font-size: 10pt !important;
         color: #0f172a !important;
         white-space: pre-wrap !important;
         min-height: 100px !important;
-        line-height: 1.6 !important;
+        line-height: 1.5 !important;
       }
-
-      /* Sizing images crisp on page */
       img {
         max-width: 100% !important;
         max-height: 240px !important;
@@ -115,8 +149,6 @@
         page-break-inside: avoid !important;
         break-inside: avoid !important;
       }
-
-      /* Page break controls */
       .page-break {
         page-break-before: always !important;
         break-before: page !important;
@@ -124,12 +156,835 @@
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header class="bg-slate-900 text-white py-6 px-4 sm:px-8 border-b border-slate-800 print:hidden">
+    <div class="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-semibold uppercase tracking-wider text-teal-400 bg-teal-950/80 px-2 py-0.5 rounded border border-teal-800">
+            Mòdul de Mesura i Regulació
+          </span>
+          <span class="text-[10px] font-semibold uppercase tracking-wider text-blue-400 bg-blue-950/80 px-2 py-0.5 rounded border border-blue-800">
+            ARI / Robòtica
+          </span>
+        </div>
+        <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight mt-1.5">
+          Pràctica 7: El fenomen del "Wind-up" i la solució Anti-windup
+        </h1>
+        <p class="text-slate-400 text-xs mt-1">
+          Saturació de l'acció integral — Analitzar la saturació de l'acció integral i com evitar-la amb Clamping (Anti-windup)
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2 w-full md:w-auto">
+        <button onclick="handlePrint()" class="btn btn-teal flex-1 md:flex-none">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          Imprimir / PDF
+        </button>
+        <button onclick="handleExportHTML()" class="btn btn-blue flex-1 md:flex-none" title="Descarrega el teu treball com a fitxer html llest per obrir i desar directament en PDF">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          Desar lliurament (.html)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content: Guia Didàctica -->
+  <main class="max-w-4xl w-full mx-auto p-4 sm:p-8 flex-grow print:hidden space-y-8">
+    
+    <!-- Enunciat card -->
+    <div class="card p-6">
+      <h2 class="text-base font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">1</span>
+        Enunciat de l'activitat (Pràctica 7)
+      </h2>
+      <div class="text-slate-700 leading-relaxed space-y-3 text-xs sm:text-sm">
+        <p>
+          L'objectiu de la <b>Pràctica 7</b> és analitzar el perillós fenomen del <b>"Wind-up" o saturació de l'acció integral</b> i avaluar la seva solució mitjançant l'algorisme de <b>Clamping (Anti-windup)</b>.
+        </p>
+        <p>
+          L'acció integral elimina l'error de posició o offset sumant els petits errors de forma acumulativa en el temps. Malauradament, tots els actuadors físics reals tenen <b>límits físics de funcionament</b> (ex. saturació de 0V a 5V o de potència de 0% a 100%).
+        </p>
+        <p>
+          Si el sistema es troba sotmès a un error constant que no pot corregir-se immediatament (ex. demanar temperatura superior a la potència màxima del calefactor), el controlador treballarà saturat al 100%. Com que l'error continua sent positiu, l'acció integral continuarà <b>calculant i sumant errors indefinidament</b> ("wind-up" o enrotllament de la integral). En arribar finalment a la consigna, la integral té un valor gegantí que triga molts segons a descarregar-se, provocant sobrepicos descontrolats i inestabilitat severa.
+        </p>
+      </div>
+    </div>
+
+    <!-- Fonaments Teòrics card -->
+    <div class="card p-6 space-y-6">
+      <h2 class="text-base font-bold text-slate-900 border-b pb-2 flex items-center gap-2">
+        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">2</span>
+        Fonaments Teòrics de la Saturació Integral i Anti-windup
+      </h2>
+      
+      <div class="space-y-4 text-slate-700 text-xs sm:text-sm leading-relaxed">
+        <p>
+          Quan un regulador PID ideal funciona en un sistema real, el senyal calculat <span class="font-mono bg-slate-100 px-1 rounded">u_ideal(t)</span> es topa amb el limitador de saturació física de l'actuador:
+        </p>
+
+        <div class="bg-slate-950 text-slate-300 font-mono text-xs p-3.5 rounded border border-slate-800 space-y-1">
+          <div class="text-indigo-400 font-bold">// Model de saturació de l'actuador físic</div>
+          <div>u(t) =</div>
+          <div>  • uMax           si u_ideal(t) &gt; uMax</div>
+          <div>  • u_ideal(t)     si 0 &le; u_ideal(t) &le; uMax</div>
+          <div>  • 0V             si u_ideal(t) &lt; 0V</div>
+        </div>
+
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
+          <h3 class="font-bold text-slate-900 flex items-center gap-1.5">
+            <span class="text-indigo-600">&bull;</span> Què passa exactament durant el "Integral Wind-up"?
+          </h3>
+          <p class="text-slate-600 text-xs leading-relaxed">
+            Mentre l'actuador està saturat al seu valor màxim, el sistema es troba en <b>bucle obert efectiu</b>. Això significa que per molt que la integral continuï acumulant valor, la planta no rebrà més energia de la que el seu limitador físic (<span class="font-mono bg-slate-100 px-1 rounded">uMax</span>) pot donar.
+          </p>
+          <ul class="list-disc pl-5 text-xs space-y-1 text-slate-700">
+            <li>L'error acumulat a l'acumulador integral creix linealment sense cap utilitat física.</li>
+            <li>Quan el setpoint torna a un nivell accessible o hi ha un canvi de consigna descendent, el controlador <b>no respon immediatament</b>. Primer necessita que l'error passi a ser negatiu durant molt de temps per poder "desenrotllar" o rebaixar tota la integral acumulada inserviblement (fase de "wind-down").</li>
+            <li>Aquest retard de descàrrega condueix a un sobrepic gegantí i pot destruir l'estabilitat del sistema.</li>
+          </ul>
+        </div>
+
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+          <h3 class="font-bold text-slate-900 flex items-center gap-1.5">
+            <span class="text-indigo-600">&bull;</span> Procés de càlcul de l'Anti-windup (Clamping)
+          </h3>
+          <p class="text-xs text-slate-600">
+            A continuació es detalla el pseudocodi del càlcul del regulador i el mètode de <b>Clamping</b> o integració condicional per evitar la saturació desmesurada:
+          </p>
+          <div class="bg-slate-950 text-slate-300 font-mono text-xs p-3.5 rounded border border-slate-800 overflow-x-auto space-y-1">
+            <div class="text-indigo-400 font-bold">// Executat a cada període de mostreig dt</div>
+            <div>const error = setpoint - mesura;</div>
+            <div>const pTerm = Kp_c * error;</div>
+            <div>const dTerm = Kp_c * Td * ((error - errorAnterior) / dt);</div>
+            <div>const iTermPrev = (Ti !== Infinity) ? (Kp_c / Ti) * integralAcumulada : 0;</div>
+            <div class="text-slate-500">// Senyal ideal de control i aplicació de límits</div>
+            <div>const u_ideal = pTerm + iTermPrev + dTerm;</div>
+            <div>const u_saturada = Math.max(0.0, Math.min(uMax, u_ideal));</div>
+            <div class="text-amber-400 font-bold">// Lògica Clamping: Atura la integració si l'actuador està saturat</div>
+            <div class="text-amber-400 font-bold">// i l'error actual té el mateix signe que el senyal ideal calculated</div>
+            <div>const estaSaturat = (u_ideal !== u_saturada);</div>
+            <div>const mateixSigne = Math.sign(error) === Math.sign(u_ideal);</div>
+            <div>const congelarIntegrador = estaSaturat && mateixSigne;</div>
+            <div class="text-slate-500">// Integració condicional</div>
+            <div>if (!congelarIntegrador && Ti !== Infinity) {</div>
+            <div>  integralAcumulada += error * dt;</div>
+            <div>}</div>
+          </div>
+        </div>
+
+        <!-- SVG Curves -->
+        <div class="bg-white p-4 rounded-lg border border-slate-200 flex flex-col items-center gap-3">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+            <span class="w-2 h-2 bg-indigo-500 rounded-full"></span>
+            Figura 1: Resposta de la planta i efecte de la saturació integral
+          </span>
+          <svg class="w-full max-w-lg h-52 bg-slate-50/40 rounded-xl border border-slate-200" viewBox="0 0 380 190" fill="none" id="svgGraficTeoric">
+            <path d="M 40 10 L 40 145 M 90 10 L 90 145 M 140 10 L 140 145 M 190 10 L 190 145 M 240 10 L 240 145 M 290 10 L 290 145 M 340 10 L 340 145" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="1 4" />
+            <path d="M 40 145 L 340 145 M 40 118 L 340 118 M 40 91 L 340 91 M 40 64 L 340 64 M 40 37 L 340 37 M 40 10 L 340 10" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="1 4" />
+
+            <!-- Shaded Area of Actuator Saturation -->
+            <rect x="65" y="10" width="75" height="135" fill="#fef2f2" opacity="0.6" />
+            <line x1="65" y1="10" x2="65" y2="145" stroke="#fca5a5" stroke-width="1" stroke-dasharray="2 2" />
+            <line x1="140" y1="10" x2="140" y2="145" stroke="#fca5a5" stroke-width="1" stroke-dasharray="2 2" />
+            <text x="102" y="20" fill="#b91c1c" font-size="7" font-weight="bold" text-anchor="middle">Saturació Actuador</text>
+
+            <path d="M 40 10 L 40 147 M 38 145 L 345 145" stroke="#475569" stroke-width="1.5" stroke-linecap="round" />
+            
+            <text x="32" y="148" fill="#64748b" font-size="7" font-weight="bold" text-anchor="end">0V</text>
+            <text x="32" y="94" fill="#64748b" font-size="7" font-weight="bold" text-anchor="end">2V</text>
+            <text x="32" y="40" fill="#64748b" font-size="7" font-weight="bold" text-anchor="end">4V</text>
+
+            <text x="40" y="157" fill="#64748b" font-size="7" font-weight="bold" text-anchor="middle">0s</text>
+            <text x="140" y="157" fill="#64748b" font-size="7" font-weight="bold" text-anchor="middle">4s</text>
+            <text x="240" y="157" fill="#64748b" font-size="7" font-weight="bold" text-anchor="middle">8s</text>
+            <text x="340" y="157" fill="#64748b" font-size="7" font-weight="bold" text-anchor="middle">12s</text>
+
+            <!-- Setpoint (r) - Green -->
+            <path d="M 40 91 L 340 91" stroke="#10b981" stroke-width="1.5" stroke-dasharray="3 3" />
+            <text x="45" y="84" fill="#10b981" font-size="8" font-weight="extrabold">Consigna de canvi r = 2.0 V</text>
+
+            <!-- Severe Windup (Dotted red curve) -->
+            <path id="windupPath" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3 2" fill="none" />
+            
+            <!-- Beautiful Clamping (Solid teal curve) -->
+            <path id="antiWindupPath" stroke="#0d9488" stroke-width="2.5" fill="none" />
+
+            <path d="M 165 25 L 165 42" stroke="#ef4444" stroke-width="1" marker-end="url(#arrow-red)" />
+            <text x="170" y="22" fill="#ef4444" font-size="7" font-weight="extrabold">Sobrepic crític (Overshoot)</text>
+            <text x="170" y="30" fill="#991b1b" font-size="6.5">per acumulació inútil d'u_I</text>
+
+            <path d="M 230 115 L 210 102" stroke="#0d9488" stroke-width="1" stroke-dasharray="2 1" />
+            <text x="235" y="117" fill="#0d9488" font-size="7" font-weight="extrabold">Clamping: ràpida estabilització</text>
+            <text x="235" y="125" fill="#0f766e" font-size="6.5">Sense sobrepicos innecessaris</text>
+
+            <defs>
+              <marker id="arrow-red" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#ef4444" />
+              </marker>
+            </defs>
+          </svg>
+
+          <div class="w-full text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded border border-slate-200 mt-1 space-y-1">
+            <p><b>Anàlisi de la resposta (Figura 1):</b></p>
+            <ul class="list-disc pl-4 space-y-0.5">
+              <li><span class="text-red-600 font-bold">&bull; SENSE Anti-windup (Vermella de punts):</span> El controlador acumula un error integral excessiu. En assolir la consigna, l'acció integral triga segons a descarregar-se, provocant sobrepicos i inestabilitat.</li>
+              <li><span class="text-teal-600 font-bold">&bull; AMB Anti-windup Clamping (Teal contínua):</span> L'integrador es congela durant la saturació. En arribar al setpoint, l'acció integral manté un valor controlat, permetent un assentament ràpid i net.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guia de Treball Pas a Pas card -->
+    <div class="card p-6">
+      <h2 class="text-base font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">3</span>
+        Guia de Treball Pas a Pas
+      </h2>
+      <div class="space-y-4 text-slate-700 text-xs sm:text-sm leading-relaxed">
+        <div class="border-l-4 border-amber-500 pl-3 py-1 bg-amber-50/40 rounded-r">
+          <h3 class="font-bold text-slate-900">Pas 1: Forçar l'acumulació descontrolada de la integral (Wind-up)</h3>
+          <p class="mt-1 text-slate-600 text-xs leading-relaxed">
+            Configureu la planta externa amb: <span class="font-mono bg-slate-100 px-1 rounded">&tau;_1 = 3.0s, &tau;_2 = 1.5s, &tau;_3 = 0.5s, &theta; = 0.8s</span>.
+            Estableix la consigna a <span class="font-mono bg-slate-100 px-1 rounded">r = 3.0 V</span> i limiteu el voltatge a <span class="font-mono bg-slate-100 px-1 rounded">U_max = 1.2 V</span>. Desactiveu el <b>Clamping (Anti-windup)</b>.
+            Observeu que la sortida y(t) no arriba a la consigna (es queda a uns 2.4V) perquè l'actuador està saturat al màxim (1.2V), i veureu que l'acció integral (<span class="text-purple-600 font-semibold font-mono">u_I</span>) segueix creixent linealment sense límit (15V-20V o més).
+          </p>
+        </div>
+
+        <div class="border-l-4 border-teal-500 pl-3 py-1 bg-teal-50/40 rounded-r">
+          <h3 class="font-bold text-slate-900">Pas 2: Activar el Clamping i congelar la integració</h3>
+          <p class="mt-1 text-slate-600 text-xs leading-relaxed">
+            Mantenint els mateixos paràmetres, activeu l'opció de <b>Clamping (Anti-windup)</b>.
+            Observeu com de forma immediata l'acció integral <span class="font-semibold text-teal-600">u_I</span> es deté i es congela en un valor pla i controlat (impedeix l'acumulació infinita). Anoteu el límit d'u_I obtingut.
+          </p>
+        </div>
+
+        <div class="border-l-4 border-indigo-500 pl-3 py-1 bg-indigo-50/40 rounded-r">
+          <h3 class="font-bold text-slate-900">Pas 3: Analitzar transitoris i canvis de consigna</h3>
+          <p class="mt-1 text-slate-600 text-xs leading-relaxed">
+            Configureu <span class="font-mono bg-slate-100 px-1 rounded">U_max = 5.0 V</span> i proveu canvis de consigna bruscos. Compareu els resultats amb l'Anti-windup desactivat vs activat. Comproveu com el fet de tenir Clamping disminueix de forma dràstica el sobrepic (overshoot) i el temps d'estabilització.
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Student Report Section -->
+  <section class="max-w-4xl w-full mx-auto p-4 sm:p-8 pt-0 print:p-0 print:max-w-full">
+    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 print-card" id="studentReportSection">
+      
+      <!-- Report Header -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b-2 border-slate-900 pb-4 mb-6">
+        <div>
+          <h2 class="text-lg font-extrabold text-slate-900 uppercase tracking-tight flex items-center gap-2">
+            <i data-lucide="file-text" class="w-5 h-5 text-indigo-600"></i>
+            Full de Treball i Lliurament de la Pràctica 7
+          </h2>
+          <p class="text-[11px] text-slate-500 mt-1">
+            Responeu les preguntes de laboratori sobre el fenomen de la saturació integral (Wind-up), l'efecte de l'Anti-windup (Clamping) i pugeu les captures del simulador per generar el vostre informe final (.html).
+          </p>
+        </div>
+        
+        <!-- Quick print actions -->
+        <div class="flex flex-wrap gap-2 w-full md:w-auto">
+          <button onclick="handlePrint()" class="btn btn-teal flex-1 md:flex-initial">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            Imprimir / Desar PDF
+          </button>
+          <button onclick="handleExportHTML()" class="btn btn-blue flex-1 md:flex-initial" title="Descarrega un document HTML complet que inclou les teves respostes i imatges">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            Desar fitxer HTML
+          </button>
+        </div>
+      </div>
+
+      <!-- Student Credentials Form -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-slate-50 p-5 rounded-lg border border-slate-200">
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <i data-lucide="user" class="w-3 h-3 text-slate-400"></i>
+            Nom i Cognoms de l'alumne/a
+          </label>
+          <input type="text" id="studentName" placeholder="Ex: Joan Garcia i Soler" class="input-field" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <i data-lucide="users" class="w-3 h-3 text-slate-400"></i>
+            Grup de Classe
+          </label>
+          <input type="text" id="studentGroup" placeholder="Ex: 2n Automàtica i Robòtica Industrial" class="input-field" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <i data-lucide="calendar" class="w-3 h-3 text-slate-400"></i>
+            Data del Treball
+          </label>
+          <input type="date" id="studentDate" class="input-field" />
+        </div>
+      </div>
+
+      <!-- Pregunta 1 -->
+      <div class="mb-8 border-b border-slate-100 pb-8 print-card">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 1</span>
+          El fenomen de la Saturació de l'Acció Integral (Wind-up)
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Configureu la planta externa amb retard i múltiples constants d'inèrcia: <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_1 = 3.0 s</span>, <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_2 = 1.5 s</span>, <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_3 = 0.5 s</span> i retard temporal <span class="font-mono bg-slate-100 px-0.5 rounded">&theta; = 0.8 s</span>. Estableix la consigna <span class="font-mono bg-slate-100 px-0.5 rounded">r = 3.0 V</span>, el guany a <span class="font-mono bg-slate-100 px-0.5 rounded">K_p_c = 2.5</span>, la constant integral a <span class="font-mono bg-slate-100 px-0.5 rounded">T_i = 4.0 s</span>, i derivada desactivada (<span class="font-mono bg-slate-100 px-0.5 rounded">T_d = 0.0 s</span>). Limiteu el voltatge a <span class="font-mono bg-slate-100 px-0.5 rounded">U_max = 1.2 V</span> i <b>desactiveu l'Anti-windup (Clamping)</b>.
+          <br /><b>Responeu:</b> Expliqueu per què la sortida de la planta <span class="font-mono bg-slate-100 px-0.5 rounded">y(t)</span> no pot arribar mai a la consigna. Què passa amb l'acció integral acumulada (<span class="font-mono bg-slate-100 px-0.5 rounded">u_I</span>) al llarg del temps? Quin és el valor final d'aquesta acció que s'indica al panell de mètriques i per què segueix creixent linealment sense fre?
+        </p>
+        <textarea id="q1" rows="5" placeholder="Anoteu el valor final assolit per la sortida de la planta (aproximadament 2.4V) i el valor desmesurat de l'acció integral (u_I) acumulat al final. Expliqueu com la saturació de l'actuador a 1.2V trenca el llaç de control i provoca que l'error positiu es continuï integrant indefinidament..." class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-xs leading-relaxed mb-4 text-slate-800 bg-white"></textarea>
+        <div id="q1Fallback" class="print-textarea-fallback hidden"></div>
+
+        <!-- Upload Zone 1 -->
+        <div class="space-y-2">
+          <label class="block text-[11px] font-bold text-slate-700">
+            Captura de pantalla d'aquesta simulació (Saturació integral massiva, u_I creixent sense límit):
+          </label>
+          <div id="q1UploadArea" class="space-y-2">
+            <div id="q1Dropzone" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors">
+              <i data-lucide="upload" class="w-6 h-6 text-slate-400"></i>
+              <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+              <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+              <input type="file" id="q1FileInput" accept="image/*" class="hidden" />
+            </div>
+            <div id="q1Preview" class="hidden relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center">
+              <img id="q1Img" src="" alt="Captura Activitat 1" class="max-h-56 object-contain w-full" />
+              <div class="absolute top-2 right-2">
+                <button type="button" id="q1DeleteBtn" class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span>Eliminar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pregunta 2 -->
+      <div class="mb-8 border-b border-slate-100 pb-8 print-card">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 2</span>
+          Activació de l'Anti-windup per Clamping (Bloqueig de la Integració)
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Mantenint exactament els mateixos paràmetres de la planta i del regulador externa (K_p_c = 2.5, T_i = 4.0 s, U_max = 1.2 V, r = 3.0 V), activeu l'opció de <b>Clamping (Anti-windup)</b>.
+          <br /><b>Responeu:</b> Quina diferència s'observa ara en l'evolució temporal de l'acció integral (<span class="font-semibold text-teal-600">u_I</span>) i en el seu valor acumulat final? Descriviu de quina manera l'algorisme de Clamping detecta la saturació i decideix congelar de forma dinàmica el terme integral.
+        </p>
+        <textarea id="q2" rows="5" placeholder="Anoteu com l'acció integral final ara es bloqueja i no supera el límit permès (per exemple, es congela de forma plana). Expliqueu el criteri de Clamping: atura la integració si l'esforç de control ideal està saturat i a més el signe de l'error empitjoraria la saturació..." class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-xs leading-relaxed mb-4 text-slate-800 bg-white"></textarea>
+        <div id="q2Fallback" class="print-textarea-fallback hidden"></div>
+
+        <!-- Upload Zone 2 -->
+        <div class="space-y-2">
+          <label class="block text-[11px] font-bold text-slate-700">
+            Captura de pantalla d'aquesta simulació (Integració correctament congelada i limitada gràcies a l'Anti-windup):
+          </label>
+          <div id="q2UploadArea" class="space-y-2">
+            <div id="q2Dropzone" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors">
+              <i data-lucide="upload" class="w-6 h-6 text-slate-400"></i>
+              <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+              <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+              <input type="file" id="q2FileInput" accept="image/*" class="hidden" />
+            </div>
+            <div id="q2Preview" class="hidden relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center">
+              <img id="q2Img" src="" alt="Captura Activitat 2" class="max-h-56 object-contain w-full" />
+              <div class="absolute top-2 right-2">
+                <button type="button" id="q2DeleteBtn" class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span>Eliminar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pregunta 3 -->
+      <div class="mb-8 border-b border-slate-100 pb-8 print-card">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 3</span>
+          Anàlisi de l'efecte del Wind-up en Canvis de Consigna i Transitoris
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Configureu un escenari normal: augmenteu la potència de l'actuador a <span class="font-mono bg-slate-100 px-0.5 rounded">U_max = 5.0 V</span> i demaneu <span class="font-mono bg-slate-100 px-0.5 rounded">r = 2.0 V</span>. Simuleu la transició amb <b>Anti-windup desactivat</b> i després amb <b>Anti-windup activat</b>.
+          <br /><b>Responeu:</b> Expliqueu com influeix l'enrotllament (wind-up) previ de la integral en el sobrepic (overshoot) i en el temps de retorn a l'estabilitat de la planta. Per què el fet de disposar d'Anti-windup disminueix dràsticament el temps d'estabilització (settling time) davant pertorbacions severes o canvis de consigna bruscos?
+        </p>
+        <textarea id="q3" rows="5" placeholder="Compareu com sense Anti-windup s'obté un overshoot gegant i molt retard en retornar perquè la integral ha acumulat massa corrent inútil, mentre que amb l'Anti-windup actiu l'overshoot es minimitza i el control s'estabilitza de forma gairebé immediata..." class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-xs leading-relaxed mb-4 text-slate-800 bg-white"></textarea>
+        <div id="q3Fallback" class="print-textarea-fallback hidden"></div>
+
+        <!-- Upload Zone 3 -->
+        <div class="space-y-2">
+          <label class="block text-[11px] font-bold text-slate-700">
+            Captura de pantalla d'aquesta simulació (Transitori ideal en canvi de consigna gràcies al Clamping actiu):
+          </label>
+          <div id="q3UploadArea" class="space-y-2">
+            <div id="q3Dropzone" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors">
+              <i data-lucide="upload" class="w-6 h-6 text-slate-400"></i>
+              <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+              <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+              <input type="file" id="q3FileInput" accept="image/*" class="hidden" />
+            </div>
+            <div id="q3Preview" class="hidden relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center">
+              <img id="q3Img" src="" alt="Captura Activitat 3" class="max-h-56 object-contain w-full" />
+              <div class="absolute top-2 right-2">
+                <button type="button" id="q3DeleteBtn" class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold">
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span>Eliminar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pregunta Final / Conclusió -->
+      <div class="print-card">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Conclusions</span>
+          Conclusions sobre la importància de l'Anti-windup a la indústria
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          <b>Responeu:</b> Resumiu de forma professional per què gairebé cap PID industrial es programa sense un mètode d'Anti-windup. Doneu un exemple pràctic de planta real (forn de fosa, reactor químic, control de nivell d'un dipòsit) on l'absència d'anti-windup podria provocar un desastre tèrmic, químic o desbordament de fluids.
+        </p>
+        <textarea id="qFinal" rows="4" placeholder="Escriu aquí les teves conclusions. Per exemple: si un forn industrial de fosa de metall té una arrencada freda fins a 1000ºC, el cremador estarà saturat al 100% durant hores. Sense Anti-windup, la integral acumularia tant valor que en arribar a 1000ºC la fosa continuaria escalfant-se fins a danyar l'estructura..." class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-xs leading-relaxed text-slate-800 bg-white"></textarea>
+        <div id="qFinalFallback" class="print-textarea-fallback hidden"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-slate-900 text-slate-400 py-6 text-center text-xs mt-auto border-t border-slate-800 print:hidden">
+    <p>Material docent oficial per al mòdul de mesura i regulació - Cicle de Grau Superior d'Automatització i Robòtica Industrial (ARI).</p>
+    <p class="text-slate-500 mt-1">Dissenyat per a l'examen pràctic de l'acció integral, el sobrepico (overshoot) i l'anti-windup.</p>
+  </footer>
+
+  <!-- Help Modal Dialog -->
+  <div id="helpModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 hidden items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 relative">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="p-2 bg-amber-100 text-amber-800 rounded-full shrink-0">
+          <i data-lucide="alert-circle" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Bloqueig d'entorn segur detectat</h3>
+          <p class="text-xs text-slate-500 mt-1">El navegador pot bloquejar la impressió directa perquè aquesta aplicació s'executa dins d'un entorn de proves segur (Iframe Sandbox).</p>
+        </div>
+      </div>
+      
+      <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-xs text-slate-700 space-y-2 mb-5">
+        <p class="font-bold text-slate-900">Com pots desar el teu treball en format PDF perfecte?</p>
+        <ol class="list-decimal pl-4 space-y-1.5 leading-relaxed">
+          <li>Feu clic al botó blau: <b class="text-blue-600">"Desar lliurament (.html)"</b>.</li>
+          <li>Es descarregarà un únic fitxer HTML que inclou totes les teves respostes i les captures que hagis pujat.</li>
+          <li>Obriu aquest fitxer descarregat des del vostre ordinador a qualsevol pestanya del navegador (Chrome, Edge, Firefox, etc.).</li>
+          <li>Premeu <b class="font-mono bg-slate-200 px-1 py-0.5 rounded text-slate-800">Ctrl + P</b> i seleccioneu <b>"Anomena com a PDF"</b> per desar un informe perfecte.</li>
+        </ol>
+      </div>
+
+      <div class="flex justify-end gap-2.5">
+        <button onclick="handleExportHTML(); toggleHelpModal(false);" class="btn btn-blue text-xs">
+          Desar fitxer ara
+        </button>
+        <button onclick="toggleHelpModal(false)" class="btn bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs">
+          Entesos, tancar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 1. Application state
+    const state = {
+      studentName: '',
+      studentGroup: '',
+      studentDate: '',
+      q1: '',
+      q1Screenshot: null,
+      q2: '',
+      q2Screenshot: null,
+      q3: '',
+      q3Screenshot: null,
+      qFinal: '',
+      showHelpModal: false
+    };
+
+    const textFields = ['studentName', 'studentGroup', 'studentDate', 'q1', 'q2', 'q3', 'qFinal'];
+
+    // 2. Mathematically generated SVG curves
+    function generateWindupPath() {
+      let path = "M 40 130";
+      const paddingLeft = 40;
+      const plotWidth = 300;
+      const plotHeight = 120;
+      const dt = 0.1;
+      for (let t = 0; t <= 12; t += dt) {
+        const x = paddingLeft + (t / 12) * plotWidth;
+        let yVal = 0.0;
+        if (t >= 1.0) {
+          const tSim = t - 1.0;
+          if (tSim < 4.0) {
+            yVal = (tSim / 4.0) * 1.5;
+          } else {
+            const tDelay = tSim - 4.0;
+            yVal = 1.5 + 1.8 * Math.sin(tDelay * 0.7) * Math.exp(-tDelay * 0.2);
+          }
+        }
+        const y = 130 - (yVal / 5.0) * plotHeight;
+        path += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+      }
+      return path;
+    }
+
+    function generateAntiWindupPath() {
+      let path = "M 40 130";
+      const paddingLeft = 40;
+      const plotWidth = 300;
+      const plotHeight = 120;
+      const dt = 0.1;
+      for (let t = 0; t <= 12; t += dt) {
+        const x = paddingLeft + (t / 12) * plotWidth;
+        let yVal = 0.0;
+        if (t >= 1.0) {
+          const tSim = t - 1.0;
+          if (tSim < 3.0) {
+            yVal = (tSim / 3.0) * 2.0;
+          } else {
+            const tDelay = tSim - 3.0;
+            yVal = 2.0 + 0.3 * Math.sin(tDelay * 1.5) * Math.exp(-tDelay * 0.8);
+          }
+        }
+        const y = 130 - (yVal / 5.0) * plotHeight;
+        path += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+      }
+      return path;
+    }
+
+    // Initialize SVG curves on page load
+    document.getElementById('windupPath').setAttribute('d', generateWindupPath());
+    document.getElementById('antiWindupPath').setAttribute('d', generateAntiWindupPath());
+
+    // 3. Local storage & State management
+    function loadState() {
+      const saved = localStorage.getItem('pid_practica_7_state');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          Object.assign(state, parsed);
+        } catch (e) {
+          console.error("Error loading state", e);
+        }
+      }
+      
+      if (!state.studentDate) {
+        state.studentDate = new Date().toISOString().split('T')[0];
+      }
+      
+      textFields.forEach(field => {
+        const input = document.getElementById(field);
+        if (input) {
+          input.value = state[field] || '';
+        }
+        const fallback = document.getElementById(field + 'Fallback');
+        if (fallback) {
+          const val = state[field];
+          fallback.textContent = val || (field === 'qFinal' ? "L'estudiant no ha escrit cap conclusió." : "L'estudiant no ha escrit cap resposta per a aquesta activitat.");
+        }
+      });
+
+      ['q1', 'q2', 'q3'].forEach(prefix => {
+        updateImageUI(prefix);
+      });
+    }
+
+    function saveState() {
+      localStorage.setItem('pid_practica_7_state', JSON.stringify(state));
+    }
+
+    // 4. Input Sync and Fallback Divs for Printing
+    textFields.forEach(field => {
+      const input = document.getElementById(field);
+      if (input) {
+        input.addEventListener('input', (e) => {
+          state[field] = e.target.value;
+          saveState();
+          
+          const fallback = document.getElementById(field + 'Fallback');
+          if (fallback) {
+            fallback.textContent = e.target.value || (field === 'qFinal' ? "L'estudiant no ha escrit cap conclusió." : "L'estudiant no ha escrit cap resposta per a aquesta activitat.");
+          }
+        });
+      }
+    });
+
+    // 5. Drag and Drop & Image Upload Management
+    function handleImageUpload(file, field) {
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        alert("Si us plau, puja un fitxer d'imatge vàlid.");
+        return;
+      }
+      if (file.size > 4 * 1024 * 1024) {
+        alert("La imatge és massa gran. El límit és de 4MB.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function(event) {
+        const base64 = event.target.result;
+        state[field] = base64;
+        saveState();
+        updateImageUI(field.replace('Screenshot', ''));
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function updateImageUI(prefix) {
+      const dropzone = document.getElementById(prefix + 'Dropzone');
+      const preview = document.getElementById(prefix + 'Preview');
+      const img = document.getElementById(prefix + 'Img');
+      
+      const base64 = state[prefix + 'Screenshot'];
+      if (base64) {
+        dropzone.classList.add('hidden');
+        preview.classList.remove('hidden');
+        img.src = base64;
+      } else {
+        dropzone.classList.remove('hidden');
+        preview.classList.add('hidden');
+        img.src = '';
+      }
+    }
+
+    ['q1', 'q2', 'q3'].forEach(prefix => {
+      const dropzone = document.getElementById(prefix + 'Dropzone');
+      const fileInput = document.getElementById(prefix + 'FileInput');
+      const deleteBtn = document.getElementById(prefix + 'DeleteBtn');
+      const field = prefix + 'Screenshot';
+
+      dropzone.addEventListener('click', () => fileInput.click());
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) handleImageUpload(file, field);
+      });
+
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('border-indigo-500', 'bg-indigo-50/20');
+      });
+
+      dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('border-indigo-500', 'bg-indigo-50/20');
+      });
+
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('border-indigo-500', 'bg-indigo-50/20');
+        const file = e.dataTransfer.files[0];
+        if (file) handleImageUpload(file, field);
+      });
+
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state[field] = null;
+        saveState();
+        updateImageUI(prefix);
+        fileInput.value = '';
+      });
+    });
+
+    // 6. Action Triggers
+    function handlePrint() {
+      try {
+        window.print();
+      } catch (e) {
+        toggleHelpModal(true);
+      }
+    }
+
+    function toggleHelpModal(show) {
+      const modal = document.getElementById('helpModal');
+      if (show) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      } else {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+      }
+    }
+
+    // Standalone HTML report generator containing full answers and Base64 images
+    function handleExportHTML() {
+      const nameStr = state.studentName || 'Sense_Nom';
+      const groupStr = state.studentGroup || 'Sense_Grup';
+      const dateStr = state.studentDate || 'Sense_Data';
+
+      const screenshot1HTML = state.q1Screenshot 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${state.q1Screenshot}" alt="Captura 1" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const screenshot2HTML = state.q2Screenshot 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${state.q2Screenshot}" alt="Captura 2" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const screenshot3HTML = state.q3Screenshot 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${state.q3Screenshot}" alt="Captura 3" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const standaloneHTML = `<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pràctica 7: El fenomen del "Wind-up" i la solució Anti-windup</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    @media print {
+      @page {
+        size: A4;
+        margin: 20mm 15mm 20mm 15mm;
+      }
+      body {
+        background-color: white !important;
+        font-size: 11pt !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-card {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 20px !important;
+        border-radius: 8px !important;
+        margin-bottom: 24px !important;
+        background-color: #ffffff !important;
+      }
+      .page-break {
+        page-break-before: always !important;
+        break-before: page !important;
+      }
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-8 max-w-4xl mx-auto">
   
-  <!-- Mountpoint for React Vite app -->
-  <div id="root"></div>
+  <div class="border-b-4 border-slate-900 pb-4 mb-8">
+    <div class="flex justify-between items-start">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-indigo-600">Mesura i Regulació - Examen de Laboratori</span>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">Pràctica 7: El fenomen del "Wind-up" i la solució Anti-windup</h1>
+        <p class="text-slate-500 text-xs mt-1">Saturació de l'acció integral — Analitzar la saturació integral i com evitar-la amb Clamping (Anti-windup).</p>
+      </div>
+      <button onclick="window.print()" class="no-print bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-md transition-all">
+        Imprimir Report a PDF
+      </button>
+    </div>
 
-  <script type="module" src="/src/main.tsx"></script>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 bg-slate-100 p-4 rounded-lg border border-slate-200">
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Nom i cognoms</span>
+        <span class="text-sm font-bold text-slate-900">${nameStr}</span>
+      </div>
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Grup de classe</span>
+        <span class="text-sm font-bold text-slate-900">${groupStr}</span>
+      </div>
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Data de lliurament</span>
+        <span class="text-sm font-bold text-slate-900">${dateStr}</span>
+      </div>
+    </div>
+  </div>
 
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Activitat 1: El fenomen de la Saturació de l'Acció Integral (Wind-up)
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Configureu la planta amb &tau;_1 = 3.0 s, &tau;_2 = 1.5 s, &tau;_3 = 0.5 s, &theta; = 0.8 s. En mode PID Continu, demaneu consigna r = 3.0 V, K_p_c = 2.5, T_i = 4.0 s i T_d = 0.0 s. Limiteu la potència de l'actuador a U_max = 1.2 V i desactiveu l'Anti-windup. Expliqueu per quina raó y(t) no pot arribar mai a la consigna. Què passa amb l'acció integral acumulada (u_I) al llarg del temps? Quin és el seu valor final i per quina raó segueix creixent linealment sense fre?
+    </p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">${state.q1 || "L'estudiant no ha escrit cap resposta per a aquesta activitat."}</div>
+    <div class="mt-4">
+      <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+      ${screenshot1HTML}
+    </div>
+  </div>
+
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Activitat 2: Activació de l'Anti-windup per Clamping (Bloqueig de la Integració)
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Amb els mateixos paràmetres, activeu el mètode Anti-windup (Clamping). Quina diferència s'observa en l'evolució temporal de l'acció integral (u_I) i el seu valor final acumulat? Comenta com funciona l'algorisme de Clamping per suspendre o congelar de forma dinàmica la integració.
+    </p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">${state.q2 || "L'estudiant no ha escrit cap resposta per a aquesta activitat."}</div>
+    <div class="mt-4">
+      <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+      ${screenshot2HTML}
+    </div>
+  </div>
+
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Activitat 3: Anàlisi de l'efecte de l'Anti-windup en Canvis de Consigna i Transitoris
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Configureu U_max = 5.0 V, demaneu r = 2.0 V i simuleu la transició amb l'Anti-windup desactivat vs activat. Com influeix l'enrotllament (wind-up) previ de la integral en el sobrepic (overshoot) i en el temps de retorn a l'estabilitat quan demanem canvis bruscos de consigna o pertorbacions?
+    </p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">${state.q3 || "L'estudiant no ha escrit cap resposta per a aquesta activitat."}</div>
+    <div class="mt-4">
+      <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+      ${screenshot3HTML}
+    </div>
+  </div>
+
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Conclusions generals sobre la importància de l'Anti-windup a la indústria
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Resumiu de forma professional per què pràcticament cap regulador PID s'instal·la a la indústria sense un mètode d'Anti-windup. Doneu un exemple pràctic de planta real (forn, dipòsit de nivell, etc.) on un excés d'integració faria malbé la planta.
+    </p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[80px]">${state.qFinal || "L'estudiant no ha escrit cap conclusió."}</div>
+  </div>
+
+  <div class="mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-400 no-print">
+    <p>Material de lliurament pràctic oficial - IES Ebre. Generat amb el Simulador PID interactiu.</p>
+  </div>
+
+</body>
+</html>`;
+
+      const blob = new Blob([standaloneHTML], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Practica_7_Anti_Windup_${nameStr.trim().replace(/\s+/g, '_')}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    // 7. Initialize everything on DOMContentLoaded
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      lucide.createIcons();
+    });
+  </script>
 </body>
 </html>

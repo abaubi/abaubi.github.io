@@ -1,0 +1,8 @@
+{
+  "name": "Pràctica 7: El fenomen del Wind-up i la solució Anti-windup",
+  "description": "Un simulador interactiu de control per visualitzar la saturació de l'acció integral (wind-up) i la solució mitjançant mètodes d'Anti-wind-up (Clamping).",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
