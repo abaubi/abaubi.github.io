@@ -1,0 +1,8 @@
+{
+  "name": "Pràctica 8: Sintonització manual de controladors (Mètode d'assaig i error)",
+  "description": "Una aplicació interactiva de simulació per aprendre a sintonitzar manualment controladors PID per assaig i error sobre una planta desconeguda de 3r ordre.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

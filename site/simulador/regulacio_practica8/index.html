@@ -1,135 +1,740 @@
 <!DOCTYPE html>
-<html lang="ca" class="scroll-smooth">
+<html lang="ca">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pràctica 6: Regulació Proporcional-Integral-Derivativa (PID) completa</title>
-  
-  <!-- Preconnect to Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
-
+  <title>Pràctica 8: Sintonització manual de controladors</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
   <style>
-    /* Premium CSS Print Media Rules for school report lliurament */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    
     @media print {
       @page {
         size: A4;
-        margin: 15mm 15mm 15mm 15mm;
+        margin: 20mm 15mm 20mm 15mm;
       }
-      
       body {
         background-color: white !important;
-        color: #0f172a !important; /* slate-900 */
-        font-family: 'Inter', -apple-system, sans-serif !important;
-        font-size: 11.5pt !important;
-        line-height: 1.5 !important;
-        padding: 0 !important;
-        margin: 0 !important;
+        font-size: 11pt !important;
       }
-
-      /* Hide interactive simulator, headers, sliders, scales, and buttons when printing */
-      .print\:hidden, 
-      header, 
-      footer, 
-      section.lg\:col-span-5, 
-      section.lg\:col-span-7, 
-      main, 
-      button, 
-      input[type="file"],
       .no-print {
         display: none !important;
       }
-
-      /* Allow student report section to expand and print in full width */
-      section#studentReportSection,
-      section {
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        display: block !important;
-      }
-
-      /* Avoid cards/activities splitting across pages in middle of a paragraph */
       .print-card {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
-        border: 1px solid #cbd5e1 !important; /* slate-300 */
-        padding: 24px !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 20px !important;
         border-radius: 8px !important;
         margin-bottom: 24px !important;
         background-color: #ffffff !important;
       }
-
-      /* Title styling inside print report */
-      h2 {
-        font-size: 14pt !important;
-        font-weight: 800 !important;
-        color: #0f172a !important;
-        border-bottom: 2px solid #0f172a !important;
-        padding-bottom: 6px !important;
-      }
-
-      h3 {
-        font-size: 11pt !important;
-        font-weight: 700 !important;
-        color: #1e293b !important;
-        margin-bottom: 8px !important;
-      }
-
-      p {
-        font-size: 9.5pt !important;
-        color: #334155 !important; /* slate-700 */
-        line-height: 1.5 !important;
-      }
-
-      /* Hide form textareas and display the print-only div with text content */
-      textarea {
-        display: none !important;
-      }
-
-      .print-textarea-fallback {
-        display: block !important;
-        background-color: #f8fafc !important; /* slate-50 */
-        border-left: 4px solid #0d9488 !important; /* teal-600 */
-        border-top: 1px solid #cbd5e1 !important;
-        border-right: 1px solid #cbd5e1 !important;
-        border-bottom: 1px solid #cbd5e1 !important;
-        padding: 16px !important;
-        border-radius: 0 8px 8px 0 !important;
-        font-size: 10pt !important;
-        color: #0f172a !important;
-        white-space: pre-wrap !important;
-        min-height: 100px !important;
-        line-height: 1.6 !important;
-      }
-
-      /* Sizing images crisp on page */
-      img {
-        max-width: 100% !important;
-        max-height: 240px !important;
-        object-fit: contain !important;
-        border-radius: 6px !important;
-        margin-top: 12px !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-      }
-
-      /* Page break controls */
       .page-break {
         page-break-before: always !important;
         break-before: page !important;
       }
     }
+    
+    .hidden {
+      display: none !important;
+    }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
-  
-  <!-- Mountpoint for React Vite app -->
-  <div id="root"></div>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col">
 
-  <script type="module" src="/src/main.tsx"></script>
+  <!-- Capçalera del document -->
+  <header class="bg-slate-900 text-white py-6 px-4 sm:px-8 border-b border-slate-800 print:hidden">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-teal-400 bg-teal-950/80 px-2.5 py-0.5 rounded border border-teal-800">
+            Mòdul de Mesura i Regulació
+          </span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-blue-400 bg-blue-950/80 px-2.5 py-0.5 rounded border border-blue-800">
+            ARI / Robòtica
+          </span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1.5 flex items-center gap-2 text-white">
+          Pràctica 8: Sintonització manual de controladors (Mètode d'assaig i error)
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">
+          Optimització manual de controladors PID sobre una planta de segon ordre fins a complir els KPIs de disseny.
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2 w-full md:w-auto">
+        <button id="btnPrint" class="flex-1 md:flex-none bg-teal-600 hover:bg-teal-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer border border-teal-500">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          Generar PDF / Imprimir
+        </button>
+        <button id="btnExport" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer border border-blue-500" title="Descarrega el teu treball com a fitxer html llest per obrir i desar directament en PDF">
+          <i data-lucide="download" class="w-4 h-4"></i>
+          Desar lliurament (.html)
+        </button>
+      </div>
+    </div>
+  </header>
 
+  <!-- Contingut principal (Guia teòrica) -->
+  <main class="max-w-4xl w-full mx-auto p-4 sm:p-8 flex flex-col gap-8 flex-grow print:hidden">
+    
+    <section class="space-y-8">
+      
+      <!-- Secció 1: Enunciat i Objectiu -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">1</span>
+          Enunciat i Objectiu de la Pràctica 8
+        </h2>
+        <div class="text-slate-700 leading-relaxed space-y-4 text-sm">
+          <p>
+            L'objectiu de la <b>Pràctica 8</b> és desenvolupar un mètode lògic i pràctic per sintonitzar un llaç de control PID utilitzant el <b>mètode d'assaig i error (tuning manual)</b>, sense necessitat d'utilitzar fórmules matemàtiques prèvies (com Ziegler-Nichols o Cohen-Coon).
+          </p>
+          <p>
+            En la pràctica industrial, molts sistemes són massa complexos o es desconeixen els seus paràmetres físics (com constants de temps, inèrcies i retards). En aquests casos, els enginyers apliquen un protocol sistemàtic d'ajust manual que permet estabilitzar la planta i optimitzar la resposta de forma segura.
+          </p>
+          <p>
+            <b>Activitat principal:</b> Partint d'una planta desconeguda de 2n ordre (un autèntic sistema de "caixa negra" configurable), haureu d'aplicar el mètode clàssic d'ajust manual per aconseguir els indicadors clau de rendiment (<b>KPIs de disseny</b>) requerits pel client.
+          </p>
+        </div>
+      </div>
+
+      <!-- Secció 2: Fonaments teòrics -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">2</span>
+          Fonaments del Mètode de Sintonització Manual (Assaig i Error)
+        </h2>
+        <div class="space-y-6 text-slate-700 text-sm leading-relaxed">
+          <p>
+            L'algorisme PID combina tres accions de control (<span class="font-mono bg-slate-100 px-1 rounded">P</span>, <span class="font-mono bg-slate-100 px-1 rounded">I</span> i <span class="font-mono bg-slate-100 px-1 rounded">D</span>). Cadascuna té un efecte particular sobre el comportament temporal del sistema:
+          </p>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left border-collapse border border-slate-200 rounded-lg overflow-hidden">
+              <thead>
+                <tr class="bg-slate-100 text-slate-700 uppercase font-bold">
+                  <th class="p-2 border border-slate-200">Paràmetre</th>
+                  <th class="p-2 border border-slate-200">Temps de Pujada (<span class="italic">t_r</span>)</th>
+                  <th class="p-2 border border-slate-200">Sobrepic (<span class="italic">Overshoot</span>)</th>
+                  <th class="p-2 border border-slate-200">Temps d'Assentament (<span class="italic">t_s</span>)</th>
+                  <th class="p-2 border border-slate-200">Error Permanent (<span class="italic">Offset</span>)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover:bg-slate-50">
+                  <td class="p-2 border border-slate-200 font-bold text-indigo-600">Augmentar Kp</td>
+                  <td class="p-2 border border-slate-200 text-emerald-600 font-medium">Disminueix (Més ràpid)</td>
+                  <td class="p-2 border border-slate-200 text-red-600 font-medium">Augmenta (Més oscil·latori)</td>
+                  <td class="p-2 border border-slate-200 text-slate-600">Poc canvi</td>
+                  <td class="p-2 border border-slate-200 text-emerald-600 font-medium">Disminueix (Però no s'elimina)</td>
+                </tr>
+                <tr class="hover:bg-slate-50">
+                  <td class="p-2 border border-slate-200 font-bold text-purple-600">Augmentar Ki (Més acció I)</td>
+                  <td class="p-2 border border-slate-200 text-emerald-600 font-medium">Disminueix (Més ràpid)</td>
+                  <td class="p-2 border border-slate-200 text-red-600 font-medium">Augmenta (Més oscil·latori)</td>
+                  <td class="p-2 border border-slate-200 text-red-600 font-medium">Augmenta (Triga més a assentar)</td>
+                  <td class="p-2 border border-slate-200 text-emerald-600 font-bold">Elimina completament (Offset = 0)</td>
+                </tr>
+                <tr class="hover:bg-slate-50">
+                  <td class="p-2 border border-slate-200 font-bold text-teal-600">Augmentar Kd</td>
+                  <td class="p-2 border border-slate-200 text-slate-600">Poc canvi (Lleuger augment)</td>
+                  <td class="p-2 border border-slate-200 text-emerald-600 font-bold">Disminueix (Esmorteix)</td>
+                  <td class="p-2 border border-slate-200 text-emerald-600 font-bold">Disminueix (Estabilitza abans)</td>
+                  <td class="p-2 border border-slate-200 text-slate-600">Poc canvi</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="text-indigo-600">&bull;</span>
+              El protocol clàssic de sintonització en 3 passos:
+            </h3>
+            <ol class="list-decimal pl-5 text-xs space-y-2 text-slate-700">
+              <li>
+                <b>Pas 1: Acció Proporcional pura (Kp)</b>
+                <br />Desactiveu les accions Integral i Derivada. Incrementeu el guany <span class="font-mono font-bold text-indigo-600">Kp</span> des d'un valor molt baix fins a obtenir una resposta ràpida amb una oscil·lació moderada. En aquest pas veureu com s'accelera la planta, però queda un <b>error d'offset permanent</b> insuperable per al control P pur.
+              </li>
+              <li>
+                <b>Pas 2: Acció Integral (Ki) per eliminar l'error</b>
+                <br />Activeu l'acció Integral i comenceu amb una constant baixa <span class="font-mono font-bold text-purple-600">Ki</span>. Aneu incrementant <span class="font-mono font-bold text-purple-600">Ki</span> per augmentar l'acció integradora de forma progressiva. L'error d'offset es reduirà a zero, però el preu serà un <b>augment notable de l'overshoot (sobrepic)</b> i una resposta més inestable o lenta.
+              </li>
+              <li>
+                <b>Pas 3: Acció Derivada (Kd) per esmorteir</b>
+                <br />Finalment, incrementeu la constant derivada <span class="font-mono font-bold text-teal-600">Kd</span> des de 0. L'acció derivada actua de forma "predictiva", calculant la velocitat de l'error per aplicar una <b>frenada suau</b>. Això reduirà dràsticament el sobrepic i el temps de retorn a la línia de consigna, permetent complir els estrictes KPIs industrials de disseny.
+              </li>
+            </ol>
+          </div>
+
+          <div class="bg-white p-5 rounded-lg border border-slate-200 flex flex-col items-center gap-3">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <span class="w-2 h-2 bg-indigo-500 rounded-full"></span>
+              Figura 1: Evolució temporal de la sortida y(t) segons el pas de sintonia
+            </span>
+            <svg class="w-full max-w-lg h-52 bg-slate-50/40 rounded-xl border border-slate-200" viewBox="0 0 380 190" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M 40 10 L 40 145 M 90 10 L 90 145 M 140 10 L 140 145 M 190 10 L 190 145 M 240 10 L 240 145 M 290 10 L 290 145 M 340 10 L 340 145" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="1 4" />
+              <path d="M 40 145 L 340 145 M 40 118 L 340 118 M 40 91 L 340 91 M 40 64 L 340 64 M 40 37 L 340 37 M 40 10 L 340 10" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="1 4" />
+              <path d="M 40 10 L 40 147 M 38 145 L 345 145" stroke="#475569" stroke-width="1.5" stroke-linecap="round" />
+              
+              <text x="32" y="148" fill="#64748b" font-size="7" font-weight="bold" text-anchor="end">0V</text>
+              <text x="32" y="94" fill="#64748b" font-size="7" font-weight="bold" text-anchor="end">2.5V</text>
+              <text x="32" y="40" fill="#64748b" font-size="7" font-weight="bold" text-anchor="end">5V</text>
+              
+              <text x="40" y="157" fill="#64748b" font-size="7" font-weight="bold" text-anchor="middle">0s</text>
+              <text x="140" y="157" fill="#64748b" font-size="7" font-weight="bold" text-anchor="middle">4s</text>
+              <text x="240" y="157" fill="#64748b" font-size="7" font-weight="bold" text-anchor="middle">8s</text>
+              <text x="340" y="157" fill="#64748b" font-size="7" font-weight="bold" text-anchor="middle">12s</text>
+
+              <path d="M 40 49 L 340 49" stroke="#10b981" stroke-width="1.5" stroke-dasharray="3 3" />
+              <text x="45" y="44" fill="#10b981" font-size="8" font-weight="800">Consigna de disseny r = 3.0 V</text>
+
+              <path id="pControlPath" stroke="#f97316" stroke-width="1.5" stroke-dasharray="3 2" fill="none" />
+              <path id="piControlPath" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="4 2" fill="none" />
+              <path id="pidControlPath" stroke="#0d9488" stroke-width="2.5" fill="none" />
+
+              <text x="145" y="100" fill="#f97316" font-size="7" font-weight="bold">Pas 1: Control P (Amb Offset)</text>
+              <text x="110" y="24" fill="#ef4444" font-size="7" font-weight="bold">Pas 2: Control PI (Alt Sobrepic)</text>
+              <text x="210" y="65" fill="#0d9488" font-size="7" font-weight="bold">Pas 3: Control PID Sintonitzat (Ideal)</text>
+            </svg>
+            <div class="w-full text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded border border-slate-200 mt-1 space-y-1">
+              <p><b>Anàlisi dels perfils de resposta (Figura 1):</b></p>
+              <ul class="list-disc pl-4 space-y-1 text-[11px]">
+                <li><span class="text-orange-500 font-bold">&bull; Pas 1: P pur (Taronja):</span> Resposta ràpida i totalment estable, però pateix un fort error permanent (offset) perquè l'acció P depèn d'un error existent per poder actuar.</li>
+                <li><span class="text-red-500 font-bold">&bull; Pas 2: PI (Vermell):</span> En activar l'acció integral, l'offset s'elimina del tot. No obstant, s'introdueix un desfasament que genera oscil·lacions i un gran sobrepic (overshoot) inicial.</li>
+                <li><span class="text-teal-600 font-bold">&bull; Pas 3: PID complet (Teal):</span> L'acció derivada aporta amortiment dinàmic, absorbint la inèrcia de la planta i permetent un control ràpid, sense offset i amb un sobrepic molt petit.</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secció 3: Especificacions de disseny (KPIs) -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">3</span>
+          Especificacions de Disseny del Client (KPIs d'Homologació)
+        </h2>
+        <div class="space-y-4 text-slate-700 text-sm leading-relaxed">
+          <p>
+            Per homologar el nostre controlador PID sobre la planta secreta, hem de complir de manera simultània les següents especificacions KPI de disseny (mesurades a partir del moment de l'escaló a t = 1.0 s amb consigna r = 3.0 V):
+          </p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1">
+              <span class="text-xs font-bold uppercase tracking-wider text-teal-600">1. Error permanent (Offset)</span>
+              <span class="text-lg font-extrabold text-slate-950 font-mono">Offset ≤ 0.02 V</span>
+              <span class="text-[11px] text-slate-500 leading-tight">La resposta s'ha de clavar exactament al voltatge de consigna requerit.</span>
+            </div>
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1">
+              <span class="text-xs font-bold uppercase tracking-wider text-indigo-600">2. Temps de Pujada (Rise Time)</span>
+              <span class="text-lg font-extrabold text-slate-950 font-mono">t_r ≤ 3.5 s</span>
+              <span class="text-[11px] text-slate-500 leading-tight">Temps transcorregut des de l'escaló fins que el procés assoleix el 90% del setpoint per primer cop.</span>
+            </div>
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1">
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-600">3. Sobrepic Màxim (Overshoot)</span>
+              <span class="text-lg font-extrabold text-slate-950 font-mono">Mp ≤ 15.0 %</span>
+              <span class="text-[11px] text-slate-500 leading-tight">L'oscil·lació inicial de seguretat no pot superar un 15% del valor de consigna demanat.</span>
+            </div>
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1">
+              <span class="text-xs font-bold uppercase tracking-wider text-blue-600">4. Temps d'Estabilització (Settling Time)</span>
+              <span class="text-lg font-extrabold text-slate-950 font-mono">t_s ≤ 7.5 s</span>
+              <span class="text-[11px] text-slate-500 leading-tight">Temps que triga la planta en entrar definitivament dins de la banda de tolerància del ±2%.</span>
+            </div>
+          </div>
+          <p class="text-xs text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200 leading-normal font-medium">
+            ⚠️ <b>Atenció:</b> La planta conté 3 constants d'inèrcia i un retard important de dead-time, de manera que un excés d'integració o un mal guany proporcional poden inestabilitzar-la ràpidament. Sintonitzeu amb cura pas a pas!
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- SECCIÓ DE L'INFORME DE L'ALUMNE -->
+  <section class="max-w-4xl w-full mx-auto p-4 sm:p-8 pt-0 print:p-0 print:max-w-full">
+    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200">
+      
+      <!-- Capçalera del Report -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b-2 border-slate-900 pb-4 mb-6">
+        <div>
+          <h2 class="text-xl font-extrabold text-slate-900 uppercase tracking-tight flex items-center gap-2">
+            <i data-lucide="file-text" class="w-5 h-5 text-indigo-600"></i>
+            Full de Treball i Lliurament de la Pràctica 8
+          </h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Responeu les preguntes de laboratori sobre la sintonització manual PID (mètode d'assaig i error) aplicat sobre la planta secreta, i adjunteu les captures de pantalla corresponents per homologar el vostre report de pràctiques (.html).
+          </p>
+        </div>
+        
+        <!-- Botons d'exportació en el form -->
+        <div class="flex flex-wrap gap-2 w-full md:w-auto">
+          <button class="btnPrintSecondary flex-1 md:flex-initial bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-all flex items-center justify-center gap-2 cursor-pointer">
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            Imprimir / Desar PDF
+          </button>
+          <button class="btnExportSecondary flex-1 md:flex-initial bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-all flex items-center justify-center gap-2 cursor-pointer" title="Descarrega un document HTML complet que inclou les teves respostes i imatges">
+            <i data-lucide="download" class="w-4 h-4"></i>
+            Desar fitxer HTML
+          </button>
+        </div>
+      </div>
+
+      <!-- Dades d'identificació de l'alumne -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-slate-50 p-5 rounded-lg border border-slate-200">
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <i data-lucide="user" class="w-3 h-3 text-slate-400"></i>
+            Nom i Cognoms de l'alumne/a
+          </label>
+          <input type="text" id="studentName" placeholder="Ex: Joan Garcia i Soler" class="w-full p-2.5 border border-slate-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm bg-white text-slate-900" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <i data-lucide="users" class="w-3 h-3 text-slate-400"></i>
+            Grup de Classe
+          </label>
+          <input type="text" id="studentGroup" placeholder="Ex: 2n Automàtica i Robòtica Industrial" class="w-full p-2.5 border border-slate-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm bg-white text-slate-900" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <i data-lucide="calendar" class="w-3 h-3 text-slate-400"></i>
+            Data del Treball
+          </label>
+          <input type="date" id="studentDate" class="w-full p-2.5 border border-slate-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm bg-white text-slate-900" />
+        </div>
+      </div>
+
+      <!-- Pregunta 1 -->
+      <div class="mb-8 border-b border-slate-100 pb-8">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 1</span>
+          Sintonització de l'acció Proporcional pura (Kp)
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Configureu la planta amb els paràmetres actius, i el controlador en mode <b>P pur</b> (Acció Integral desactivada, és a dir, Ki = 0.0, i Acció Derivada desactivada, Kd = 0.0). Demaneu una consigna de r = 3.0 V. Incrementeu el guany proporcional Kp progressivament des de 0.1 fins a trobar un valor que proporcioni una pujada ràpida però eviti inestabilitzar del tot el sistema.
+          <br /><b>Pregunta:</b> Quin valor de Kp heu triat? Expliqueu el comportament de la sortida y(t) i com evoluciona l'error permanent (offset) i el temps de pujada a mesura que augmenta Kp. Per què resulta impossible assolir exactament la consigna de 3.0 V només amb un control proporcional?
+        </p>
+        <textarea id="q1" rows="5" placeholder="Anoteu el valor escollit de Kp i descriviu el comportament. Per exemple: amb un Kp de 1.8 el temps de pujada és ràpid d'acord amb la planta de segon ordre però s'estabilitza en un valor inferior a 3.0V, deixant un error permanent residual d'offset. Expliqueu que un control P pur requereix un error residual constant per poder mantenir un senyal de control u(t) diferent de zero..." class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed mb-4 text-slate-800 bg-white"></textarea>
+
+        <!-- Zona Captura 1 -->
+        <div class="space-y-2">
+          <label class="block text-[11px] font-bold text-slate-700">Captura de pantalla d'aquesta simulació (Control P pur on s'observi l'offset de règim permanent):</label>
+          <div id="dropzone1" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors">
+            <i data-lucide="upload" class="w-6 h-6 text-slate-400"></i>
+            <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+            <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+            <input type="file" id="file1" accept="image/*" class="hidden" />
+          </div>
+          <div id="previewContainer1" class="relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center hidden">
+            <img id="preview1" src="" alt="Captura Activitat 1" class="max-h-56 object-contain w-full" />
+            <div class="absolute top-2 right-2">
+              <button id="btnRemove1" type="button" class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <span>Eliminar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pregunta 2 -->
+      <div class="mb-8 border-b border-slate-100 pb-8">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 2</span>
+          Introducció de l'acció Integral (Ki) i eliminació de l'offset
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Amb el valor de Kp seleccionat al Pas 1, activeu l'acció integral en el controlador. Comenceu amb un valor de Ki baix (ex: 0.1), el qual indica poca activitat integradora. Després aneu incrementant progressivament el guany integral Ki fins a aconseguir eliminar l'offset permanent.
+          <br /><b>Pregunta:</b> Com ha afectat l'acció integral a la resposta del sistema? Quin és el valor de Ki que heu triat per eliminar l'error permanent ràpidament? Comenteu per què en fer Ki massa gran la planta es torna inestable o presenta un sobrepic gegantí que incompleix els KPIs del client.
+        </p>
+        <textarea id="q2" rows="5" placeholder="Descriviu com l'acció integral resol l'offset gràcies a acumular l'error temporal. Anoteu el valor triat de Ki (ex: 0.5). Comenteu que si incrementem Ki excessivament (ex: per sobre de 2.0) s'introdueix una gran oscil·lació crítica en el control que provoca inestabilitat i incompleix el KPI de sobrepic menor del 15%..." class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed mb-4 text-slate-800 bg-white"></textarea>
+
+        <!-- Zona Captura 2 -->
+        <div class="space-y-2">
+          <label class="block text-[11px] font-bold text-slate-700">Captura de pantalla d'aquesta simulació (Controlador sintonitzat en mode PI on s'hagi eliminat l'offset permanent):</label>
+          <div id="dropzone2" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors">
+            <i data-lucide="upload" class="w-6 h-6 text-slate-400"></i>
+            <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+            <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+            <input type="file" id="file2" accept="image/*" class="hidden" />
+          </div>
+          <div id="previewContainer2" class="relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center hidden">
+            <img id="preview2" src="" alt="Captura Activitat 2" class="max-h-56 object-contain w-full" />
+            <div class="absolute top-2 right-2">
+              <button id="btnRemove2" type="button" class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <span>Eliminar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pregunta 3 -->
+      <div class="mb-8 border-b border-slate-100 pb-8">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 3</span>
+          Suavitzat i esmortiment amb l'acció Derivada (Kd)
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Ara que teniu el sistema PI del Pas 2, incrementeu de forma suau la constant derivada Kd (per exemple, de 0.1 a 1.5). Observeu com l'acció derivada "frena" la pujada del sistema quan s'apropa al setpoint, disminuint l'overshoot i ajudant a complir simultàniament tots els KPIs de disseny.
+          <br /><b>Pregunta:</b> Quin és el vostre joc de paràmetres sintonitzat final (Kp, Ki, Kd) que assoleix homologar el llaç? Indiqueu els valors finals obtinguts de temps de pujada, sobrepic, temps d'estabilització i offset. Expliqueu com l'acció derivada actua de manera anticipativa/predictiva per reduir les oscil·lacions.
+        </p>
+        <textarea id="q3" rows="5" placeholder="Anoteu els vostres valors finals sintonitzats (ex: Kp = 1.4, Ki = 0.5, Kd = 0.9) que fan que tots els indicadors KPI surtin en verd. Indiqueu els resultats (ex: Rise time = 2.4s, Overshoot = 9.5%, Settling time = 5.2s, Offset = 0.00V). Expliqueu que la derivada calcula la derivada de l'error, d'aquesta manera pot 'avançar' la tendència i aplicar una contra-força a l'actuador per evitar que el procés sobrepassi la consigna de fons..." class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed mb-4 text-slate-800 bg-white"></textarea>
+
+        <!-- Zona Captura 3 -->
+        <div class="space-y-2">
+          <label class="block text-[11px] font-bold text-slate-700">Captura de pantalla d'aquesta simulació (Regulació PID final sintonitzada, amb l'aprovació completa dels 4 KPIs de disseny):</label>
+          <div id="dropzone3" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors">
+            <i data-lucide="upload" class="w-6 h-6 text-slate-400"></i>
+            <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+            <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+            <input type="file" id="file3" accept="image/*" class="hidden" />
+          </div>
+          <div id="previewContainer3" class="relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center hidden">
+            <img id="preview3" src="" alt="Captura Activitat 3" class="max-h-56 object-contain w-full" />
+            <div class="absolute top-2 right-2">
+              <button id="btnRemove3" type="button" class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold">
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <span>Eliminar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pregunta Final -->
+      <div>
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Conclusions</span>
+          El mètode d'assaig i error en l'àmbit industrial
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          <b>Responeu:</b> Elaboreu un resum formal o manual de bones pràctiques per a la sintonització d'equips industrials per assaig i error. Quins riscos comporta aplicar aquest mètode directament sobre maquinària física real (com ara un reactor químic o un braç robòtic d'alta precisió) en lloc d'un simulador i quines precaucions s'han de prendre?
+        </p>
+        <textarea id="qFinal" rows="4" placeholder="Escriu aquí les teves conclusions. Expliqueu com perills com escalfaments excessius, vibracions mecàniques destructives o inestabilitats que facin picar l'actuador contra els topalls físics aconsellen l'ús previ de simuladors homologats, l'estudi de models aproximats en bucle obert, o bé l'ús de guanys molt conservadors a l'inici d'un assaig manual real..." class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed text-slate-800 bg-white"></textarea>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Peu de pàgina -->
+  <footer class="bg-slate-900 text-slate-400 py-6 text-center text-xs mt-auto border-t border-slate-800 print:hidden">
+    <p>Material docent oficial per al mòdul de mesura i regulació - Cicle de Grau Superior d'Automatització i Robòtica Industrial (ARI).</p>
+    <p class="text-slate-500 mt-1">Dissenyat per a la sintonització manual PID per assaig i error, homologant els KPIs de disseny requerits.</p>
+  </footer>
+
+  <!-- MODAL DE DIÀLEG D'AJUDA -->
+  <div id="helpModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 relative">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="p-2 bg-amber-100 text-amber-800 rounded-full shrink-0">
+          <i data-lucide="alert-circle" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Bloqueig d'entorn segur detectat</h3>
+          <p class="text-xs text-slate-500 mt-1">El navegador pot bloquejar la impressió directa perquè aquesta aplicació s'executa dins d'un entorn de proves segur.</p>
+        </div>
+      </div>
+      
+      <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-xs text-slate-700 space-y-2 mb-5">
+        <p class="font-bold text-slate-900">Com pots desar el teu treball en format PDF perfecte?</p>
+        <ol class="list-decimal pl-4 space-y-1.5 leading-relaxed">
+          <li>Feu clic al botó blau: <b class="text-blue-600">"Desar fitxer HTML"</b>.</li>
+          <li>Es descarregarà un únic fitxer HTML que inclou totes les teves respostes i les captures.</li>
+          <li>Obriu aquest fitxer descarregat des del vostre ordinador a qualsevol pestanya del navegador.</li>
+          <li>Premeu <b class="font-mono bg-slate-200 px-1 py-0.5 rounded text-slate-800">Ctrl + P</b> (o Cmd + P a Mac) i seleccioneu <b>"Anomena com a PDF"</b>.</li>
+        </ol>
+      </div>
+
+      <div class="flex justify-end gap-2.5">
+        <button id="btnModalExport" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-colors cursor-pointer">
+          Desar fitxer ara
+        </button>
+        <button id="btnModalClose" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer">
+          Entesos, tancar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Initialize Lucide Icons
+    lucide.createIcons();
+
+    // Default Date to today
+    document.getElementById('studentDate').value = new Date().toISOString().split('T')[0];
+
+    // Chart path generation
+    const generatePaths = () => {
+      const pControlPath = (() => {
+        let path = "M 40 130";
+        const dt = 0.1;
+        for (let t = 0; t <= 12; t += dt) {
+          const x = 40 + (t / 12) * 300;
+          let yVal = t >= 1.0 ? 1.8 * (1 - Math.exp(-(t - 1.0) / 1.5)) : 0.0;
+          const y = 130 - (yVal / 5.0) * 120;
+          path += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+        }
+        return path;
+      })();
+
+      const piControlPath = (() => {
+        let path = "M 40 130";
+        const dt = 0.1;
+        for (let t = 0; t <= 12; t += dt) {
+          const x = 40 + (t / 12) * 300;
+          let yVal = 0.0;
+          if (t >= 1.0) {
+            const tSim = t - 1.0;
+            yVal = 3.0 * (1 - Math.exp(-tSim / 2.0) * (Math.cos(tSim * 1.6) - 0.3 * Math.sin(tSim * 1.6)));
+          }
+          const y = 130 - (yVal / 5.0) * 120;
+          path += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+        }
+        return path;
+      })();
+
+      const pidControlPath = (() => {
+        let path = "M 40 130";
+        const dt = 0.1;
+        for (let t = 0; t <= 12; t += dt) {
+          const x = 40 + (t / 12) * 300;
+          let yVal = 0.0;
+          if (t >= 1.0) {
+            const tSim = t - 1.0;
+            yVal = 3.0 * (1 - Math.exp(-tSim * 0.9) * Math.cos(tSim * 0.5));
+          }
+          const y = 130 - (yVal / 5.0) * 120;
+          path += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+        }
+        return path;
+      })();
+
+      document.getElementById('pControlPath').setAttribute('d', pControlPath);
+      document.getElementById('piControlPath').setAttribute('d', piControlPath);
+      document.getElementById('pidControlPath').setAttribute('d', pidControlPath);
+    };
+
+    generatePaths();
+
+    // Image Upload Logic
+    const screenshots = {
+      q1: null,
+      q2: null,
+      q3: null
+    };
+
+    const setupImageUpload = (id) => {
+      const dropzone = document.getElementById(`dropzone${id}`);
+      const fileInput = document.getElementById(`file${id}`);
+      const previewContainer = document.getElementById(`previewContainer${id}`);
+      const previewImg = document.getElementById(`preview${id}`);
+      const btnRemove = document.getElementById(`btnRemove${id}`);
+
+      const handleFile = (file) => {
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+          alert("Si us plau, puja un fitxer d'imatge vàlid.");
+          return;
+        }
+        if (file.size > 4 * 1024 * 1024) {
+          alert("La imatge és massa gran. El límit és de 4MB.");
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          screenshots[`q${id}`] = e.target.result;
+          previewImg.src = e.target.result;
+          dropzone.classList.add('hidden');
+          previewContainer.classList.remove('hidden');
+        };
+        reader.readAsDataURL(file);
+      };
+
+      dropzone.addEventListener('click', () => fileInput.click());
+      
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('border-indigo-500', 'bg-indigo-50/20');
+      });
+
+      dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('border-indigo-500', 'bg-indigo-50/20');
+      });
+
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('border-indigo-500', 'bg-indigo-50/20');
+        handleFile(e.dataTransfer.files[0]);
+      });
+
+      fileInput.addEventListener('change', (e) => {
+        handleFile(e.target.files[0]);
+      });
+
+      btnRemove.addEventListener('click', () => {
+        screenshots[`q${id}`] = null;
+        previewImg.src = "";
+        fileInput.value = "";
+        previewContainer.classList.add('hidden');
+        dropzone.classList.remove('hidden');
+      });
+    };
+
+    setupImageUpload('1');
+    setupImageUpload('2');
+    setupImageUpload('3');
+
+    // Modals & Exporting
+    const helpModal = document.getElementById('helpModal');
+
+    const handlePrint = () => {
+      try {
+        window.print();
+      } catch (e) {
+        helpModal.classList.remove('hidden');
+        helpModal.classList.add('flex');
+      }
+    };
+
+    const handleExportHTML = () => {
+      const name = document.getElementById('studentName').value || 'Sense_Nom';
+      const group = document.getElementById('studentGroup').value || 'Sense_Grup';
+      const date = document.getElementById('studentDate').value || 'Sense_Data';
+      
+      const q1Text = document.getElementById('q1').value;
+      const q2Text = document.getElementById('q2').value;
+      const q3Text = document.getElementById('q3').value;
+      const qFinalText = document.getElementById('qFinal').value;
+
+      const getScreenshotHTML = (screenshotKey) => {
+        if (screenshots[screenshotKey]) {
+          return `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${screenshots[screenshotKey]}" alt="Captura" class="max-h-72 object-contain w-full rounded" /></div>`;
+        }
+        return `<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s'ha adjuntat cap captura de pantalla.</p>`;
+      };
+
+      const escapeHTML = (str) => {
+        return str.replace(/[&<>'"]/g, 
+          tag => ({
+              '&': '&amp;',
+              '<': '&lt;',
+              '>': '&gt;',
+              "'": '&#39;',
+              '"': '&quot;'
+            }[tag] || tag)
+        );
+      };
+
+      const htmlContent = `<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pràctica 8: Sintonització manual de controladors</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; }
+    @media print {
+      @page { size: A4; margin: 20mm 15mm 20mm 15mm; }
+      body { background-color: white !important; font-size: 11pt !important; }
+      .no-print { display: none !important; }
+      .print-card { page-break-inside: avoid !important; break-inside: avoid !important; border: 1px solid #e2e8f0 !important; padding: 20px !important; border-radius: 8px !important; margin-bottom: 24px !important; background-color: #ffffff !important; }
+      .page-break { page-break-before: always !important; break-before: page !important; }
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-8 max-w-4xl mx-auto">
+  <div class="border-b-4 border-slate-900 pb-4 mb-8">
+    <div class="flex justify-between items-start">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-indigo-600">Mesura i Regulació - Examen de Laboratori</span>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">Pràctica 8: Sintonització manual de controladors (Mètode d'assaig i error)</h1>
+        <p class="text-slate-500 text-xs mt-1">Regulació PID — Trobar el joc de paràmetres ideals (Kp, Ki, Kd) sobre una planta de segon ordre per assolir els KPIs de disseny.</p>
+      </div>
+      <button onclick="window.print()" class="no-print bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-md transition-all">Imprimir Report a PDF</button>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 bg-slate-100 p-4 rounded-lg border border-slate-200">
+      <div><span class="block text-[10px] font-bold uppercase text-slate-500">Nom i cognoms</span><span class="text-sm font-bold text-slate-900">${escapeHTML(name)}</span></div>
+      <div><span class="block text-[10px] font-bold uppercase text-slate-500">Grup de classe</span><span class="text-sm font-bold text-slate-900">${escapeHTML(group)}</span></div>
+      <div><span class="block text-[10px] font-bold uppercase text-slate-500">Data de lliurament</span><span class="text-sm font-bold text-slate-900">${escapeHTML(date)}</span></div>
+    </div>
+  </div>
+
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">Activitat 1: Sintonització de l'acció Proporcional pura (Kp)</h2>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">${escapeHTML(q1Text) || 'L\'estudiant no ha escrit cap resposta per a aquesta activitat.'}</div>
+    <div class="mt-4"><span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>${getScreenshotHTML('q1')}</div>
+  </div>
+
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">Activitat 2: Introducció de l'acció Integral (Ki) i eliminació de l'offset</h2>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">${escapeHTML(q2Text) || 'L\'estudiant no ha escrit cap resposta per a aquesta activitat.'}</div>
+    <div class="mt-4"><span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>${getScreenshotHTML('q2')}</div>
+  </div>
+
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">Activitat 3: Suavitzat i esmortiment final amb l'acció Derivada (Kd)</h2>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">${escapeHTML(q3Text) || 'L\'estudiant no ha escrit cap resposta per a aquesta activitat.'}</div>
+    <div class="mt-4"><span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>${getScreenshotHTML('q3')}</div>
+  </div>
+
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">Conclusions: Protocol d'ajust per assaig i error en sistemes industrials reals</h2>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[80px]">${escapeHTML(qFinalText) || 'L\'estudiant no ha escrit cap conclusió.'}</div>
+  </div>
+
+  <div class="mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-400 no-print">
+    <p>Material de lliurament pràctic oficial - IES Ebre. Generat amb el Simulador PID d'Assaig i Error.</p>
+  </div>
+</body>
+</html>`;
+
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Practica_8_Sintonia_Manual_${name.trim().replace(/\s+/g, '_') || 'Lliurament'}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    };
+
+    // Event Listeners for Buttons
+    document.getElementById('btnPrint').addEventListener('click', handlePrint);
+    document.getElementById('btnExport').addEventListener('click', handleExportHTML);
+    
+    document.querySelectorAll('.btnPrintSecondary').forEach(btn => {
+      btn.addEventListener('click', handlePrint);
+    });
+    
+    document.querySelectorAll('.btnExportSecondary').forEach(btn => {
+      btn.addEventListener('click', handleExportHTML);
+    });
+
+    document.getElementById('btnModalClose').addEventListener('click', () => {
+      helpModal.classList.add('hidden');
+      helpModal.classList.remove('flex');
+    });
+
+    document.getElementById('btnModalExport').addEventListener('click', () => {
+      handleExportHTML();
+      helpModal.classList.add('hidden');
+      helpModal.classList.remove('flex');
+    });
+
+  </script>
 </body>
 </html>
