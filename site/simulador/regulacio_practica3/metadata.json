@@ -1,0 +1,8 @@
+{
+  "name": "Pràctica 3: Regulació Tot o Res (On-Off) amb histèresi",
+  "description": "Informe interactiu i guia didàctica per a la Pràctica 3 de Regulació Tot o Res (On-Off) amb histèresi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

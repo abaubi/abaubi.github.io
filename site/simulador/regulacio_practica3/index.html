@@ -3,26 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pràctica 2: L'efecte del temps mort o retard en els sistemes de control</title>
+  <title>Pràctica 3: Regulació Tot o Res (On-Off) amb histèresi</title>
   
-  <!-- Preconnect to Google Fonts -->
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        },
+      },
+    }
+  </script>
+
   <style>
-    /* Premium CSS Print Media Rules for school report lliurament */
+    /* CSS Print Media Rules for school report lliurament */
     @media print {
       @page {
         size: A4;
-        margin: 15mm 15mm 15mm 15mm;
+        margin: 18mm 15mm 18mm 15mm;
       }
       
       body {
         background-color: white !important;
         color: #0f172a !important; /* slate-900 */
         font-family: 'Inter', -apple-system, sans-serif !important;
-        font-size: 11.5pt !important;
+        font-size: 11pt !important;
         line-height: 1.5 !important;
         padding: 0 !important;
         margin: 0 !important;
@@ -32,23 +48,24 @@
       .print\:hidden, 
       header, 
       footer, 
-      section.lg\:col-span-5, 
-      section.lg\:col-span-7, 
       main, 
       button, 
       input[type="file"],
-      .no-print {
+      .no-print,
+      #guiaDidacticaSection,
+      .action-buttons {
         display: none !important;
       }
 
       /* Allow student report section to expand and print in full width */
-      section#studentReportSection,
-      section {
+      #studentReportSection {
         width: 100% !important;
         max-width: 100% !important;
         padding: 0 !important;
         margin: 0 !important;
         display: block !important;
+        border: none !important;
+        box-shadow: none !important;
       }
 
       /* Avoid cards/activities splitting across pages in middle of a paragraph */
@@ -60,33 +77,25 @@
         border-radius: 8px !important;
         margin-bottom: 24px !important;
         background-color: #ffffff !important;
+        box-shadow: none !important;
       }
 
       /* Title styling inside print report */
-      h2 {
-        font-size: 14pt !important;
-        font-weight: 800 !important;
+      h1, h2 {
         color: #0f172a !important;
-        border-bottom: 2px solid #0f172a !important;
-        padding-bottom: 6px !important;
-      }
-
-      h3 {
-        font-size: 11pt !important;
-        font-weight: 700 !important;
-        color: #1e293b !important;
-        margin-bottom: 8px !important;
-      }
-
-      p {
-        font-size: 9.5pt !important;
-        color: #334155 !important; /* slate-700 */
-        line-height: 1.5 !important;
       }
 
       /* Hide form textareas and display the print-only div with text content */
-      textarea {
+      textarea, input[type="text"], input[type="date"] {
         display: none !important;
+      }
+
+      .print-input-fallback {
+        display: block !important;
+        font-weight: bold;
+        color: #0f172a !important;
+        border-bottom: 1px dashed #94a3b8 !important;
+        padding-bottom: 2px;
       }
 
       .print-textarea-fallback {
@@ -122,14 +131,1034 @@
         break-before: page !important;
       }
     }
+
+    /* Print Fallbacks default hidden for screen */
+    .print-textarea-fallback, .print-input-fallback, .print-header-only {
+      display: none;
+    }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
-  
-  <!-- Mountpoint for React Vite app -->
-  <div id="root"></div>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col">
 
-  <script type="module" src="/src/main.tsx"></script>
+  <!-- CAPÇALERA DE PANTALLA (no-print) -->
+  <header class="bg-slate-900 text-white py-6 px-4 sm:px-8 border-b border-slate-800 print:hidden">
+    <div class="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-teal-400 bg-teal-950/80 px-2.5 py-0.5 rounded border border-teal-800">
+            Mòdul de Mesura i Regulació
+          </span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-blue-400 bg-blue-950/80 px-2.5 py-0.5 rounded border border-blue-800">
+            ARI / Robòtica
+          </span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1.5">
+          Pràctica 3: Regulació Tot o Res (On-Off) amb histèresi
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">
+          Controlador tipus termòstat — Estudi de la freqüència de commutació de l'actuador i amplitud de les oscil·lacions
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2 w-full md:w-auto">
+        <button 
+          onclick="handlePrint()" 
+          class="flex-1 md:flex-none bg-teal-600 hover:bg-teal-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
+        >
+          <!-- Printer Icon -->
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0a2.25 2.25 0 0 1-2.25 2.25H8.59A2.25 2.25 0 0 1 6.34 18m11.318-4.171A3 3 0 0 0 15 11.25H9a3 3 0 0 0-2.66 2.579M15 11.25V7.5A2.25 2.25 0 0 0 12.75 5.25h-1.5A2.25 2.25 0 0 0 9 7.5v3.75M16.5 13.5h.008v.008h-.008V13.5Zm-9 0h.008v.008h-.008V13.5Z" />
+          </svg>
+          Generar PDF / Imprimir
+        </button>
+        <button 
+          onclick="handleExportHTML()" 
+          class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
+          title="Descarrega el teu treball com a fitxer html llest per obrir i desar directament en PDF"
+        >
+          <!-- Download Icon -->
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+          Desar lliurament (.html)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- CAPÇALERA SENSE IMPRESSIÓ / EXPORTACIÓ (S'activa quan s'imprimeix l'informe per separat) -->
+  <div class="print-header-only border-b-4 border-slate-900 pb-4 mb-6">
+    <div class="flex justify-between items-start">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-teal-600">Mesura i Regulació - Examen de Laboratori</span>
+        <h1 class="text-2xl font-extrabold text-slate-900 mt-1">Pràctica 3: Regulació Tot o Res (On-Off) amb histèresi</h1>
+        <p class="text-slate-500 text-xs mt-1">Comprendre el funcionament d'un termòstat i l'efecte de l'amplada de la histèresi (H) i la potència de l'actuador (U_max).</p>
+      </div>
+    </div>
+    
+    <!-- Student details printed fallback -->
+    <div class="grid grid-cols-3 gap-4 mt-6 bg-slate-100 p-4 rounded-lg border border-slate-200">
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Nom i cognoms</span>
+        <span id="print_studentName" class="text-sm font-bold text-slate-900">-</span>
+      </div>
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Grup de classe</span>
+        <span id="print_studentGroup" class="text-sm font-bold text-slate-900">-</span>
+      </div>
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Data de lliurament</span>
+        <span id="print_studentDate" class="text-sm font-bold text-slate-900">-</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓ 1: GUIA DIDÀCTICA (Es cultiva només per pantalla, s'amaga a la impressió) -->
+  <main id="guiaDidacticaSection" class="max-w-4xl w-full mx-auto p-4 sm:p-8 flex-grow print:hidden space-y-8">
+    
+    <!-- Secció 1: Enunciat -->
+    <div id="sectionEnunciat" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+      <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">1</span>
+        Enunciat de l'activitat
+      </h2>
+      <div class="text-slate-700 leading-relaxed space-y-4 text-sm">
+        <p>
+          L'objectiu d'aquesta <b>Pràctica 3</b> és comprendre en profunditat el funcionament d'un dels reguladors més estesos i clàssics de l'enginyeria: el <b>controlador On-Off (o Tot o Res) amb histèresi</b>, comú en termòstats de calefacció, aire condicionat i dipòsits de nivell.
+        </p>
+        <p>
+          En temps real, analitzarem com la potència de l'actuador (<span class="font-semibold text-teal-600">U_max</span>) i l'amplada de la histèresi (<span class="font-semibold text-teal-600">H</span>) influeixen directament sobre la <b>freqüència de commutació</b> de l'actuador (desgast físic d'equips) i l'<b>amplitud de les oscil·lacions</b> de la variable controlada (<span class="font-semibold text-teal-600">y</span>). També veurem com la presència d'inèrcia o retards a la planta genera sobreescalfaments inevitablement.
+        </p>
+      </div>
+    </div>
+
+    <!-- Secció 2: Fonaments teòrics -->
+    <div id="sectionTeoria" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+      <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">2</span>
+        Conceptes Clau d'Enginyeria
+      </h2>
+      <div class="space-y-6 text-slate-700 text-sm leading-relaxed">
+        <p>
+          A diferència dels controladors continus com els PID, els reguladors On-Off només tenen dos estats possibles de sortida: <b>activat (U_max)</b> o <b>desactivat (0)</b>.
+        </p>
+
+        <!-- Bloc 1: On-Off ideal i el Chattering -->
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+          <h3 class="font-bold text-slate-900 flex items-center gap-2">
+            <span class="text-teal-600">&bull;</span>
+            Control On-Off Ideal (Sense histèresi, H = 0 V)
+          </h3>
+          <p>
+            En un regulador ideal, l'actuador s'encén quan la variable és inferior a la consigna i s'apaga immediatament quan la supera:
+          </p>
+          <div class="bg-slate-950 text-slate-300 font-mono text-xs p-3 rounded border border-slate-800 space-y-1">
+            <div>• Si y(t) &lt; r  &rArr;  u(t) = U_max</div>
+            <div>• Si y(t) &ge; r  &rArr;  u(t) = 0</div>
+          </div>
+          
+          <!-- Dibuix SVG del Chattering (On-Off Ideal) -->
+          <div class="bg-white p-4 rounded-lg border border-slate-200 flex flex-col items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Figura 1: Commutació d'alta freqüència (Chattering) amb H = 0 V</span>
+            <svg class="w-full max-w-md h-40 bg-slate-50/40 rounded border border-slate-100" viewBox="0 0 360 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Gridlines -->
+              <path d="M 40 10 L 40 130 M 100 10 L 100 130 M 160 10 L 160 130 M 220 10 L 220 130 M 280 10 L 280 130 M 340 10 L 340 130" stroke="#f1f5f9" stroke-width="1" />
+              <path d="M 40 130 L 340 130 M 40 70 L 340 70 M 40 40 L 340 40 M 40 100 L 340 100" stroke="#f1f5f9" stroke-width="1" />
+
+              <!-- Axes -->
+              <path d="M 40 10 L 40 132 M 38 130 L 345 130" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" />
+              
+              <!-- Setpoint (r) - Green -->
+              <path d="M 40 70 L 340 70" stroke="#10b981" stroke-width="1.5" stroke-dasharray="3 3" />
+              <text x="45" y="66" fill="#10b981" font-size="8" font-weight="bold">Setpoint r</text>
+
+              <!-- Temperature Output (Red) - Fast Chattering (Constant oscillation) -->
+              <path id="chatteringPath" stroke="#ef4444" stroke-width="1.5" fill="none" />
+              <text x="115" y="55" fill="#ef4444" font-size="8" font-weight="bold">Sortida y(t)</text>
+
+              <!-- Actuator State (Blue) - Constant dense square waves -->
+              <path id="actuatorIdealPath" stroke="#3b82f6" stroke-width="1" fill="none" />
+              <text x="45" y="146" fill="#3b82f6" font-size="8" font-weight="bold">Actuador u(t) (Rapid Switching!)</text>
+            </svg>
+          </div>
+
+          <p class="text-xs text-slate-600">
+            A la vida real, el soroll de mesura del sensor faria que l'actuador commutés milers de vegades per segon quan som prop de la consigna. Això s'anomena <b>chattering o pampallugues</b>, i destrossaria mecànicament qualsevol relé, contactor o vàlvula real en qüestió d'hores.
+          </p>
+        </div>
+
+        <!-- Bloc 2: Histèresi Simètrica -->
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+          <h3 class="font-bold text-slate-900 flex items-center gap-2">
+            <span class="text-teal-600">&bull;</span>
+            L'Amplada de la Histèresi Simètrica (H)
+          </h3>
+          <p>
+            Per protegir els actuadors, s'introdueix una <b>banda morta o d'histèresi (H)</b> centrat entorn de la consigna (<span class="italic">r</span>). Les noves condicions de commutació passen a ser:
+          </p>
+          <div class="bg-slate-950 text-slate-300 font-mono text-xs p-3 rounded border border-slate-800 space-y-1">
+            <div>• Si y(t) &lt; (r - H/2)  &rArr;  u(t) = U_max  (S'encén)</div>
+            <div>• Si y(t) &gt; (r + H/2)  &rArr;  u(t) = 0      (S'apaga)</div>
+            <div>• Si està a l'interior  &rArr;  u(t) = darrer estat (Manté)</div>
+          </div>
+
+          <!-- Dibuix SVG de la Histèresi -->
+          <div class="bg-white p-4 rounded-lg border border-slate-200 flex flex-col items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Figura 2: Funcionament d'un Control On-Off amb histèresi</span>
+            <svg class="w-full max-w-md h-40 bg-slate-50/40 rounded border border-slate-100" viewBox="0 0 360 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Gridlines -->
+              <path d="M 40 10 L 40 130 M 100 10 L 100 130 M 160 10 L 160 130 M 220 10 L 220 130 M 280 10 L 280 130 M 340 10 L 340 130" stroke="#f1f5f9" stroke-width="1" />
+              <path d="M 40 130 L 340 130 M 40 70 L 340 70 M 40 40 L 340 40 M 40 100 L 340 100" stroke="#f1f5f9" stroke-width="1" />
+
+              <!-- Axes -->
+              <path d="M 40 10 L 40 132 M 38 130 L 345 130" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" />
+              
+              <!-- Setpoint (r) - Green -->
+              <path d="M 40 70 L 340 70" stroke="#10b981" stroke-width="1.5" stroke-dasharray="3 3" />
+              <text x="45" y="66" fill="#10b981" font-size="8" font-weight="bold">Setpoint r</text>
+
+              <!-- Hysteresis limits - Gray -->
+              <path d="M 40 40 L 340 40" stroke="#64748b" stroke-width="1" stroke-dasharray="1 3" />
+              <text x="180" y="36" fill="#64748b" font-size="7" font-weight="mono">Límit superior (r + H/2)</text>
+
+              <path d="M 40 100 L 340 100" stroke="#64748b" stroke-width="1" stroke-dasharray="1 3" />
+              <text x="180" y="112" fill="#64748b" font-size="7" font-weight="mono">Límit inferior (r - H/2)</text>
+
+              <!-- Hysteresis bracket -->
+              <path d="M 335 40 L 335 100" stroke="#475569" stroke-width="1" />
+              <path d="M 332 40 L 338 40 M 332 100 L 338 100" stroke="#475569" stroke-width="1" />
+              <text x="341" y="74" fill="#475569" font-size="10" font-weight="bold">H</text>
+
+              <!-- Temperature Output (Red) - Controlled Oscillation with Constant Amplitude -->
+              <path d="M 40 120 C 60 120, 80 35, 100 35 C 115 35, 125 105, 140 105 C 155 105, 165 35, 180 35 C 195 35, 205 105, 220 105 C 235 105, 245 35, 260 35 C 275 35, 285 105, 300 105 C 315 105, 325 35, 340 35" stroke="#ef4444" stroke-width="2" fill="none" />
+              <text x="145" y="24" fill="#ef4444" font-size="8" font-weight="bold">Sortida y(t)</text>
+
+              <!-- Actuator State (Blue) - Staggered Pulses perfectly synchronized with temperature crossings -->
+              <path d="M 40 140 L 90 140 L 90 150 L 130 150 L 130 140 L 170 140 L 170 150 L 210 150 L 210 140 L 250 140 L 250 150 L 290 150 L 290 140 L 330 140 L 330 150 L 340 150" stroke="#3b82f6" stroke-width="1.5" fill="none" />
+              <text x="45" y="146" fill="#3b82f6" font-size="8" font-weight="bold">Actuador u(t) (ON/OFF Protegit)</text>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Bloc 3: L'efecte de l'acumulació d'energia -->
+        <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
+          <h3 class="font-bold text-slate-900 flex items-center gap-2">
+            <span class="text-teal-600">&bull;</span>
+            Overshoot (Sobre-escalfament) i Inèrcia
+          </h3>
+          <p>
+            Tot i que l'actuador s'apaga exactament a <span class="font-mono text-xs">r + H/2</span>, l'energia ja aportada al sistema (per exemple, la calor residual de la resistència del forn) segueix fluint un cert temps, fent que la temperatura segueixi pujant. Això se sap com a <b>sobrepassament (overshoot)</b> i s'agreuja notablement quan la planta té constants d'inèrcia secundàries (&tau;<sub>2</sub>, &tau;<sub>3</sub>) o retard temporal (&theta;).
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Secció 3: Passos per a la pràctica -->
+    <div id="sectionPassos" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+      <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+        <span class="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">3</span>
+        Guia de Treball Pas a Pas
+      </h2>
+      <div class="space-y-4 text-slate-700 text-sm leading-relaxed">
+        <div class="border-l-4 border-teal-500 pl-3 py-1 bg-teal-50/40 rounded-r">
+          <h3 class="font-bold text-slate-900">Pas 1: Control ideal i el risc del "Chattering"</h3>
+          <p class="mt-1 text-slate-600">
+            Activeu el <b>Bucle Tancat</b>. Consigna a <span class="font-mono bg-slate-100 px-1 rounded">r = 2.0 V</span>. Planta de 1r Ordre (<span class="font-mono bg-slate-100 px-1 rounded">K_p = 2.0, &tau;_1 = 3.0 s, &tau;_2 = 0s, &tau;_3 = 0s, &theta; = 0s</span>). Fixeu una potència d'actuador <span class="font-mono bg-slate-100 px-1 rounded">U_max = 5.0 V</span> i histèresi <span class="font-mono bg-slate-100 px-1 rounded">H = 0.0 V</span>.
+            Observeu com la variable es clava a 2.0 V, però la senyal blava de control fa pampallugues a velocitat màxima (freqüència molt alta o infinita). Apunteu aquesta freqüència i analitzeu per què és dolent realment.
+          </p>
+        </div>
+
+        <div class="border-l-4 border-teal-500 pl-3 py-1 bg-teal-50/40 rounded-r">
+          <h3 class="font-bold text-slate-900">Pas 2: Trobar el compromís de la histèresi (H)</h3>
+          <p class="mt-1 text-slate-600">
+            With els mateixos valors de planta, canvieu gradualment la histèresi <span class="font-semibold text-teal-600">H</span> a <span class="font-mono bg-slate-100 px-1 rounded">0.2 V</span>, <span class="font-mono bg-slate-100 px-1 rounded">0.6 V</span> i <span class="font-mono bg-slate-100 px-1 rounded">1.2 V</span>.
+            Mireu com canvia la freqüència de commutació al panell de rendiment (baixa) i com s'incrementa l'amplitud real de l'oscil·lació del voltatge. Descriviu aquesta relació inversa i la decisió industrial a prendre.
+          </p>
+        </div>
+
+        <div class="border-l-4 border-teal-500 pl-3 py-1 bg-teal-50/40 rounded-r">
+          <h3 class="font-bold text-slate-900">Pas 3: L'efecte de la potència d'energia (U_max) i el retard d'inèrcia</h3>
+          <p class="mt-1 text-slate-600">
+            Ara, doneu inèrcies secundàries a la planta posant <span class="font-mono bg-slate-100 px-1 rounded">&tau;_2 = 1.0 s</span> (o poseu retard <span class="font-mono bg-slate-100 px-1 rounded">&theta; = 1.0 s</span>). Fixeu histèresi a <span class="font-mono bg-slate-100 px-1 rounded">H = 0.4 V</span> i consigna <span class="font-mono bg-slate-100 px-1 rounded">r = 2.0 V</span>.
+            Compareu què passa si l'actuador té poca potència (<span class="font-mono bg-slate-100 px-1 rounded">U_max = 3.0 V</span>) versus molta potència (<span class="font-mono bg-slate-100 px-1 rounded">U_max = 8.0 V</span>). Observeu com un actuador massa potent, en presència d'inèrcia, fa que la sortida y(t) sobrepassi enormement els límits teòrics de la histèresi.
+          </p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- SECCIÓ 2: INFORME DE L'ALUMNE (Aquest es veu per pantalla i s'imprimeix de forma estilitzada) -->
+  <section id="studentReportSection" class="max-w-4xl w-full mx-auto p-4 sm:p-8 pt-0 print:pt-0 print:p-0">
+    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 print:border-none print:shadow-none">
+      
+      <!-- Capçalera de l'informe per a pantalla (S'amaga en impressió) -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b-2 border-slate-900 pb-4 mb-6 print:hidden">
+        <div>
+          <h2 class="text-xl font-extrabold text-slate-900 uppercase tracking-tight flex items-center gap-2">
+            <!-- FileText icon SVG -->
+            <svg class="w-5 h-5 text-teal-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+            </svg>
+            Full de Treball i Lliurament de la Pràctica
+          </h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Responeu les preguntes i feu captures de les vostres simulacions. Un cop acabat, descarregueu el document HTML o imprimiu-lo en PDF.
+          </p>
+        </div>
+        
+        <div class="flex flex-wrap gap-2 w-full md:w-auto">
+          <button
+            onclick="handlePrint()"
+            class="flex-1 md:flex-initial bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0a2.25 2.25 0 0 1-2.25 2.25H8.59A2.25 2.25 0 0 1 6.34 18m11.318-4.171A3 3 0 0 0 15 11.25H9a3 3 0 0 0-2.66 2.579M15 11.25V7.5A2.25 2.25 0 0 0 12.75 5.25h-1.5A2.25 2.25 0 0 0 9 7.5v3.75M16.5 13.5h.008v.008h-.008V13.5Zm-9 0h.008v.008h-.008V13.5Z" />
+            </svg>
+            Imprimir / Desar PDF
+          </button>
+          <button
+            onclick="handleExportHTML()"
+            class="flex-1 md:flex-initial bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-all flex items-center justify-center gap-2 cursor-pointer"
+            title="Descarrega un document HTML complet que inclou les teves respostes i imatges"
+          >
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+            </svg>
+            Desar fitxer HTML
+          </button>
+        </div>
+      </div>
+
+      <!-- Dades de l'alumne formulari en pantalla (S'amaga a la impressió, reemplaçat per print-header-only) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-slate-50 p-5 rounded-lg border border-slate-200 print:hidden">
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+            </svg>
+            Nom i Cognoms de l'alumne/a
+          </label>
+          <input
+            id="studentName"
+            type="text"
+            placeholder="Ex: Joan Garcia i Soler"
+            class="w-full p-2.5 border border-slate-300 rounded focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none text-sm bg-white"
+          />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.109A11.386 11.386 0 0 1 10.089 21c-2.243 0-4.352-.64-6.136-1.75a11.266 11.266 0 0 1-1.01-1.223M11.24 16.256A5.023 5.023 0 0 0 10.089 16c-1.353 0-2.62.4-3.69 1.1a4.125 4.125 0 0 0-4.121 4.125c0 .108.01.216.029.322m15.362-7.14a4.125 4.125 0 0 0-4.121-4.125 4.12 4.12 0 0 0-2.613.953m4.113 7.311A10.28 10.28 0 0 1 15 16.5m-5.467-3.07a4.996 4.996 0 0 0 3.033-1.07M12 9.75a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1-4.5 0Zm0 0a2.25 2.25 0 1 0 4.5 0 2.25 2.25 0 0 0-4.5 0ZM1.5 15a2.25 2.25 0 1 1 4.5 0 2.25 2.25 0 0 1-4.5 0Zm18 0a2.25 2.25 0 1 1 4.5 0 2.25 2.25 0 0 1-4.5 0Z" />
+            </svg>
+            Grup de Classe
+          </label>
+          <input
+            id="studentGroup"
+            type="text"
+            placeholder="Ex: 2n Automàtica i Robòtica Industrial"
+            class="w-full p-2.5 border border-slate-300 rounded focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none text-sm bg-white"
+          />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" />
+            </svg>
+            Data del Treball
+          </label>
+          <input
+            id="studentDate"
+            type="date"
+            class="w-full p-2.5 border border-slate-300 rounded focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none text-sm bg-white"
+          />
+        </div>
+      </div>
+
+      <!-- Pregunta 1 -->
+      <div class="print-card mb-8 border-b border-slate-100 pb-8">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5">
+          Activitat 1: Control On-Off ideal (sense histèresi, H = 0.0 V)
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Configureu el sistema en <b>Bucle Tancat</b> amb Consigna <span class="font-mono bg-slate-100 px-0.5 rounded">r = 2.0 V</span>, potència de l'actuador <span class="font-mono bg-slate-100 px-0.5 rounded">U_max = 5.0 V</span>, i histèresi <span class="font-mono bg-slate-100 px-0.5 rounded">H = 0.0 V</span>. Planta de 1r Ordre (<span class="font-mono bg-slate-100 px-0.5 rounded">K_p = 2.0</span>, <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_1 = 3.0 s</span>, inèrcies <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_2=&tau;_3=0</span>, retard <span class="font-mono bg-slate-100 px-0.5 rounded">&theta;=0</span>).
+          Observeu el comportament i responeu: Què li passa a la senyal de control <span class="font-mono bg-slate-100 px-0.5 rounded">u(t)</span> i a la sortida <span class="font-mono bg-slate-100 px-0.5 rounded">y(t)</span>? Quina és la freqüència de commutació obtinguda al panell de rendiment? Expliqueu de forma raonada per què aquest comportament és completament inviable en la pràctica industrial real.
+        </p>
+        <textarea
+          id="q1"
+          rows="5"
+          placeholder="Escriu aquí les teves observacions, descripció física de les corbes de commutació ràpida (chattering) i el dany sobre els actuadors..."
+          class="w-full p-3 border border-slate-300 rounded-lg focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none text-sm leading-relaxed mb-4 block"
+        ></textarea>
+        <!-- Print-only Fallback -->
+        <div id="q1_print_fallback" class="print-textarea-fallback"></div>
+
+        <!-- Zona per pujar la captura 1 -->
+        <div class="space-y-2 no-print">
+          <label class="block text-[11px] font-bold text-slate-700">
+            Captura de pantalla d'aquesta simulació (Control On-Off ideal amb H = 0.0 V):
+          </label>
+          
+          <!-- Upload Area 1 -->
+          <div id="q1_upload_zone" class="border-2 border-dashed border-slate-300 hover:border-teal-500 hover:bg-teal-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors">
+            <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
+            </svg>
+            <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+            <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+            <input id="q1_file_input" type="file" accept="image/*" class="hidden" />
+          </div>
+
+          <!-- Preview Area 1 -->
+          <div id="q1_preview_container" class="relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center hidden">
+            <img id="q1_preview_img" src="" alt="Captura Activitat 1" class="max-h-56 object-contain w-full" />
+            <div class="absolute top-2 right-2 flex gap-1.5">
+              <button
+                type="button"
+                id="q1_delete_btn"
+                class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                </svg>
+                <span>Eliminar imatge</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rendered preview of image 1 in printing -->
+        <div id="q1_print_image_container" class="hidden print:block mt-4">
+          <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+          <img id="q1_print_img" class="border border-slate-200 p-1 bg-white rounded max-h-64 object-contain mt-1" src="" alt="Sense captura de pantalla lliurada." />
+          <span id="q1_no_img_placeholder" class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border block">No s'ha adjuntat cap captura de pantalla per a l'activitat 1.</span>
+        </div>
+      </div>
+
+      <!-- Pregunta 2 -->
+      <div class="print-card mb-8 border-b border-slate-100 pb-8 page-break">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5">
+          Activitat 2: L'efecte de l'amplada de la histèresi (H)
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Mantingueu els mateixos paràmetres de la planta i una potència <span class="font-mono bg-slate-100 px-0.5 rounded">U_max = 5.0 V</span>. Ara, proveu d'incrementar de manera seqüencial l'amplada de la histèresi <span class="font-semibold text-teal-600">H</span> a <span class="font-mono bg-slate-100 px-0.5 rounded">0.2 V</span>, <span class="font-mono bg-slate-100 px-0.5 rounded">0.6 V</span> i <span class="font-mono bg-slate-100 px-0.5 rounded">1.2 V</span>.
+          Responeu amb dades precises obtingudes de la simulació: Com influeix l'amplada de la histèresi en l'amplitud real de les oscil·lacions de la variable controlada (&Delta;y) i en la freqüència de commutació de l'actuador? Expliqueu quin és el "compromís de disseny" (trade-off) que ha d'assumir un/a enginyer/a a l'hora de triar el valor de la histèresi en un termòstat.
+        </p>
+        <textarea
+          id="q2"
+          rows="5"
+          placeholder="Escriu aquí el teu informe de comportament, detallant com una histèresi major protegeix els equips mecànics a canvi de perdre precisió en la temperatura..."
+          class="w-full p-3 border border-slate-300 rounded-lg focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none text-sm leading-relaxed mb-4 block"
+        ></textarea>
+        <!-- Print-only Fallback -->
+        <div id="q2_print_fallback" class="print-textarea-fallback"></div>
+
+        <!-- Zona per pujar la captura 2 -->
+        <div class="space-y-2 no-print">
+          <label class="block text-[11px] font-bold text-slate-700">
+            Captura de pantalla d'aquesta simulació (Efecte de l'amplada de la histèresi en l'ona d'oscil·lació):
+          </label>
+          
+          <!-- Upload Area 2 -->
+          <div id="q2_upload_zone" class="border-2 border-dashed border-slate-300 hover:border-teal-500 hover:bg-teal-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors">
+            <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
+            </svg>
+            <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+            <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+            <input id="q2_file_input" type="file" accept="image/*" class="hidden" />
+          </div>
+
+          <!-- Preview Area 2 -->
+          <div id="q2_preview_container" class="relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center hidden">
+            <img id="q2_preview_img" src="" alt="Captura Activitat 2" class="max-h-56 object-contain w-full" />
+            <div class="absolute top-2 right-2 flex gap-1.5">
+              <button
+                type="button"
+                id="q2_delete_btn"
+                class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                </svg>
+                <span>Eliminar imatge</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rendered preview of image 2 in printing -->
+        <div id="q2_print_image_container" class="hidden print:block mt-4">
+          <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+          <img id="q2_print_img" class="border border-slate-200 p-1 bg-white rounded max-h-64 object-contain mt-1" src="" alt="Sense captura de pantalla lliurada." />
+          <span id="q2_no_img_placeholder" class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border block">No s'ha adjuntat cap captura de pantalla per a l'activitat 2.</span>
+        </div>
+      </div>
+
+      <!-- Pregunta 3 -->
+      <div class="print-card mb-8 border-b border-slate-100 pb-8 page-break">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5">
+          Activitat 3: L'efecte de la potència de l'actuador (U_max) i la inèrcia/retard de la planta
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Configureu una planta amb inèrcies secundàries o retard de transport significatiu: poseu constant <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_2 = 1.0 s</span> o retard <span class="font-mono bg-slate-100 px-0.5 rounded">&theta; = 1.0 s</span> (mantenint <span class="font-mono bg-slate-100 px-0.5 rounded">K_p = 2.0</span> i <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_1 = 3.0 s</span>). Fixeu una histèresi de <span class="font-mono bg-slate-100 px-0.5 rounded">H = 0.4 V</span> i consigna <span class="font-mono bg-slate-100 px-0.5 rounded">r = 2.0 V</span>.
+          Compareu el comportament quan teniu un escalfador poc potent (<span class="font-mono bg-slate-100 px-0.5 rounded">U_max = 3.0 V</span>) enfront d'un escalfador extremadament potent (<span class="font-mono bg-slate-100 px-0.5 rounded">U_max = 8.0 V</span>).
+          Com influeix l'augment de la potència <span class="font-semibold text-teal-600">U_max</span> en l'oscil·lació real? Per què la variable controlada sobrepassa amb escreix els límits definits per la histèresi (overshoot/undershoot) quan el sistema té retard o inèrcies? Expliqueu aquest fenomen físicament.
+        </p>
+        <textarea
+          id="q3"
+          rows="5"
+          placeholder="Explica físicament l'acumulació d'energia de la planta (retard térmic) i com la potència U_max sobredimensionada genera grans sobre-escalfaments un cop apagat l'actuador..."
+          class="w-full p-3 border border-slate-300 rounded-lg focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none text-sm leading-relaxed mb-4 block"
+        ></textarea>
+        <!-- Print-only Fallback -->
+        <div id="q3_print_fallback" class="print-textarea-fallback"></div>
+
+        <!-- Zona per pujar la captura 3 -->
+        <div class="space-y-2 no-print">
+          <label class="block text-[11px] font-bold text-slate-700">
+            Captura de pantalla d'aquesta simulació (Efecte de U_max with retard/inèrcia):
+          </label>
+          
+          <!-- Upload Area 3 -->
+          <div id="q3_upload_zone" class="border-2 border-dashed border-slate-300 hover:border-teal-500 hover:bg-teal-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors">
+            <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z" />
+            </svg>
+            <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+            <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+            <input id="q3_file_input" type="file" accept="image/*" class="hidden" />
+          </div>
+
+          <!-- Preview Area 3 -->
+          <div id="q3_preview_container" class="relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center hidden">
+            <img id="q3_preview_img" src="" alt="Captura Activitat 3" class="max-h-56 object-contain w-full" />
+            <div class="absolute top-2 right-2 flex gap-1.5">
+              <button
+                type="button"
+                id="q3_delete_btn"
+                class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer"
+              >
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                </svg>
+                <span>Eliminar imatge</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rendered preview of image 3 in printing -->
+        <div id="q3_print_image_container" class="hidden print:block mt-4">
+          <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+          <img id="q3_print_img" class="border border-slate-200 p-1 bg-white rounded max-h-64 object-contain mt-1" src="" alt="Sense captura de pantalla lliurada." />
+          <span id="q3_no_img_placeholder" class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border block">No s'ha adjuntat cap captura de pantalla per a l'activitat 3.</span>
+        </div>
+      </div>
+
+      <!-- Conclusions Finals -->
+      <div class="print-card pt-4 page-break">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5">
+          Conclusió de l'Aprenentatge i Proposta Industrial
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Com a futur/a professional de l'automatització industrial, compareu breument els avantatges i inconvenients de la regulació On-Off amb histèresi respecte d'un control continu proporcional o PID. En quin tipus d'instal·lacions industrials (calderes, climatitzadors, tancs d'aigua, servomotors) està justificat l'ús del control On-Off i en quines està prohibit?
+        </p>
+        <textarea
+          id="qFinal"
+          rows="4"
+          placeholder="Escriu una síntesi clara diferenciant sistemes amb grans inèrcies (on el control On-Off és òptim i barat) i sistemes ràpids o de precisió on calen controls continus..."
+          class="w-full p-3 border border-slate-300 rounded-lg focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none text-sm leading-relaxed mb-4 block"
+        ></textarea>
+        <!-- Print-only Fallback -->
+        <div id="qFinal_print_fallback" class="print-textarea-fallback"></div>
+      </div>
+
+      <!-- Nota informativa de lliurament -->
+      <div class="mt-6 flex items-start gap-2.5 bg-blue-50/50 rounded-lg p-4 border border-blue-100 text-xs text-blue-800 leading-relaxed no-print print:hidden">
+        <svg class="w-5 h-5 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+        </svg>
+        <div>
+          <p class="font-bold">Com es realitza el lliurament del document d'examen?</p>
+          <p class="mt-0.5">
+            Teniu dues opcions molt senzilles: podeu fer clic a <b class="text-teal-700">"Imprimir / Desar PDF"</b> per obtenir el document directament (si s'obre una finestra de diàleg normal), o bé utilitzar <b class="text-blue-700">"Desar fitxer HTML"</b> per guardar un document auto-contingut amb totes les captures inserides a l'interior, obrir-lo al vostre ordinador en un navegador normal i prémer <b class="font-mono bg-slate-200 px-0.5 rounded">Ctrl + P</b> per desar-lo com a PDF de manera idèntica.
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- PEU DE PÀGINA DE PANTALLA (no-print) -->
+  <footer class="bg-slate-900 text-slate-400 py-6 text-center text-xs mt-auto border-t border-slate-800 print:hidden">
+    <p>Material docent oficial per al mòdul de mesura i regulació - Cicle de Grau Superior d'Automatització i Robòtica Industrial (ARI).</p>
+    <p class="text-slate-500 mt-1">Dissenyat per a la realització de la pràctica de regulació On-Off mitjançant simuladors externs.</p>
+  </footer>
+
+  <!-- MODAL D'AJUDA (S'activa si el navegador bloqueja window.print des d'un iframe) -->
+  <div id="helpModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 relative">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="p-2 bg-amber-100 text-amber-800 rounded-full shrink-0">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+          </svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Bloqueig d'entorn segur detectat</h3>
+          <p class="text-xs text-slate-500 mt-1">El navegador pot bloquejar la impressió directa perquè aquesta aplicació s'executa dins d'un entorn de proves segur (Sandbox de l'Iframe).</p>
+        </div>
+      </div>
+      
+      <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-xs text-slate-700 space-y-2 mb-5">
+        <p class="font-bold text-slate-900">Com pots desar el teu treball en format PDF perfecte?</p>
+        <ol class="list-decimal pl-4 space-y-1.5 leading-relaxed">
+          <li>Feu clic al botó blau: <b class="text-blue-600">"Desar fitxer HTML"</b>.</li>
+          <li>Es descarregarà un únic fitxer HTML que inclou totes les teves respostes i les captures que hagis pujat.</li>
+          <li>Obriu aquest fitxer descarregat des del vostre ordinador a qualsevol pestanya del navegador (Chrome, Edge, Firefox, etc.).</li>
+          <li>Premeu <b class="font-mono bg-slate-200 px-1 py-0.5 rounded text-slate-800">Ctrl + P</b> (o Cmd + P a Mac) i seleccioneu <b>"Anomena com a PDF"</b> per desar un informe de pràctica perfecte.</li>
+        </ol>
+      </div>
+
+      <div class="flex justify-end gap-2.5">
+        <button 
+          onclick="handleExportHTML(); closeHelpModal();" 
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-colors cursor-pointer"
+        >
+          Desar fitxer ara
+        </button>
+        <button 
+          onclick="closeHelpModal()" 
+          class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+        >
+          Entesos, tancar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN APPLICATION JAVASCRIPT -->
+  <script>
+    // 1. STATE INITIALIZATION (loaded from localStorage if exists)
+    const state = {
+      studentName: localStorage.getItem('onoff_studentName') || '',
+      studentGroup: localStorage.getItem('onoff_studentGroup') || '',
+      studentDate: localStorage.getItem('onoff_studentDate') || new Date().toISOString().split('T')[0],
+      q1: localStorage.getItem('onoff_q1') || '',
+      q1Screenshot: localStorage.getItem('onoff_q1Screenshot') || null,
+      q2: localStorage.getItem('onoff_q2') || '',
+      q2Screenshot: localStorage.getItem('onoff_q2Screenshot') || null,
+      q3: localStorage.getItem('onoff_q3') || '',
+      q3Screenshot: localStorage.getItem('onoff_q3Screenshot') || null,
+      qFinal: localStorage.getItem('onoff_qFinal') || ''
+    };
+
+    // Save current state to LocalStorage
+    function saveState() {
+      localStorage.setItem('onoff_studentName', state.studentName);
+      localStorage.setItem('onoff_studentGroup', state.studentGroup);
+      localStorage.setItem('onoff_studentDate', state.studentDate);
+      localStorage.setItem('onoff_q1', state.q1);
+      
+      if (state.q1Screenshot) {
+        try {
+          localStorage.setItem('onoff_q1Screenshot', state.q1Screenshot);
+        } catch (e) {
+          console.warn("Storage quota exceeded for image 1");
+        }
+      } else {
+        localStorage.removeItem('onoff_q1Screenshot');
+      }
+
+      localStorage.setItem('onoff_q2', state.q2);
+      if (state.q2Screenshot) {
+        try {
+          localStorage.setItem('onoff_q2Screenshot', state.q2Screenshot);
+        } catch (e) {
+          console.warn("Storage quota exceeded for image 2");
+        }
+      } else {
+        localStorage.removeItem('onoff_q2Screenshot');
+      }
+
+      localStorage.setItem('onoff_q3', state.q3);
+      if (state.q3Screenshot) {
+        try {
+          localStorage.setItem('onoff_q3Screenshot', state.q3Screenshot);
+        } catch (e) {
+          console.warn("Storage quota exceeded for image 3");
+        }
+      } else {
+        localStorage.removeItem('onoff_q3Screenshot');
+      }
+
+      localStorage.setItem('onoff_qFinal', state.qFinal);
+    }
+
+    // 2. SVG PATHS GENERATION
+    function generateSVGs() {
+      // Generate mathematically perfect chattering path with constant amplitude (y between 68 and 72)
+      let chPath = "M 40 125 C 65 125, 85 85, 100 70";
+      let y = 68;
+      for (let x = 100; x <= 340; x += 3.0) {
+        chPath += " L " + x.toFixed(1) + " " + y;
+        y = y === 68 ? 72 : 68;
+      }
+      document.getElementById('chatteringPath').setAttribute('d', chPath);
+
+      // Generate perfect high-frequency actuator path corresponding to H = 0 V (with perfect vertical steps)
+      let actIdealPath = "M 40 150 L 100 150";
+      let currentY = 150;
+      const step = 4.0;
+      for (let x = 100; x < 340; x += step) {
+        const nextY = currentY === 150 ? 140 : 150;
+        // Vertical transition at the current x
+        actIdealPath += " L " + x.toFixed(1) + " " + nextY;
+        // Horizontal segment to the next x
+        const nextX = Math.min(x + step, 340);
+        actIdealPath += " L " + nextX.toFixed(1) + " " + nextY;
+        currentY = nextY;
+      }
+      document.getElementById('actuatorIdealPath').setAttribute('d', actIdealPath);
+    }
+
+    // 3. EVENT BINDING & REACTION ON USER INPUT
+    function setupInputBinding(id, stateField, printId) {
+      const el = document.getElementById(id);
+      const printEl = document.getElementById(printId);
+      
+      // Initialize value
+      el.value = state[stateField];
+      if (printEl) {
+        printEl.innerText = state[stateField] || (id.includes('student') ? '-' : 'L\'estudiant no ha escrit cap resposta per a aquesta activitat.');
+      }
+
+      // Input changes
+      el.addEventListener('input', () => {
+        state[stateField] = el.value;
+        saveState();
+        if (printEl) {
+          printEl.innerText = el.value || (id.includes('student') ? '-' : 'L\'estudiant no ha escrit cap resposta per a aquesta activitat.');
+        }
+      });
+    }
+
+    // 4. IMAGE UPLOAD & PREVIEW LOGIC
+    function setupUploadZone(zoneId, inputId, previewContainerId, previewImgId, deleteBtnId, printImgId, printPlaceholderId, fieldName) {
+      const zone = document.getElementById(zoneId);
+      const input = document.getElementById(inputId);
+      const previewContainer = document.getElementById(previewContainerId);
+      const previewImg = document.getElementById(previewImgId);
+      const deleteBtn = document.getElementById(deleteBtnId);
+      const printImg = document.getElementById(printImgId);
+      const printPlaceholder = document.getElementById(printPlaceholderId);
+
+      // Click to trigger upload
+      zone.addEventListener('click', () => input.click());
+
+      // Drag and Drop listeners
+      zone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        zone.classList.add('border-teal-500', 'bg-teal-50/20');
+      });
+
+      zone.addEventListener('dragleave', () => {
+        zone.classList.remove('border-teal-500', 'bg-teal-50/20');
+      });
+
+      zone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        zone.classList.remove('border-teal-500', 'bg-teal-50/20');
+        const file = e.dataTransfer.files?.[0];
+        processImage(file);
+      });
+
+      // File input listener
+      input.addEventListener('change', (e) => {
+        const file = e.target.files?.[0];
+        processImage(file);
+      });
+
+      // Delete listener
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state[fieldName] = null;
+        input.value = "";
+        saveState();
+        renderImageState();
+      });
+
+      function processImage(file) {
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+          alert("Si us plau, puja un fitxer d'imatge vàlid.");
+          return;
+        }
+        if (file.size > 4 * 1024 * 1024) {
+          alert("La imatge és massa gran. El límit és de 4MB.");
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          state[fieldName] = event.target.result;
+          saveState();
+          renderImageState();
+        };
+        reader.readAsDataURL(file);
+      }
+
+      // Initial / updated image rendering
+      function renderImageState() {
+        const dataUrl = state[fieldName];
+        if (dataUrl) {
+          zone.classList.add('hidden');
+          previewContainer.classList.remove('hidden');
+          previewImg.src = dataUrl;
+          
+          if (printImg) {
+            printImg.src = dataUrl;
+            printImg.classList.remove('hidden');
+          }
+          if (printPlaceholder) {
+            printPlaceholder.classList.add('hidden');
+          }
+        } else {
+          zone.classList.remove('hidden');
+          previewContainer.classList.add('hidden');
+          previewImg.src = "";
+          
+          if (printImg) {
+            printImg.src = "";
+            printImg.classList.add('hidden');
+          }
+          if (printPlaceholder) {
+            printPlaceholder.classList.remove('hidden');
+          }
+        }
+      }
+
+      // Call it once to set initial image if loaded from localStorage
+      renderImageState();
+    }
+
+    // 5. PRINT ACTION HANDLER
+    function handlePrint() {
+      // Sync names into print fallbacks explicitly
+      document.getElementById('print_studentName').innerText = state.studentName || '-';
+      document.getElementById('print_studentGroup').innerText = state.studentGroup || '-';
+      document.getElementById('print_studentDate').innerText = state.studentDate || '-';
+
+      try {
+        window.print();
+      } catch (e) {
+        // Open modal instruction warning if in sandbox
+        document.getElementById('helpModal').classList.remove('hidden');
+      }
+    }
+
+    function closeHelpModal() {
+      document.getElementById('helpModal').classList.add('hidden');
+    }
+
+    // 6. EXPORT ENTIRE WORK TO STANDALONE HTML FILE
+    function handleExportHTML() {
+      const nameStr = state.studentName || 'Sense_Nom';
+      const groupStr = state.studentGroup || 'Sense_Grup';
+      const dateStr = state.studentDate || 'Sense_Data';
+
+      const screenshot1HTML = state.q1Screenshot 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${state.q1Screenshot}" alt="Captura 1" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const screenshot2HTML = state.q2Screenshot 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${state.q2Screenshot}" alt="Captura 2" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const screenshot3HTML = state.q3Screenshot 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${state.q3Screenshot}" alt="Captura 3" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const standaloneHTML = `<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pràctica 3: Regulació Tot o Res (On-Off) amb histèresi</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    @media print {
+      @page {
+        size: A4;
+        margin: 20mm 15mm 20mm 15mm;
+      }
+      body {
+        background-color: white !important;
+        font-size: 11pt !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-card {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 20px !important;
+        border-radius: 8px !important;
+        margin-bottom: 24px !important;
+        background-color: #ffffff !important;
+      }
+      .page-break {
+        page-break-before: always !important;
+        break-before: page !important;
+      }
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-8 max-w-4xl mx-auto">
+  
+  <!-- Header del report lliurat -->
+  <div class="border-b-4 border-slate-900 pb-4 mb-8">
+    <div class="flex justify-between items-start">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-teal-600">Mesura i Regulació - Examen de Laboratori</span>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">Pràctica 3: Regulació Tot o Res (On-Off) amb histèresi</h1>
+        <p class="text-slate-500 text-xs mt-1">Comprendre el funcionament d'un termòstat i l'efecte de l'amplada de la histèresi (H) i la potència de l'actuador (U_max).</p>
+      </div>
+      <button onclick="window.print()" class="no-print bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-md transition-all">
+        Imprimir Report a PDF
+      </button>
+    </div>
+
+    <!-- Student Details Box -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 bg-slate-100 p-4 rounded-lg border border-slate-200">
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Nom i cognoms</span>
+        <span class="text-sm font-bold text-slate-900">${nameStr}</span>
+      </div>
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Grup de classe</span>
+        <span class="text-sm font-bold text-slate-900">${groupStr}</span>
+      </div>
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Data de lliurament</span>
+        <span class="text-sm font-bold text-slate-900">${dateStr}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activitat 1 -->
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Activitat 1: Control On-Off ideal (sense histèresi, H = 0.0 V)
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Configureu el sistema en Bucle Tancat amb Consigna r = 2.0 V, U_max = 5.0 V, i histèresi H = 0.0 V. Planta de 1r Ordre (K_p = 2.0, &tau;_1 = 3.0 s, inèrcies &tau;_2=&tau;_3=0, retard &theta;=0). Què s'observa en la senyal de control u(t) i en la sortida y(t)? Quina és la freqüència de commutació? Per què és inviable industrialment?
+    </p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">
+      ${state.q1 || 'L\'estudiant no ha escrit cap resposta per a aquesta activitat.'}
+    </div>
+    <div class="mt-4">
+      <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+      ${screenshot1HTML}
+    </div>
+  </div>
+
+  <!-- Activitat 2 -->
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Activitat 2: L'efecte de l'amplada de la histèresi (H)
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Amb els mateixos paràmetres de planta, mantingueu U_max = 5.0 V, i augmenteu la histèresi H a 0.2 V, 0.6 V, i 1.2 V. Com influeix l'amplada de la histèresi en l'amplitud de les oscil·lacions de la variable controlada (&Delta;y) i en la freqüència de commutació? Expliqueu el compromís de disseny.
+    </p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">
+      ${state.q2 || 'L\'estudiant no ha escrit cap resposta per a aquesta activitat.'}
+    </div>
+    <div class="mt-4">
+      <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+      ${screenshot2HTML}
+    </div>
+  </div>
+
+  <!-- Activitat 3 -->
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Activitat 3: L'efecte de la potència de l'actuador (U_max) i el retard d'inèrcia
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Configureu inèrcia secundària o retard (&tau;_2 = 1.0 s o &theta; = 1.0 s). Fixeu H = 0.4 V i r = 2.0 V. Compareu el funcionament amb U_max = 3.0 V i amb U_max = 8.0 V. Com influeix l'augment de potència en el sobre-escalfament (overshoot) per sobre de la histèresi? Expliqueu-ho físicament.
+    </p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">
+      ${state.q3 || 'L\'estudiant no ha escrit cap resposta per a aquesta activitat.'}
+    </div>
+    <div class="mt-4">
+      <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+      ${screenshot3HTML}
+    </div>
+  </div>
+
+  <!-- Conclusió final -->
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Conclusió de l'Aprenentatge i Proposta Industrial
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Resumiu els avantatges i inconvenients de la regulació On-Off amb histèresi comparada amb un control proporcional o PID. On s'aplica i quina és la vostra recomanació pràctica?
+    </p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[80px]">
+      ${state.qFinal || 'L\'estudiant no ha escrit cap conclusió.'}
+    </div>
+  </div>
+
+  <div class="mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-400 no-print">
+    <p>Material de lliurament pràctic oficial - IES Ebre. Generat amb l'AI Studio Simulator.</p>
+  </div>
+
+</body>
+</html>`;
+
+      const blob = new Blob([standaloneHTML], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Practica_3_OnOff_Histeresi_${nameStr.trim().replace(/\s+/g, '_')}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    // 7. INITIALIZE PAGE ON LOAD
+    window.addEventListener('DOMContentLoaded', () => {
+      // 1. Generate mathematically perfect SVGs
+      generateSVGs();
+
+      // 2. Set up input binds (sync values and live fallback print rendering)
+      setupInputBinding('studentName', 'studentName', 'print_studentName');
+      setupInputBinding('studentGroup', 'studentGroup', 'print_studentGroup');
+      setupInputBinding('studentDate', 'studentDate', 'print_studentDate');
+
+      setupInputBinding('q1', 'q1', 'q1_print_fallback');
+      setupInputBinding('q2', 'q2', 'q2_print_fallback');
+      setupInputBinding('q3', 'q3', 'q3_print_fallback');
+      setupInputBinding('qFinal', 'qFinal', 'qFinal_print_fallback');
+
+      // 3. Set up drag and drop / upload for screenshots
+      setupUploadZone('q1_upload_zone', 'q1_file_input', 'q1_preview_container', 'q1_preview_img', 'q1_delete_btn', 'q1_print_img', 'q1_no_img_placeholder', 'q1Screenshot');
+      setupUploadZone('q2_upload_zone', 'q2_file_input', 'q2_preview_container', 'q2_preview_img', 'q2_delete_btn', 'q2_print_img', 'q2_no_img_placeholder', 'q2Screenshot');
+      setupUploadZone('q3_upload_zone', 'q3_file_input', 'q3_preview_container', 'q3_preview_img', 'q3_delete_btn', 'q3_print_img', 'q3_no_img_placeholder', 'q3Screenshot');
+    });
+  </script>
 
 </body>
 </html>
