@@ -1,0 +1,8 @@
+{
+  "name": "Pràctica 4: Control Proporcional (P) pur i l'error permanent (offset)",
+  "description": "Una aplicació interactiva per analitzar les limitacions del control proporcional pur, l'error de règim permanent (offset), i l'efecte del guany del controlador.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

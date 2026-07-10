@@ -3,96 +3,86 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pràctica 2: L'efecte del temps mort o retard en els sistemes de control</title>
+  <title>Pràctica 4: Control Proporcional (P) pur i l'error permanent (offset)</title>
   
-  <!-- Preconnect to Google Fonts -->
+  <!-- Preconnect and Load Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Lucide Icons via CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+
   <style>
-    /* Premium CSS Print Media Rules for school report lliurament */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+
+    /* Print media styles */
     @media print {
       @page {
         size: A4;
-        margin: 15mm 15mm 15mm 15mm;
+        margin: 20mm 15mm 20mm 15mm;
       }
-      
       body {
         background-color: white !important;
-        color: #0f172a !important; /* slate-900 */
-        font-family: 'Inter', -apple-system, sans-serif !important;
-        font-size: 11.5pt !important;
-        line-height: 1.5 !important;
-        padding: 0 !important;
-        margin: 0 !important;
+        color: #0f172a !important;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 11pt !important;
       }
-
-      /* Hide interactive simulator, headers, sliders, scales, and buttons when printing */
-      .print\:hidden, 
-      header, 
-      footer, 
-      section.lg\:col-span-5, 
-      section.lg\:col-span-7, 
-      main, 
-      button, 
-      input[type="file"],
-      .no-print {
+      .no-print, header, footer, .tab-buttons, #tab-nav {
         display: none !important;
       }
-
-      /* Allow student report section to expand and print in full width */
-      section#studentReportSection,
-      section {
+      #guia-container {
+        display: none !important;
+      }
+      #informe-container {
+        display: block !important;
         width: 100% !important;
         max-width: 100% !important;
         padding: 0 !important;
         margin: 0 !important;
-        display: block !important;
       }
-
-      /* Avoid cards/activities splitting across pages in middle of a paragraph */
       .print-card {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
-        border: 1px solid #cbd5e1 !important; /* slate-300 */
+        border: 1px solid #cbd5e1 !important;
         padding: 24px !important;
         border-radius: 8px !important;
         margin-bottom: 24px !important;
         background-color: #ffffff !important;
       }
-
-      /* Title styling inside print report */
-      h2 {
-        font-size: 14pt !important;
-        font-weight: 800 !important;
-        color: #0f172a !important;
-        border-bottom: 2px solid #0f172a !important;
-        padding-bottom: 6px !important;
+      .page-break {
+        page-break-before: always !important;
+        break-before: page !important;
       }
-
-      h3 {
-        font-size: 11pt !important;
-        font-weight: 700 !important;
-        color: #1e293b !important;
-        margin-bottom: 8px !important;
-      }
-
-      p {
-        font-size: 9.5pt !important;
-        color: #334155 !important; /* slate-700 */
-        line-height: 1.5 !important;
-      }
-
-      /* Hide form textareas and display the print-only div with text content */
       textarea {
         display: none !important;
       }
-
       .print-textarea-fallback {
         display: block !important;
-        background-color: #f8fafc !important; /* slate-50 */
-        border-left: 4px solid #0d9488 !important; /* teal-600 */
+        background-color: #f8fafc !important;
+        border-left: 4px solid #0d9488 !important;
         border-top: 1px solid #cbd5e1 !important;
         border-right: 1px solid #cbd5e1 !important;
         border-bottom: 1px solid #cbd5e1 !important;
@@ -104,8 +94,6 @@
         min-height: 100px !important;
         line-height: 1.6 !important;
       }
-
-      /* Sizing images crisp on page */
       img {
         max-width: 100% !important;
         max-height: 240px !important;
@@ -115,21 +103,962 @@
         page-break-inside: avoid !important;
         break-inside: avoid !important;
       }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col">
 
-      /* Page break controls */
+  <!-- Header del document (No es mostra quan s'imprimeix) -->
+  <header class="bg-slate-900 text-white py-6 px-4 sm:px-8 border-b border-slate-800 no-print">
+    <div class="max-w-6xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-teal-400 bg-teal-950/80 px-2.5 py-0.5 rounded border border-teal-800">
+            Mòdul de Mesura i Regulació
+          </span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-blue-400 bg-blue-950/80 px-2.5 py-0.5 rounded border border-blue-800">
+            ARI / Robòtica
+          </span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1.5 flex items-center gap-2">
+          Pràctica 4: Control Proporcional (P) pur i l'error permanent (offset)
+        </h1>
+        <p class="text-slate-400 text-sm mt-1 font-medium">
+          Controlador proporcional continu — Estudi de la limitació de l'offset i de l'estabilitat del guany amb simulador extern
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2 w-full md:w-auto">
+        <button 
+          onclick="handlePrint()" 
+          class="flex-1 md:flex-none bg-teal-600 hover:bg-teal-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
+        >
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          Generar PDF / Imprimir
+        </button>
+        <button 
+          onclick="handleExportHTML()" 
+          class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
+          title="Descarrega el teu treball com a fitxer html llest per obrir i desar directament en PDF"
+        >
+          <i data-lucide="download" class="w-4 h-4"></i>
+          Desar lliurament (.html)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Pestanyes de navegació (No es mostren quan s'imprimeix) -->
+  <div id="tab-nav" class="bg-white border-b border-slate-200 no-print sticky top-0 z-10 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 sm:px-8">
+      <div class="flex gap-6">
+        <button
+          id="btn-tab-guia"
+          onclick="setActiveTab('guia')"
+          class="py-4 px-1 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer border-indigo-600 text-indigo-600"
+        >
+          <i data-lucide="book-open" class="w-4 h-4"></i>
+          1. Guia Didàctica i de Laboratori
+        </button>
+        <button
+          id="btn-tab-informe"
+          onclick="setActiveTab('informe')"
+          class="py-4 px-1 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer border-transparent text-slate-500 hover:text-slate-800"
+        >
+          <i data-lucide="file-text" class="w-4 h-4"></i>
+          2. El Teu Informe / Full de Treball
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contingut principal -->
+  <main class="max-w-6xl w-full mx-auto p-4 sm:p-8 flex-grow">
+    
+    <!-- Fitxa 1: Guia Didàctica (S'amaga quan estem a l'informe) -->
+    <div id="guia-container" class="space-y-8 block">
+      
+      <!-- Avís per a pràctica externa -->
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-5 text-amber-900 text-xs sm:text-sm leading-relaxed flex gap-3 shadow-sm animate-fade-in">
+        <i data-lucide="alert-circle" class="w-5 h-5 text-amber-600 shrink-0 mt-0.5"></i>
+        <div>
+          <p class="font-bold text-amber-950">Nota per a la pràctica externa:</p>
+          <p class="mt-1">
+            Aquesta aplicació s'ha configurat en <b>mode de lliurament amb simulador extern</b>. Realitzeu les proves i simulacions al vostre software de laboratori extern, feu les captures de pantalla corresponents per a cada activitat, i adjunteu-les al <b>Full de Treball</b> utilitzant l'editor d'informe. Un cop completat, podreu descarregar el vostre report oficial en PDF o HTML.
+          </p>
+        </div>
+      </div>
+
+      <!-- Secció 1: Enunciat -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 animate-fade-in">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">1</span>
+          Enunciat de l'activitat
+        </h2>
+        <div class="text-slate-700 leading-relaxed space-y-4 text-sm">
+          <p>
+            L'objectiu d'aquesta <b>Pràctica 4</b> és analitzar de forma científica i visual el comportament i les limitacions insalvables del <b>control proporcional pur (P pur)</b>.
+          </p>
+          <p>
+            Utilitzant el simulador del forn elèctric, configurarem un regulador continu PID amb acció integral desactivada (<span class="font-semibold text-teal-600">T_i = &infin;</span>) i acció derivada desactivada (<span class="font-semibold text-teal-600">T_d = 0 s</span>). Comprovarem com, per molt que incrementem el guany del regulador (<span class="font-semibold text-teal-600">K_p_c</span>), la variable de sortida (<span class="font-semibold text-teal-600">y</span>) <b>mai aconsegueix arribar realment al valor de consigna (Setpoint)</b>, estabilitzant-se sempre per sota i produint un <b>error permanent en règim permanent o offset</b>.
+          </p>
+        </div>
+      </div>
+
+      <!-- Secció 2: Fonaments teòrics -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">2</span>
+          Fonaments Teòrics del Control Proporcional
+        </h2>
+        <div class="space-y-6 text-slate-700 text-sm leading-relaxed">
+          <p>
+            El control proporcional és la forma de regulació contínua més senzilla. L'actuador no s'encén ni s'apaga bruscament com en el control On-Off, sinó que l'esforç de control és <b>directament proporcional a l'error instantani</b> de mesura:
+          </p>
+
+          <div class="bg-slate-950 text-slate-300 font-mono text-xs p-4 rounded border border-slate-800 space-y-1">
+            <div class="text-teal-400 font-bold">// Equació bàsica del regulador P pur</div>
+            <div>u(t) = K_p_c · e(t)</div>
+            <div class="mt-2 text-slate-500">// On:</div>
+            <div>• e(t) = r(t) - y(t)  (Error entre consigna r i sortida y)</div>
+            <div>• K_p_c : Guany proporcional del controlador</div>
+            <div>• u(t) : Senyal enviat a l'actuador (limitat físicament entre 0 i U_max)</div>
+          </div>
+
+          <!-- Implementació en JavaScript -->
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="text-teal-600">&bull;</span>
+              Implementació pràctica en JavaScript / Node.js
+            </h3>
+            <p class="text-slate-600 text-xs">
+              En un autòmat programable o microcontrolador real que suporti JavaScript (com ara microcontroladors compatibles amb Espruino, o sistemes de telecontrol IoT industrial basats en Node.js), l'algorisme de regulació P pur s'executa de forma cíclica sota un interval de mostreig fix (típicament mitjançant <span class="font-mono bg-slate-100 px-1 rounded">setInterval</span> o interrupcions de temporitzador):
+            </p>
+            <div class="bg-slate-950 text-slate-300 font-mono text-xs p-4 rounded border border-slate-800 space-y-2 overflow-x-auto leading-relaxed">
+              <div class="text-teal-400 font-bold">// Paràmetres constants de configuració</div>
+              <div><span class="text-purple-400">const</span> Kp_c = <span className="text-amber-400">2.0</span>;      <span class="text-slate-500">// Guany proporcional del controlador (Kp_c)</span></div>
+              <div><span class="text-purple-400">const</span> Setpoint = <span className="text-amber-400">2.0</span>;  <span class="text-slate-500">// Valor de consigna desitjat (r)</span></div>
+              <div><span class="text-purple-400">const</span> U_max = <span className="text-amber-400">5.0</span>;     <span class="text-slate-500">// Voltatge màxim de sortida a l'actuador</span></div>
+              <div class="pt-2 text-teal-400 font-bold">// Funció cíclica executada en cada període de mostreig</div>
+              <div><span class="text-purple-400">function</span> <span class="text-indigo-400">calcularAccioProporcional</span>(y_actual) {'{'}</div>
+              <div class="pl-4"><span class="text-slate-500">// 1. Càlcul de l'error del sistema</span></div>
+              <div class="pl-4"><span class="text-purple-400">const</span> error = Setpoint - y_actual;</div>
+              <div class="pl-4 mt-2"><span class="text-slate-500">// 2. Càlcul de l'esforç de control ideal</span></div>
+              <div class="pl-4"><span class="text-purple-400">const</span> u_ideal = Kp_c * error;</div>
+              <div class="pl-4 mt-2"><span class="text-slate-500">// 3. Saturació física (l'actuador no pot donar menys de 0V ni més de U_max)</span></div>
+              <div class="pl-4"><span class="text-purple-400">const</span> u_sat = Math.<span class="text-blue-400">max</span>(<span class="text-amber-400">0.0</span>, Math.<span class="text-blue-400">min</span>(U_max, u_ideal));</div>
+              <div class="pl-4 mt-2"><span class="text-purple-400">return</span> u_sat; <span class="text-slate-500">// Retorna la tensió real a aplicar (en Volts)</span></div>
+              <div>{'}'}</div>
+            </div>
+            <p class="text-slate-500 text-[11px] leading-relaxed">
+              Aquest codi mostra la senzillesa i, alhora, el motiu de l'<b>offset</b>: si la variable de procés <span class="font-mono text-slate-700 bg-slate-100 px-1 rounded">y_actual</span> arriba al <span class="font-mono text-slate-700 bg-slate-100 px-1 rounded">Setpoint</span>, l'error és <span class="font-mono text-slate-700 bg-slate-100 px-1 rounded">0</span>, el que dona una acció de control de <span class="font-mono text-slate-700 bg-slate-100 px-1 rounded">0V</span> que refredarà el sistema immediatament.
+            </p>
+          </div>
+
+          <!-- El perquè físic de l'offset -->
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="text-teal-600">&bull;</span>
+              La paradoxa de l'Error Permanent (Offset)
+            </h3>
+            <p class="text-slate-600 text-xs">
+              Per què la sortida mai arriba a la consigna? Analitzem-ho físicament en règim permanent (estacionari):
+            </p>
+            <ol class="list-decimal pl-5 text-xs space-y-2 text-slate-700 leading-normal">
+              <li>
+                Imagina que la temperatura (<span class="italic">y</span>) aconseguís igualar exactament la consigna (<span class="italic">r</span>). En aquest instant, l'error seria perfectament zero (<span class="font-mono bg-slate-100 px-1 rounded">e = 0</span>).
+              </li>
+              <li>
+                Si l'error és zero, el controlador proporcional calcula una sortida nul·la: <span class="font-mono bg-slate-100 px-1 rounded">u = K_p_c · 0 = 0 Volts</span>. L'escalfador s'apaga per complet!
+              </li>
+              <li>
+                Com que l'escalfador està completament apagat, el forn es refreda immediatament i la temperatura torna a caure per sota de la consigna.
+              </li>
+              <li>
+                Per tant, per mantener qualsevol temperatura superior a 0 V, l'escalfador necessita rebre una energia contínua (<span class="font-mono bg-slate-100 px-1 rounded">u &gt; 0</span>). I per a que el controlador proportional subministri aquesta tensió, <b>és matemàticament obligatori que existeixi un error permanent diferent de zero (e_offset &gt; 0)</b>.
+              </li>
+            </ol>
+          </div>
+
+          <!-- Dibuix SVG de l'Offset -->
+          <div class="bg-white p-4 rounded-lg border border-slate-200 flex flex-col items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Figura 1: Estabilització de la sortida amb error permanent (Offset)</span>
+            <svg class="w-full max-w-md h-44 bg-slate-50/40 rounded border border-slate-100" viewBox="0 0 360 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Gridlines -->
+              <path d="M 40 10 L 40 130 M 100 10 L 100 130 M 160 10 L 160 130 M 220 10 L 220 130 M 280 10 L 280 130 M 340 10 L 340 130" stroke="#f1f5f9" stroke-width="1" />
+              <path d="M 40 130 L 340 130 M 40 72 L 340 72 M 40 40 L 340 40 M 40 102 L 340 102" stroke="#f1f5f9" stroke-width="1" />
+
+              <!-- Axes -->
+              <path d="M 40 10 L 40 132 M 38 130 L 345 130" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" />
+              
+              <!-- Setpoint (r) - Green -->
+              <path d="M 40 72 L 340 72" stroke="#10b981" stroke-width="1.5" stroke-dasharray="3 3" />
+              <text x="45" y="66" fill="#10b981" font-size="8" font-weight="bold">Consigna r = 2.0 V</text>
+
+              <!-- Stabilized output level - Orange dashed -->
+              <path d="M 40 102 L 340 102" stroke="#f59e0b" stroke-width="1" stroke-dasharray="1 2" />
+              <text x="45" y="112" fill="#d97706" font-size="8" font-weight="medium">Sortida estacionària y_est = 1.33 V</text>
+
+              <!-- Offset bracket -->
+              <path d="M 330 72 L 330 102" stroke="#ef4444" stroke-width="1" />
+              <path d="M 327 72 L 333 72 M 327 102 L 333 102" stroke="#ef4444" stroke-width="1" />
+              <text x="215" y="91" fill="#ef4444" font-size="8" font-weight="bold">Error permanent o Offset</text>
+
+              <!-- Output Curve (amber) -->
+              <!-- Built from: M 40 130 L 40.0 130.0 L 42.5 130.0 L 45.0 130.0 ... -->
+              <path d="M 40 130 L 40.0 130.0 L 42.5 130.0 L 45.0 130.0 L 47.5 130.0 L 50.0 130.0 L 52.5 130.0 L 55.0 130.0 L 57.5 130.0 L 60.0 130.0 L 62.5 130.0 L 65.0 130.0 L 67.5 124.7 L 70.0 119.9 L 72.5 115.6 L 75.0 111.7 L 77.5 108.2 L 80.0 105.0 L 82.5 102.1 L 85.0 99.5 L 87.5 97.2 L 90.0 95.1 L 92.5 93.2 L 95.0 91.5 L 97.5 89.9 L 100.0 88.5 L 102.5 87.3 L 105.0 86.1 L 107.5 85.1 L 110.0 84.2 L 112.5 83.3 L 115.0 82.6 L 117.5 81.9 L 120.0 81.3 L 122.5 80.7 L 125.0 80.2 L 127.5 79.8 L 130.0 79.3 L 132.5 79.0 L 135.0 78.6 L 137.5 78.3 L 140.0 78.0 L 142.5 77.8 L 145.0 77.6 L 147.5 77.4 L 150.0 77.2 L 152.5 77.0 L 155.0 76.9 L 157.5 76.7 L 160.0 76.6 L 162.5 76.5 L 165.0 76.4 L 167.5 76.3 L 170.0 76.2 L 172.5 76.1 L 175.0 76.1 L 177.5 76.0 L 180.0 75.9 L 182.5 75.9 L 185.0 75.8 L 187.5 75.8 L 190.0 75.7 L 192.5 75.7 L 195.0 75.7 L 197.5 75.6 L 200.0 75.6 L 202.5 75.6 L 205.0 75.5 L 207.5 75.5 L 210.0 75.5 L 212.5 75.5 L 215.0 75.5 L 217.5 75.4 L 220.0 75.4 L 222.5 75.4 L 225.0 75.4 L 227.5 75.4 L 230.0 75.4 L 232.5 75.4 L 235.0 75.4 L 237.5 75.3 L 240.0 75.3 L 242.5 75.3 L 245.0 75.3 L 247.5 75.3 L 250.0 75.3 L 252.5 75.3 L 255.0 75.3 L 257.5 75.3 L 260.0 75.3 L 262.5 75.3 L 265.0 75.3 L 267.5 75.3 L 270.0 75.3 L 272.5 75.3 L 275.0 75.3 L 277.5 75.3 L 280.0 75.3 L 282.5 75.3 L 285.0 75.3 L 287.5 75.3 L 290.0 75.3 L 292.5 75.3 L 295.0 75.3 L 297.5 75.3 L 300.0 75.3 L 302.5 75.3 L 305.0 75.3 L 307.5 75.3 L 310.0 75.3 L 312.5 75.3 L 315.0 75.3 L 317.5 75.3 L 320.0 75.3 L 322.5 75.3 L 325.0 75.3 L 327.5 75.3 L 330.0 75.3 L 332.5 75.3 L 335.0 75.3 L 337.5 75.3 L 340.0 75.3" stroke="#f59e0b" stroke-width="2.5" fill="none" />
+              <text x="140" y="50" fill="#f59e0b" font-size="9" font-weight="bold">Sortida y(t)</text>
+            </svg>
+          </div>
+
+          <!-- Model matemàtic del guany de bucle tancat -->
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="text-teal-600">&bull;</span>
+              L'Efecte del Guany K_p_c sobre l'Offset
+            </h3>
+            <p class="text-xs">
+              Mitjançant l'àlgebra de blocs de control, sabem que la sortida final en règim estacionari per a una planta lineal és:
+            </p>
+            <div class="bg-slate-900 text-slate-300 font-mono text-center p-2.5 rounded text-xs border border-slate-800">
+              y_permanent = r · <span class="text-teal-400"> ( K_p_c · K_planta ) / ( 1 + K_p_c · K_planta )</span>
+            </div>
+            <p class="text-xs mt-1">
+              On l'error permanent o offset es calcula com:
+            </p>
+            <div class="bg-slate-900 text-slate-300 font-mono text-center p-2.5 rounded text-xs border border-slate-800">
+              e_offset = r / ( 1 + <span class="text-teal-400">K_p_c · K_planta</span> )
+            </div>
+            <p class="text-xs text-slate-500 leading-normal mt-1">
+              S'observa clarament que si augmentem el guany del controlador (<span class="font-semibold text-teal-600">K_p_c &uarr;</span>), el denominador creix i per tant l'error disminueix (<span class="font-semibold text-red-600">e_offset &darr;</span>). Tanmateix, mai arribarà a zero per a cap guany finit. A més, un guany massa gran fa augmentar l'oscil·lació o inestabilitat davant de retards de la planta.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secció 3: Passos per a la pràctica -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">3</span>
+          Guia de Treball Pas a Pas
+        </h2>
+        <div class="space-y-4 text-slate-700 text-sm leading-relaxed">
+          <div class="border-l-4 border-teal-500 pl-3 py-1 bg-teal-50/40 rounded-r">
+            <h3 class="font-bold text-slate-900">Pas 1: Control proporcional de guany baix</h3>
+            <p class="mt-1 text-slate-600 text-xs sm:text-sm">
+              Configureu la planta de primer ordre pura (<span class="font-mono bg-slate-100 px-1 rounded text-xs">K_p = 2.0, &tau;_1 = 3.0 s, inèrcies secundàries &tau;_2=&tau;_3=0, retard &theta;=0s</span>). Activeu el <b>Bucle Tancat</b> en mode <b>PID</b>, configureu la consigna <span class="font-mono bg-slate-100 px-1 rounded text-xs">r = 2.0 V</span>, integral desactivada (<span class="font-mono bg-slate-100 px-1 rounded text-xs">T_i = &infin;</span>) i derivat desactivat (<span class="font-mono bg-slate-100 px-1 rounded text-xs">T_d = 0 s</span>).
+              Ajusteu el guany del regulador a <span class="font-mono bg-slate-100 px-1 rounded text-xs">K_p_c = 1.0</span>. Apunteu el valor on s'estabilitza la sortida i verifiqueu que l'error és aproximadament d'uns 0.67 Volts.
+            </p>
+          </div>
+
+          <div class="border-l-4 border-teal-500 pl-3 py-1 bg-teal-50/40 rounded-r">
+            <h3 class="font-bold text-slate-900">Pas 2: Comprovar l'efecte de l'increment de guany</h3>
+            <p class="mt-1 text-slate-600 text-xs sm:text-sm">
+              Mantenint la configuració de primer ordre, augmenteu gradualment el guany <span class="font-semibold text-teal-600">K_p_c</span> a <span class="font-mono bg-slate-100 px-1 rounded text-xs">2.0</span>, <span class="font-mono bg-slate-100 px-1 rounded text-xs">5.0</span>, i <span class="font-mono bg-slate-100 px-1 rounded text-xs">10.0</span>. 
+              Mireu com disminueix la franja d'error (offset) al panell de rendiment. Arribarà mai a 0.000 V? Reflexioneu sobre per què el sistema es manté stable però mai arriba a consigna.
+            </p>
+          </div>
+
+          <div class="border-l-4 border-teal-500 pl-3 py-1 bg-teal-50/40 rounded-r">
+            <h3 class="font-bold text-slate-900">Pas 3: El perill dels guanys elevats amb retard o inèrcies</h3>
+            <p class="mt-1 text-slate-600 text-xs sm:text-sm">
+              Introduïu retard o inèrcies a la planta: poseu <span class="font-mono bg-slate-100 px-1 rounded text-xs">&tau;_2 = 1.0 s</span> o retard <span class="font-mono bg-slate-100 px-1 rounded text-xs">&theta; = 1.0 s</span>.
+              Deixeu consigna a <span class="font-mono bg-slate-100 px-1 rounded text-xs">r = 2.0 V</span> i activeu un guany alt, per exemple <span class="font-mono bg-slate-100 px-1 rounded text-xs">K_p_c = 8.0</span> o superior. Observeu que en lloc d'apropar-nos més a la consigna, la sortida comença a oscil·lar contínuament o fins i tot es torna completament inestable. Aquest és el límit físic del control P pur en presència de retards.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Fitxa 2: Informe Alumne / Full de Treball (S'amaga a la pantalla si estem a la Guia, però es mostra en impressió) -->
+    <div id="informe-container" class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200 hidden print:block">
+      
+      <!-- Capçalera del Report amb accions ràpides (No es mostra en impressió) -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b-2 border-slate-900 pb-4 mb-6 no-print">
+        <div>
+          <h2 class="text-xl font-extrabold text-slate-900 uppercase tracking-tight flex items-center gap-2">
+            <i data-lucide="file-text" class="w-5 h-5 text-indigo-600"></i>
+            Full de Treball i Lliurament de la Pràctica 4
+          </h2>
+          <p class="text-xs text-slate-500 mt-1 font-medium">
+            Responeu les preguntes del laboratori sobre el control proporcional i l'offset, adjunteu les captures corresponents, i descarregueu el report final (.html).
+          </p>
+        </div>
+        
+        <!-- Botons d'exportació -->
+        <div class="flex flex-wrap gap-2 w-full md:w-auto">
+          <button
+            onclick="handlePrint()"
+            class="flex-1 md:flex-initial bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            Imprimir / Desar PDF
+          </button>
+          <button
+            onclick="handleExportHTML()"
+            class="flex-1 md:flex-initial bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-all flex items-center justify-center gap-2 cursor-pointer"
+            title="Descarrega un document HTML complet que inclou les teves respostes i imatges"
+          >
+            <i data-lucide="download" class="w-4 h-4"></i>
+            Desar fitxer HTML
+          </button>
+        </div>
+      </div>
+
+      <!-- Dades d'identificació de l'alumne (Dins de la targeta d'impressió) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-slate-50 p-5 rounded-lg border border-slate-200">
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <i data-lucide="user" class="w-3.5 h-3.5 text-slate-400"></i>
+            Nom i Cognoms de l'alumne/a
+          </label>
+          <input
+            type="text"
+            id="studentName"
+            placeholder="Ex: Joan Garcia i Soler"
+            class="w-full p-2.5 border border-slate-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm bg-white text-slate-900"
+          />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <i data-lucide="users" class="w-3.5 h-3.5 text-slate-400"></i>
+            Grup de Classe
+          </label>
+          <input
+            type="text"
+            id="studentGroup"
+            placeholder="Ex: 2n Automàtica i Robòtica Industrial"
+            class="w-full p-2.5 border border-slate-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm bg-white text-slate-900"
+          />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>
+            Data del Treball
+          </label>
+          <input
+            type="date"
+            id="studentDate"
+            class="w-full p-2.5 border border-slate-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm bg-white text-slate-900"
+          />
+        </div>
+      </div>
+
+      <!-- Pregunta 1 -->
+      <div class="mb-8 border-b border-slate-100 pb-8 print-card">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 1</span>
+          Control Proporcional pur amb guany moderat (K_p_c = 1.0)
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Configureu la planta amb <span class="font-mono bg-slate-100 px-0.5 rounded">K_p = 2.0</span>, <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_1 = 3.0 s</span> (inèrcies secundàries <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_2 = &tau;_3 = 0 s</span>, retard <span class="font-mono bg-slate-100 px-0.5 rounded">&theta; = 0 s</span>). Seleccioneu el mode <b>PID Continu</b> amb consigna <span class="font-mono bg-slate-100 px-0.5 rounded">r = 2.0 V</span>, integral desactivada (<span class="font-mono bg-slate-100 px-0.5 rounded">T_i = &infin;</span>) i derivatiu desactivat (<span class="font-mono bg-slate-100 px-0.5 rounded">T_d = 0 s</span>). Ajusteu el guany del controlador a <span class="font-semibold text-indigo-600">K_p_c = 1.0</span>.
+          <br /><b>Responeu:</b> Què s'observa en la sortida <span class="font-mono bg-slate-100 px-0.5 rounded">y(t)</span> en règim permanent? Arriba mai a la consigna de 2.0V? Quin és exactament l'error permanent o offset que llegeixes al panell de rendiment? Expliqueu la raó física d'aquest fenomen d'acord amb els apunts teòrics.
+        </p>
+        <textarea
+          id="q1"
+          rows="5"
+          placeholder="Escriu aquí la teva resposta detallada, analitzant el valor estacionari de y(t) i per què un error zero desactivaria per complet l'esforç de control..."
+          class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed mb-4 text-slate-800 bg-white"
+        ></textarea>
+        <!-- Print fallback placeholder for textarea -->
+        <div id="print-fallback-q1" class="print-textarea-fallback hidden mb-4"></div>
+
+        <!-- Zona per pujar la captura 1 -->
+        <div class="space-y-2">
+          <label class="block text-[11px] font-bold text-slate-700">
+            Captura de pantalla d'aquesta simulació (Control P pur, K_p_c = 1.0):
+          </label>
+          
+          <div id="uploadBox1" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors no-print">
+            <i data-lucide="upload" class="w-6 h-6 text-slate-400"></i>
+            <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+            <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+            <input type="file" id="fileInput1" accept="image/*" class="hidden">
+          </div>
+
+          <div id="previewBox1" class="hidden relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center">
+            <img id="previewImage1" src="" alt="Captura Activitat 1" class="max-h-56 object-contain w-full">
+            <div class="absolute top-2 right-2 no-print">
+              <button
+                type="button"
+                onclick="removeImage('q1Screenshot')"
+                class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold"
+              >
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <span>Eliminar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pregunta 2 -->
+      <div class="mb-8 border-b border-slate-100 pb-8 print-card">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 2</span>
+          Augment del guany proporcional i l'efecte sobre l'offset
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Mantenint exactament els mateixos paràmetres de la planta de 1r ordre, augmenteu gradualment el guany proporcional del regulador <span class="font-semibold text-indigo-600">K_p_c</span> a <span class="font-mono bg-slate-100 px-0.5 rounded">2.0</span>, <span class="font-mono bg-slate-100 px-0.5 rounded">5.0</span>, i <span class="font-mono bg-slate-100 px-0.5 rounded">10.0</span>.
+          <br /><b>Responeu:</b> Què li passa a l'error permanent o offset a mesura que incrementem el guany? S'anul·la completament en algun moment? Amb quin guany s'aconsegueix estar més a prop del setpoint? D'acord amb la fórmula matemàtica <span class="font-semibold text-xs">e_offset = r / (1 + K_p_c · K_planta)</span>, quina conclusió en treieu de l'efecte del guany?
+        </p>
+        <textarea
+          id="q2"
+          rows="5"
+          placeholder="Anoteu els valors d'offset obtinguts per a cada un dels guanys, comenteu la relació hiperbòlica entre guany i offset, i argumenteu si s'arribarà mai al valor 0 V d'offset..."
+          class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed mb-4 text-slate-800 bg-white"
+        ></textarea>
+        <!-- Print fallback placeholder for textarea -->
+        <div id="print-fallback-q2" class="print-textarea-fallback hidden mb-4"></div>
+
+        <!-- Zona per pujar la captura 2 -->
+        <div class="space-y-2">
+          <label class="block text-[11px] font-bold text-slate-700">
+            Captura de pantalla d'aquesta simulació (Comportament de la sortida amb un guany molt alt K_p_c = 10.0):
+          </label>
+          
+          <div id="uploadBox2" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors no-print">
+            <i data-lucide="upload" class="w-6 h-6 text-slate-400"></i>
+            <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+            <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+            <input type="file" id="fileInput2" accept="image/*" class="hidden">
+          </div>
+
+          <div id="previewBox2" class="hidden relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center">
+            <img id="previewImage2" src="" alt="Captura Activitat 2" class="max-h-56 object-contain w-full">
+            <div class="absolute top-2 right-2 no-print">
+              <button
+                type="button"
+                onclick="removeImage('q2Screenshot')"
+                class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold"
+              >
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <span>Eliminar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pregunta 3 -->
+      <div class="mb-8 border-b border-slate-100 pb-8 print-card">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 3</span>
+          L'efecte de la inèrcia secundària i el retard temporal
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Configureu inèrcia secundària o retard a la planta posant <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_2 = 1.0 s</span> o retard <span class="font-mono bg-slate-100 px-0.5 rounded">&theta; = 1.0 s</span>. Deixeu la consigna a <span class="font-mono bg-slate-100 px-0.5 rounded">r = 2.0 V</span>. Comproveu la corba de resposta amb un guany moderat (<span class="font-semibold text-indigo-600">K_p_c = 2.0</span>) versus un guany molt elevat (<span class="font-semibold text-indigo-600">K_p_c = 8.0</span> o superior).
+          <br /><b>Responeu:</b> Què li passa a l'estabilitat i suavitat del sistema quan pugem excessivament el guany en presència de retard o inèrcies secundàries? Com s'observa en la gràfica? Expliqueu el perill físic i d'oscil·lacions en els sistemes industrials reals.
+        </p>
+        <textarea
+          id="q3"
+          rows="5"
+          placeholder="Descriviu l'aparició de sobrepassament (overshoot), oscil·lacions amortides o inestabilitat total (oscil·lació mantinguda) a causa del retard d'informació o inèrcia de la planta..."
+          class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed mb-4 text-slate-800 bg-white"
+        ></textarea>
+        <!-- Print fallback placeholder for textarea -->
+        <div id="print-fallback-q3" class="print-textarea-fallback hidden mb-4"></div>
+
+        <!-- Zona per pujar la captura 3 -->
+        <div class="space-y-2">
+          <label class="block text-[11px] font-bold text-slate-700">
+            Captura de pantalla d'aquesta simulació (Oscil·lació o inestabilitat degut a K_p_c alt + retard/inèrcia):
+          </label>
+          
+          <div id="uploadBox3" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors no-print">
+            <i data-lucide="upload" class="w-6 h-6 text-slate-400"></i>
+            <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+            <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+            <input type="file" id="fileInput3" accept="image/*" class="hidden">
+          </div>
+
+          <div id="previewBox3" class="hidden relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center">
+            <img id="previewImage3" src="" alt="Captura Activitat 3" class="max-h-56 object-contain w-full">
+            <div class="absolute top-2 right-2 no-print">
+              <button
+                type="button"
+                onclick="removeImage('q3Screenshot')"
+                class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold"
+              >
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <span>Eliminar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pregunta Final / Conclusió -->
+      <div class="print-card">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Conclusions</span>
+          Conclusió de l'Aprenentatge i Proposta d'Acció Integral
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Expliqueu per why el control proporcional pur és insuficient per a aplicacions de precisió on la sortida s'ha d'ajustar exactament a la consigna sense cap error permanent.
+          <br /><b>Investigació opcional:</b> Quina acció del controlador PID complet permet eliminar del tot aquest error permanent (offset) i com funciona breument? Proveu-ho activant el checkbox de l'acció integral al panell de controls i comenteu què passa amb l'error permanent.
+        </p>
+        <textarea
+          id="qFinal"
+          rows="4"
+          placeholder="Escriu aquí les teves conclusions de final de pràctica, argumentant el paper de l'acció integral (acumulació de l'error en el temps per forçar l'offset a zero) de forma professional..."
+          class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed text-slate-800 bg-white"
+        ></textarea>
+        <!-- Print fallback placeholder for textarea -->
+        <div id="print-fallback-qFinal" class="print-textarea-fallback hidden mb-4"></div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Peu de pàgina de l'aplicació (No es mostra quan s'imprimeix) -->
+  <footer class="bg-slate-900 text-slate-400 py-6 text-center text-xs mt-auto border-t border-slate-800 no-print">
+    <p>Material docent oficial per al mòdul de mesura i regulació - Cicle de Grau Superior d'Automatització i Robòtica Industrial (ARI).</p>
+    <p class="text-slate-500 mt-1">Dissenyat per a l'examen pràctic de les limitacions del control proporcional i l'offset estacionari.</p>
+  </footer>
+
+  <!-- MODAL DE DIÀLEG D'AJUDA (S'activa si el navegador bloqueja window.print des d'un iframe sandbox) -->
+  <div id="helpModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 relative animate-fade-in">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="p-2 bg-amber-100 text-amber-800 rounded-full shrink-0">
+          <i data-lucide="alert-circle" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Bloqueig d'entorn segur detectat</h3>
+          <p class="text-xs text-slate-500 mt-1">El navegador pot bloquejar la impressió directa perquè aquesta aplicació s'executa dins d'un entorn de proves segur (Sandbox de l'Iframe).</p>
+        </div>
+      </div>
+      
+      <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-xs text-slate-700 space-y-2 mb-5">
+        <p class="font-bold text-slate-900">Com pots desar el teu treball en format PDF perfecte?</p>
+        <ol class="list-decimal pl-4 space-y-1.5 leading-relaxed">
+          <li>Feu clic al botó blau: <b class="text-blue-600">"Desar lliurament (.html)"</b>.</li>
+          <li>Es descarregarà un únic fitxer HTML que inclou totes les teves respostes i les captures que hagis pujat.</li>
+          <li>Obriu aquest fitxer descarregat des del vostre ordinador a qualsevol pestanya del navegador (Chrome, Edge, Firefox, etc.).</li>
+          <li>Premeu <b class="font-mono bg-slate-200 px-1 py-0.5 rounded text-slate-800">Ctrl + P</b> (o Cmd + P a Mac) i seleccioneu <b>"Anomena com a PDF"</b> per desar un informe de pràctica perfecte.</li>
+        </ol>
+      </div>
+
+      <div class="flex justify-end gap-2.5">
+        <button 
+          onclick="handleExportHTML(); closeHelpModal();" 
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-colors cursor-pointer"
+        >
+          Desar fitxer ara
+        </button>
+        <button 
+          onclick="closeHelpModal()" 
+          class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+        >
+          Entesos, tancar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- LÒGICA JAVASCRIPT VANILLA -->
+  <script>
+    // 1. Estat de les respostes (answers)
+    const answers = {
+      studentName: '',
+      studentGroup: '',
+      studentDate: new Date().toISOString().split('T')[0],
+      q1: '',
+      q1Screenshot: null,
+      q2: '',
+      q2Screenshot: null,
+      q3: '',
+      q3Screenshot: null,
+      qFinal: ''
+    };
+
+    // 2. Active tab ('guia' | 'informe')
+    let activeTab = 'guia';
+
+    // 3. Inicialització de l'aplicació
+    window.addEventListener('DOMContentLoaded', () => {
+      // Intentar carregar estat de localStorage
+      loadFromLocalStorage();
+
+      // Inicialitzar valors del formulari
+      document.getElementById('studentName').value = answers.studentName;
+      document.getElementById('studentGroup').value = answers.studentGroup;
+      document.getElementById('studentDate').value = answers.studentDate;
+      document.getElementById('q1').value = answers.q1;
+      document.getElementById('q2').value = answers.q2;
+      document.getElementById('q3').value = answers.q3;
+      document.getElementById('qFinal').value = answers.qFinal;
+
+      // Actualitzar fallbacks d'impressió i visualitzacions de captures
+      updatePrintFallbacks();
+      updateImageUI('q1Screenshot');
+      updateImageUI('q2Screenshot');
+      updateImageUI('q3Screenshot');
+
+      // Binds d'esdeveniments per als text inputs
+      bindTextInput('studentName');
+      bindTextInput('studentGroup');
+      bindTextInput('studentDate');
+      bindTextInput('q1');
+      bindTextInput('q2');
+      bindTextInput('q3');
+      bindTextInput('qFinal');
+
+      // Inicialitzar l'estat d'arrossegar/pujar imatges
+      initDragAndDrop(1, 'q1Screenshot');
+      initDragAndDrop(2, 'q2Screenshot');
+      initDragAndDrop(3, 'q3Screenshot');
+
+      // Crear icones de Lucide per primera vegada
+      lucide.createIcons();
+    });
+
+    // Vincula els esdeveniments d'escriptura per auto-desar
+    function bindTextInput(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener('input', (e) => {
+        answers[id] = e.target.value;
+        saveToLocalStorage();
+        updatePrintFallbacks();
+      });
+    }
+
+    // Actualitza els div de text lliure que s'utilitzen per a la versió impresa (ja que les textareas s'amaguen)
+    function updatePrintFallbacks() {
+      ['q1', 'q2', 'q3', 'qFinal'].forEach(id => {
+        const fallback = document.getElementById('print-fallback-' + id);
+        if (fallback) {
+          fallback.textContent = answers[id] || "L'estudiant no ha escrit cap resposta per a aquesta activitat.";
+        }
+      });
+    }
+
+    // Gestió del LocalStorage
+    function saveToLocalStorage() {
+      try {
+        localStorage.setItem('practica4_answers', JSON.stringify(answers));
+      } catch (e) {
+        console.error('Error desant a localStorage', e);
+      }
+    }
+
+    function loadFromLocalStorage() {
+      try {
+        const data = localStorage.getItem('practica4_answers');
+        if (data) {
+          const parsed = JSON.parse(data);
+          Object.assign(answers, parsed);
+        }
+      } catch (e) {
+        console.error('Error carregant de localStorage', e);
+      }
+    }
+
+    // Pestanyes de navegació
+    function setActiveTab(tab) {
+      activeTab = tab;
+      const btnGuia = document.getElementById('btn-tab-guia');
+      const btnInforme = document.getElementById('btn-tab-informe');
+      const containerGuia = document.getElementById('guia-container');
+      const containerInforme = document.getElementById('informe-container');
+
+      if (tab === 'guia') {
+        containerGuia.classList.remove('hidden');
+        containerInforme.classList.add('hidden');
+        containerInforme.classList.remove('print:block'); // keep default print:block behavior
+
+        btnGuia.className = "py-4 px-1 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer border-indigo-600 text-indigo-600";
+        btnInforme.className = "py-4 px-1 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer border-transparent text-slate-500 hover:text-slate-800";
+      } else {
+        containerGuia.classList.add('hidden');
+        containerInforme.classList.remove('hidden');
+
+        btnGuia.className = "py-4 px-1 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer border-transparent text-slate-500 hover:text-slate-800";
+        btnInforme.className = "py-4 px-1 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer border-indigo-600 text-indigo-600";
+      }
+    }
+
+    // Inicialització de drag and drop i clicks a les caixes de pujar imatges
+    function initDragAndDrop(num, field) {
+      const uploadBox = document.getElementById('uploadBox' + num);
+      const fileInput = document.getElementById('fileInput' + num);
+
+      if (!uploadBox || !fileInput) return;
+
+      uploadBox.addEventListener('click', () => fileInput.click());
+
+      fileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        handleImageFile(file, field);
+      });
+
+      uploadBox.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadBox.classList.add('border-indigo-500', 'bg-indigo-50/20');
+      });
+
+      uploadBox.addEventListener('dragleave', () => {
+        uploadBox.classList.remove('border-indigo-500', 'bg-indigo-50/20');
+      });
+
+      uploadBox.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadBox.classList.remove('border-indigo-500', 'bg-indigo-50/20');
+        const file = e.dataTransfer.files[0];
+        handleImageFile(file, field);
+      });
+    }
+
+    // Processa la imatge a base64
+    function handleImageFile(file, field) {
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        alert("Si us plau, puja un fitxer d'imatge vàlid.");
+        return;
+      }
+
+      // Límit 4MB
+      if (file.size > 4 * 1024 * 1024) {
+        alert("La imatge és massa gran. El límit és de 4MB.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        answers[field] = e.target.result;
+        saveToLocalStorage();
+        updateImageUI(field);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Mostra/amaga elements de la UI d'imatges segons si existeixen
+    function updateImageUI(field) {
+      // field is 'q1Screenshot', 'q2Screenshot', 'q3Screenshot'
+      const num = field === 'q1Screenshot' ? 1 : field === 'q2Screenshot' ? 2 : 3;
+      const uploadBox = document.getElementById('uploadBox' + num);
+      const previewBox = document.getElementById('previewBox' + num);
+      const previewImage = document.getElementById('previewImage' + num);
+
+      if (answers[field]) {
+        uploadBox.classList.add('hidden');
+        previewBox.classList.remove('hidden');
+        previewImage.src = answers[field];
+      } else {
+        uploadBox.classList.remove('hidden');
+        previewBox.classList.add('hidden');
+        previewImage.src = '';
+      }
+    }
+
+    // Elimina la imatge desada
+    function removeImage(field) {
+      answers[field] = null;
+      saveToLocalStorage();
+      updateImageUI(field);
+    }
+
+    // Funció per a imprimir
+    function handlePrint() {
+      try {
+        window.print();
+      } catch (e) {
+        showHelpModal();
+      }
+    }
+
+    // Gestió del modal d'ajuda
+    function showHelpModal() {
+      document.getElementById('helpModal').classList.remove('hidden');
+    }
+
+    function closeHelpModal() {
+      document.getElementById('helpModal').classList.add('hidden');
+    }
+
+    // Generador i descarregador de fitxers HTML lliurables autònoms
+    function handleExportHTML() {
+      const nameStr = answers.studentName || 'Sense_Nom';
+      const groupStr = answers.studentGroup || 'Sense_Grup';
+      const dateStr = answers.studentDate || 'Sense_Data';
+
+      const screenshot1HTML = answers.q1Screenshot 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${answers.q1Screenshot}" alt="Captura 1" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const screenshot2HTML = answers.q2Screenshot 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${answers.q2Screenshot}" alt="Captura 2" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const screenshot3HTML = answers.q3Screenshot 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${answers.q3Screenshot}" alt="Captura 3" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const standaloneHTML = `\x3C!DOCTYPE html\x3E
+\x3Chtml lang="ca"\x3E
+\x3Chead\x3E
+  \x3Cmeta charset="UTF-8"\x3E
+  \x3Cmeta name="viewport" content="width=device-width, initial-scale=1.0"\x3E
+  \x3Ctitle\x3EPràctica 4: Control Proporcional (P) pur i l'error permanent (offset)\x3C/title\x3E
+  \x3Cscript src="https://cdn.tailwindcss.com"\x3E\x3C/script\x3E
+  \x3Cstyle\x3E
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    @media print {
+      @page {
+        size: A4;
+        margin: 20mm 15mm 20mm 15mm;
+      }
+      body {
+        background-color: white !important;
+        font-size: 11pt !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-card {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 20px !important;
+        border-radius: 8px !important;
+        margin-bottom: 24px !important;
+        background-color: #ffffff !important;
+      }
       .page-break {
         page-break-before: always !important;
         break-before: page !important;
       }
     }
-  </style>
-</head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
+  \x3C/style\x3E
+\x3C/head\x3E
+\x3Cbody class="p-4 sm:p-8 max-w-4xl mx-auto"\x3E
   
-  <!-- Mountpoint for React Vite app -->
-  <div id="root"></div>
+  \x3C!-- Header del report lliurat --\x3E
+  \x3Cdiv class="border-b-4 border-slate-900 pb-4 mb-8"\x3E
+    \x3Cdiv class="flex justify-between items-start"\x3E
+      \x3Cdiv\x3E
+        \x3Cspan class="text-xs font-bold uppercase tracking-wider text-teal-600"\x3EMesura i Regulació - Examen de Laboratori\x3C/span\x3E
+        \x3Ch1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1"\x3EPràctica 4: Control Proporcional (P) pur i l'error permanent (offset)\x3C/h1\x3E
+        \x3Cp class="text-slate-500 text-xs mt-1"\x3EAnalitzar les limitacions del control proporcional pur i el comportament de l'error permanent en règim estacionari (offset).\x3C/p\x3E
+      \x3C/div\x3E
+      \x3Cbutton onclick="window.print()" class="no-print bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-md transition-all"\x3E
+        Imprimir Report a PDF
+      \x3C/button\x3E
+    \x3C/div\x3E
 
-  <script type="module" src="/src/main.tsx"></script>
+    \x3C!-- Student Details Box --\x3E
+    \x3Cdiv class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 bg-slate-100 p-4 rounded-lg border border-slate-200"\x3E
+      \x3Cdiv\x3E
+        \x3Cspan class="block text-[10px] font-bold uppercase text-slate-500"\x3ENom i cognoms\x3C/span\x3E
+        \x3Cspan class="text-sm font-bold text-slate-900"\x3E\${escapeHTML(nameStr)}\x3C/span\x3E
+      \x3C/div\x3E
+      \x3Cdiv\x3E
+        \x3Cspan class="block text-[10px] font-bold uppercase text-slate-500"\x3EGrup de classe\x3C/span\x3E
+        \x3Cspan class="text-sm font-bold text-slate-900"\x3E\${escapeHTML(groupStr)}\x3C/span\x3E
+      \x3C/div\x3E
+      \x3Cdiv\x3E
+        \x3Cspan class="block text-[10px] font-bold uppercase text-slate-500"\x3EData de lliurament\x3C/span\x3E
+        \x3Cspan class="text-sm font-bold text-slate-900"\x3E\${escapeHTML(dateStr)}\x3C/span\x3E
+      \x3C/div\x3E
+    \x3C/div\x3E
+  \x3C/div\x3E
 
+  \x3C!-- Activitat 1 --\x3E
+  \x3Cdiv class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm"\x3E
+    \x3Ch2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3"\x3E
+      Activitat 1: Control Proporcional pur amb guany moderat (Kp_c = 1.0)
+    \x3C/h2\x3E
+    \x3Cp class="text-xs text-slate-600 mb-4 leading-relaxed"\x3E
+      \x3Cb\x3EEnunciat:\x3C/b\x3E Configureu la planta amb K_p = 2.0, &tau;_1 = 3.0 s (inèrcies secundàries &tau;_2 = &tau;_3 = 0 s, retard &theta; = 0 s). Seleccioneu el mode Bucle Tancat PID amb consigna r = 2.0 V, constant integral T_i = &infin; i temps derivatiu T_d = 0 s. Ajusteu el guany del controlador a K_p_c = 1.0. Què s'observa en la sortida y(t) en règim permanent? Arriba a la consigna? Quin és l'error permanent (offset) obtingut al panell de rendiment? Expliqueu la raó física d'aquest fenomen.
+    \x3C/p\x3E
+    \x3Cdiv class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600"\x3EResposta de l'estudiant:\x3C/div\x3E
+    \x3Cdiv class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]"\x3E\${escapeHTML(answers.q1) || 'L\\x27estudiant no ha escrit cap resposta per a aquesta activitat.'}\x3C/div\x3E
+    \x3Cdiv class="mt-4"\x3E
+      \x3Cspan class="text-[10px] font-bold text-slate-500 block"\x3EGràfica de simulació adjunta:\x3C/span\x3E
+      \${screenshot1HTML}
+    \x3C/div\x3E
+  \x3C/div\x3E
+
+  \x3C!-- Activitat 2 --\x3E
+  \x3Cdiv class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm page-break"\x3E
+    \x3Ch2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3"\x3E
+      Activitat 2: Augment del guany proporcional i l'efecte sobre l'offset
+    \x3C/h2\x3E
+    \x3Cp class="text-xs text-slate-600 mb-4 leading-relaxed"\x3E
+      \x3Cb\x3EEnunciat:\x3C/b\x3E Mantenint els mateixos paràmetres de la planta, augmenteu el guany proporcional del regulador K_p_c a 2.0, 5.0 i 10.0. Què li passa a l'error permanent (offset)? S'anul·la completament en algun moment? Com afecta un guany molt elevat a l'estabilitat i suavitat del sistema si s'introdueix un petit retard o inèrcia secundària?
+    \x3C/p\x3E
+    \x3Cdiv class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600"\x3EResposta de l'estudiant:\x3C/div\x3E
+    \x3Cdiv class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]"\x3E\${escapeHTML(answers.q2) || 'L\\x27estudiant no ha escrit cap resposta per a aquesta activitat.'}\x3C/div\x3E
+    \x3Cdiv class="mt-4"\x3E
+      \x3Cspan class="text-[10px] font-bold text-slate-500 block"\x3EGràfica de simulació adjunta:\x3C/span\x3E
+      \${screenshot2HTML}
+    \x3C/div\x3E
+  \x3C/div\x3E
+
+  \x3C!-- Activitat 3 --\x3E
+  \x3Cdiv class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm page-break"\x3E
+    \x3Ch2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3"\x3E
+      Activitat 3: L'efecte de la inèrcia secundària i el retard temporal
+    \x3C/h2\x3E
+    \x3Cp class="text-xs text-slate-600 mb-4 leading-relaxed"\x3E
+      \x3Cb\x3EEnunciat:\x3C/b\x3E Configureu inèrcia secundària o retard (&tau;_2 = 1.0 s o &theta; = 1.0 s). Amb r = 2.0 V, comproveu el comportament per a un guany moderat (K_p_c = 2.0) versus un guany molt elevat (K_p_c = 8.0 o superior). Què s'observa en la sortida quan pugem excessivament el guany en presència de retards o inèrcies? Comenteu sobre el risc d'inestabilitat i oscil·lacions.
+    \x3C/p\x3E
+    \x3Cdiv class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600"\x3EResposta de l'estudiant:\x3C/div\x3E
+    \x3Cdiv class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]"\x3E\${escapeHTML(answers.q3) || 'L\\x27estudiant no ha escrit cap resposta per a aquesta activitat.'}\x3C/div\x3E
+    \x3Cdiv class="mt-4"\x3E
+      \x3Cspan class="text-[10px] font-bold text-slate-500 block"\x3EGràfica de simulació adjunta:\x3C/span\x3E
+      \${screenshot3HTML}
+    \x3C/div\x3E
+  \x3C/div\x3E
+
+  \x3C!-- Conclusió final --\x3E
+  \x3Cdiv class="print-card bg-white p-6 rounded-xl border border-slate-200 shadow-sm page-break"\x3E
+    \x3Ch2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3"\x3E
+      Conclusió de l'Aprenentatge i Proposta d'Acció Integral
+    \x3C/h2\x3E
+    \x3Cp class="text-xs text-slate-600 mb-4 leading-relaxed"\x3E
+      \x3Cb\x3EEnunciat:\x3C/b\x3E Expliqueu per què el control proporcional pur és insuficient per a aplicacions de precisió on l'error s'ha d'anul·lar del tot. Quina acció del controlador PID s'hauria d'afegir per eliminar completament l'error permanent (offset) i com funciona breument?
+    \x3C/p\x3E
+    \x3Cdiv class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600"\x3EResposta de l'estudiant:\x3C/div\x3E
+    \x3Cdiv class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[80px]"\x3E\${escapeHTML(answers.qFinal) || 'L\\x27estudiant no ha escrit cap conclusió.'}\x3C/div\x3E
+  \x3C/div\x3E
+
+  \x3Cdiv class="mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-400 no-print"\x3E
+    \x3Cp\x3EMaterial de lliurament pràctic oficial - IES Ebre. Generat amb l'AI Studio Simulator.\x3C/p\x3E
+  \x3C/div\x3E
+
+\x3C/body\x3E
+\x3C/html\x3E`;
+
+      const blob = new Blob([standaloneHTML], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Practica_4_Proporcional_Offset_${nameStr.trim().replace(/\s+/g, '_')}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    // Helper per escapar HTML de forma segura
+    function escapeHTML(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+  </script>
 </body>
 </html>
