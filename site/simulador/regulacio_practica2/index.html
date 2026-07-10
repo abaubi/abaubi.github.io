@@ -5,10 +5,22 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Pràctica 2: L'efecte del temps mort o retard en els sistemes de control</title>
   
-  <!-- Preconnect to Google Fonts -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+          },
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons via CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
 
   <style>
     /* Premium CSS Print Media Rules for school report lliurament */
@@ -28,21 +40,19 @@
         margin: 0 !important;
       }
 
-      /* Hide interactive simulator, headers, sliders, scales, and buttons when printing */
-      .print\:hidden, 
+      /* Hide interactive simulator, headers, and buttons when printing */
       header, 
       footer, 
-      section.lg\:col-span-5, 
-      section.lg\:col-span-7, 
       main, 
       button, 
       input[type="file"],
-      .no-print {
+      .no-print,
+      .no-print-element {
         display: none !important;
       }
 
       /* Allow student report section to expand and print in full width */
-      section#studentReportSection,
+      #studentReportSection,
       section {
         width: 100% !important;
         max-width: 100% !important;
@@ -122,14 +132,875 @@
         break-before: page !important;
       }
     }
+
+    /* Fallback printing element initially hidden in browser screen mode */
+    .print-textarea-fallback {
+      display: none;
+    }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
-  
-  <!-- Mountpoint for React Vite app -->
-  <div id="root"></div>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col font-sans">
 
-  <script type="module" src="/src/main.tsx"></script>
+  <!-- Capçalera del document (No es mostra quan s'imprimeix) -->
+  <header class="bg-slate-900 text-white py-6 px-4 sm:px-8 border-b border-slate-800 no-print">
+    <div class="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-teal-400 bg-teal-950/80 px-2.5 py-0.5 rounded border border-teal-800">
+            Mòdul de Mesura i Regulació
+          </span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-blue-400 bg-blue-950/80 px-2.5 py-0.5 rounded border border-blue-800">
+            ARI / Robòtica
+          </span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1.5 flex items-center gap-2">
+          Pràctica 2: L'efecte del temps mort o retard (&theta;)
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">
+          Guia didàctica i full de lliurament per a simuladors de control externs (Matlab, Scilab, Octave, etc.)
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2 w-full md:w-auto shrink-0">
+        <button 
+          onclick="prepararIImprimir()" 
+          class="flex-1 md:flex-none bg-teal-600 hover:bg-teal-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
+        >
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          Generar PDF / Imprimir
+        </button>
+        <button 
+          onclick="exportarHTML()" 
+          class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
+          title="Descarrega el teu treball com a fitxer html llest per obrir i desar directament en PDF"
+        >
+          <i data-lucide="download" class="w-4 h-4"></i>
+          Desar lliurament (.html)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contingut principal en columna única -->
+  <main class="max-w-4xl w-full mx-auto p-4 sm:p-8 space-y-8 flex-grow no-print">
+    
+    <!-- Guia didàctica -->
+    <section class="space-y-8">
+      
+      <!-- Secció 1: Enunciat -->
+      <div id="sectionEnunciat" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">1</span>
+          Enunciat de l'activitat
+        </h2>
+        <div class="text-slate-700 leading-relaxed space-y-4 text-sm">
+          <p>
+            L'objectiu d'aquesta <b>Pràctica 2</b> és analitzar la influència d'un dels fenòmens més complexos i realistes de l'automatització industrial: el <b>temps mort o retard temporal</b> (representat com a <span class="font-semibold text-teal-600">&theta;</span> o <span class="font-semibold text-teal-600">L</span>).
+          </p>
+          <p>
+            Estudiarem com es comporta una planta en bucle obert i, sobretot, per quina raó el retard s'anomena el <b>major enemic de l'estabilitat</b> quan tanquem el bucle amb un regulador automàtic (com un termòstat o controlador PID). Aprendrem a compensar aquest efecte per evitar que les nostres màquines comencin a oscil·lar descontroladament.
+          </p>
+        </div>
+      </div>
+
+      <!-- Secció 2: Fonaments teòrics -->
+      <div id="sectionTeoria" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">2</span>
+          Conceptes Clau d'Enginyeria
+        </h2>
+        <div class="space-y-6 text-slate-700 text-sm leading-relaxed">
+          <p>
+            En un sistema industrial real, l'efecte de l'energia que apliquem a l'entrada no sempre es reflecteix a la sortida de manera immediata.
+          </p>
+
+          <!-- Bloc 1: Què és el Temps Mort -->
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="text-teal-600">&bull;</span>
+              Temps Mort o Retard de Transport (<span class="italic font-semibold">&theta;</span>)
+            </h3>
+            <p>
+              És el període de temps que transcorre des que fem una acció sobre l'entrada fins que el sensor comença a detectar <b>el més mínim canvi</b> a la sortida. Durant aquest temps, la sortida es manté absolutament plana a zero.
+            </p>
+            <div class="text-xs text-slate-600 bg-teal-50/50 p-2.5 rounded border border-teal-100 italic">
+              <strong>Exemple real:</strong> Imagina una canonada de transport de fluid calent. Si obres la vàlvula d'aigua calenta a l'inici d'un tub de 10 metres, l'aigua triga uns segons a viatjar per la canonada abans d'arribar al sensor de temperatura situat a l'extrem final. Aquest temps de viatge és un temps mort pur.
+            </div>
+          </div>
+
+          <!-- Dibuix SVG del Retard Temporal -->
+          <div class="bg-white p-4 rounded-lg border border-slate-200 flex flex-col items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Figura 1: Efecte del Temps Mort (&theta;) sobre la Resposta a l'Escaló</span>
+            <svg class="w-full max-w-md h-32 bg-slate-50/40 rounded border border-slate-100" viewBox="0 0 360 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Gridlines -->
+              <path d="M 40 10 L 40 100 M 100 10 L 100 100 M 160 10 L 160 100 M 220 10 L 220 100 M 280 10 L 280 100 M 340 10 L 340 100" stroke="#f1f5f9" stroke-width="1" />
+              <path d="M 40 100 L 340 100 M 40 60 L 340 60 M 40 20 L 340 20" stroke="#f1f5f9" stroke-width="1" />
+
+              <!-- Axes -->
+              <path d="M 40 10 L 40 102 M 38 100 L 345 100" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" />
+              
+              <!-- Step Input (Blue) -->
+              <path d="M 40 100 L 100 100 L 100 60 L 340 60" stroke="#3b82f6" stroke-width="1.5" stroke-dasharray="3 3" />
+              <text x="105" y="55" fill="#3b82f6" font-size="9" font-weight="bold">Entrada Escaló (u)</text>
+
+              <!-- Delayed Output Curve (Amber) -->
+              <path d="M 40 100 L 160 100 C 180 100, 200 70, 250 40 T 340 30" stroke="#f59e0b" stroke-width="2.5" />
+              <text x="210" y="25" fill="#f59e0b" font-size="9" font-weight="bold">Sortida de la Planta (y)</text>
+
+              <!-- Theta indicator -->
+              <path d="M 100 105 L 160 105" stroke="#0d9488" stroke-width="1.5" stroke-linecap="round" />
+              <path d="M 100 102 L 100 108 M 160 102 L 160 108" stroke="#0d9488" stroke-width="1.5" />
+              <text x="112" y="116" fill="#0d9488" font-size="10" font-weight="bold">Temps mort (&theta;)</text>
+              
+              <!-- Labels -->
+              <text x="94" y="94" fill="#64748b" font-size="8" font-family="monospace">t0 = 1s</text>
+              <text x="150" y="94" fill="#0d9488" font-size="8" font-family="monospace">t0 + &theta;</text>
+            </svg>
+          </div>
+
+          <!-- Bloc 2: Bucle Tancat i Inestabilitat -->
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="text-teal-600">&bull;</span>
+              Per què és l'enemic de la regulació?
+            </h3>
+            <p>
+              Cuando cerramos el bucle con realimentación (bucle cerrado), el controlador toma decisiones basadas en el error actual del sensor. Si hay un retraso temporal, el efecto del actuador llega tarde al sensor.
+            </p>
+            <p class="text-xs text-slate-600 mt-2">
+              Esto produce el siguiente efecto destructivo de la regulación:
+            </p>
+            <ul class="list-disc pl-4 text-xs space-y-1 text-slate-600">
+              <li>El controlador ve que el sistema está frío, así que aumenta la potencia de calefacción al máximo.</li>
+              <li>A causa del retraso, el calor tarda en llegar. El controlador, impaciente porque no ve cambios, mantiene la potencia al 100%.</li>
+              <li>Cuando el calor finalmente llega, el sistema tiene mucha más energía de la necesaria. La temperatura se dispara muy por sobre de la consigna.</li>
+              <li>Al ver que se ha pasado de largo, el controlador apaga la calefacción por completo.</li>
+              <li>Pero, una vez más, el sensor tarda en darse cuenta. Cuando empieza a enfriarse, ya se ha enfriado demasiado, y el ciclo se repite, creando <b>oscilaciones inestables</b>.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secció 3: Passos per a la pràctica -->
+      <div id="sectionPassos" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">3</span>
+          Guia de Treball Pas a Pas (amb Simulador Extern)
+        </h2>
+        <div class="space-y-4 text-slate-700 text-sm leading-relaxed">
+          <p class="text-xs text-slate-500 italic mb-2">
+            Nota: Per realitzar aquestes activitats heu d'utilitzar el vostre programari de simulació extern assignat (Matlab, Simulink, Scilab, Octave o similar) i introduir els paràmetres detallats a continuació per contestar les preguntes.
+          </p>
+
+          <div class="border-l-4 border-teal-500 pl-3 py-1 bg-teal-50/40 rounded-r">
+            <h3 class="font-bold text-slate-900">Pas 1: Mesurar l'efecte en Bucle Obert</h3>
+            <p class="mt-1 text-slate-600">
+              Configureu al vostre simulador extern una planta en <b>Bucle Obert</b> amb guany <span class="font-mono bg-slate-100 px-1 rounded">K_p = 2.0</span>, constant de temps <span className="font-mono bg-slate-100 px-1 rounded">&tau;_1 = 3.0 s</span>, i constants <span class="font-mono bg-slate-100 px-1 rounded">&tau;_2 = 0s</span> i <span class="font-mono bg-slate-100 px-1 rounded">&tau;_3 = 0s</span>. Ajusteu l'escaló a amplitud <span class="font-mono bg-slate-100 px-1 rounded">A = 1.0</span> al segon <span class="font-mono bg-slate-100 px-1 rounded">t = 1.0 s</span>.
+              Canvieu el retard <span class="font-semibold text-teal-600">&theta;</span> de 0 s a 1.5 s, 3.0 s i 5.0 s. Observeu com es desplaça la corba i adjunteu la captura corresponent al full de sota.
+            </p>
+          </div>
+
+          <div class="border-l-4 border-teal-500 pl-3 py-1 bg-teal-50/40 rounded-r">
+            <h3 class="font-bold text-slate-900">Pas 2: Observar la inestabilitat en Bucle Tancat</h3>
+            <p class="mt-1 text-slate-600">
+              Configureu al vostre simulador extern un model en <b>Bucle Tancat</b>. Definiu una consigna (Setpoint) de <span class="font-mono bg-slate-100 px-1 rounded">2.0</span>. Configureu la planta amb <span class="font-mono bg-slate-100 px-1 rounded">K_p = 1.5</span>, <span class="font-mono bg-slate-100 px-1 rounded">&tau;_1 = 2.0 s</span>, <span class="font-mono bg-slate-100 px-1 rounded">&tau;_2 = 1.0 s</span>.
+              Configureu un controlador proporcional-integral (PI) amb guany <span class="font-mono bg-slate-100 px-1 rounded">K_c = 2.0</span> i <span class="font-mono bg-slate-100 px-1 rounded">T_i = 4.0 s</span>.
+              Simuleu i compareu primer amb <span class="font-semibold text-teal-600">&theta; = 0.0 s</span>, després pugeu el retard a <span class="font-mono bg-slate-100 px-1 rounded">1.5 s</span> i finalment a <span class="font-mono bg-slate-100 px-1 rounded">3.0 s</span>. Analitzeu l'origen de l'oscil·lació salvatge.
+            </p>
+          </div>
+
+          <div class="border-l-4 border-teal-500 pl-3 py-1 bg-teal-50/40 rounded-r">
+            <h3 class="font-bold text-slate-900">Pas 3: Estabilitzar el sistema sota retard</h3>
+            <p class="mt-1 text-slate-600">
+              Manteniu el retard <span class="font-semibold text-teal-600">&theta; = 2.5 s</span> on el sistema és inestable. Modifiqueu el controlador PI fent-lo més lent per atenuar la inestabilitat: reduïu el guany <span class="font-mono bg-slate-100 px-1 rounded">K_c</span> a <span class="font-mono bg-slate-100 px-1 rounded">0.5</span> i augmenteu el temps integral <span class="font-mono bg-slate-100 px-1 rounded">T_i</span> a <span class="font-mono bg-slate-100 px-1 rounded">8.0 s</span>. Observeu el canvi en l'estabilitat i la pèrdua de velocitat.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- SECCIÓ DE L'INFORME DE L'ALUMNE (Full de treball editable) -->
+    <section id="studentReportSection" class="pt-4">
+      <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200">
+        
+        <!-- Capçalera del Report amb accions ràpides -->
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b-2 border-slate-900 pb-4 mb-6">
+          <div>
+            <h2 class="text-xl font-extrabold text-slate-900 uppercase tracking-tight flex items-center gap-2">
+              <i data-lucide="file-text" class="w-5 h-5 text-teal-600"></i>
+              Full de Treball i Lliurament de la Pràctica
+            </h2>
+            <p class="text-xs text-slate-500 mt-1">
+              Responeu les preguntes i pugeu les captures de les vostres simulacions externes. Un cop acabat, descarregueu el document HTML o imprimiu-lo en PDF.
+            </p>
+          </div>
+          
+          <!-- Botons d'exportació -->
+          <div class="flex flex-wrap gap-2 w-full md:w-auto">
+            <button
+              onclick="prepararIImprimir()"
+              class="flex-1 md:flex-initial bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <i data-lucide="printer" class="w-4 h-4"></i>
+              Imprimir / Desar PDF
+            </button>
+            <button
+              onclick="exportarHTML()"
+              class="flex-1 md:flex-initial bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-all flex items-center justify-center gap-2 cursor-pointer"
+              title="Descarrega un document HTML complet que inclou les teves respostes i imatges"
+            >
+              <i data-lucide="download" class="w-4 h-4"></i>
+              Desar fitxer HTML
+            </button>
+          </div>
+        </div>
+
+        <!-- Dades d'identificació de l'alumne -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-slate-50 p-5 rounded-lg border border-slate-200">
+          <div>
+            <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+              <i data-lucide="user" class="w-3 h-3 text-slate-400"></i>
+              Nom i Cognoms de l'alumne/a
+            </label>
+            <input
+              type="text"
+              id="studentName"
+              placeholder="Ex: Joan Garcia i Soler"
+              oninput="syncFallbackText('studentName', 'print-studentName')"
+              class="w-full p-2.5 border border-slate-300 rounded focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none text-sm bg-white"
+            />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+              <i data-lucide="users" class="w-3 h-3 text-slate-400"></i>
+              Grup de Classe
+            </label>
+            <input
+              type="text"
+              id="studentGroup"
+              placeholder="Ex: 2n Automàtica i Robòtica Industrial"
+              oninput="syncFallbackText('studentGroup', 'print-studentGroup')"
+              class="w-full p-2.5 border border-slate-300 rounded focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none text-sm bg-white"
+            />
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+              <i data-lucide="calendar" class="w-3 h-3 text-slate-400"></i>
+              Data del Treball
+            </label>
+            <input
+              type="date"
+              id="studentDate"
+              oninput="syncFallbackText('studentDate', 'print-studentDate')"
+              class="w-full p-2.5 border border-slate-300 rounded focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none text-sm bg-white"
+            />
+          </div>
+        </div>
+
+        <!-- Pregunta 1 -->
+        <div class="mb-8 border-b border-slate-100 pb-8 print-card">
+          <h3 class="text-sm font-bold text-slate-900 mb-1.5">
+            Activitat 1: Anàlisi del retard (&theta;) en Bucle Obert (Sistemes sense regulació)
+          </h3>
+          <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+            Configureu el sistema en <b>Bucle Obert</b> amb <span class="font-mono bg-slate-100 px-0.5 rounded">K_p = 2.0</span>, <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_1 = 3.0 s</span>, <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_2 = 0s</span>, <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_3 = 0s</span> i l'amplitud a <span class="font-mono bg-slate-100 px-0.5 rounded">A = 1.0</span>.
+            Proveu diferents valors de retard <span class="font-semibold text-teal-600">&theta;</span> (per exemple: 0 s, 1.5 s, 3.0 s i 5.0 s).
+            Expliqueu de forma raonada: Què li passa a la corba de resposta quan incrementem el retard? S'altera la velocitat de transició de la corba (pendent) o el seu valor final (voltatge estabilitzat)? Quina és la diferència física entre la constant de temps i el temps mort?
+          </p>
+          <textarea
+            id="q1"
+            rows="5"
+            oninput="syncFallbackText('q1', 'fallback-q1')"
+            placeholder="Escriu aquí les teves observacions, descripció física de les corbes i conceptes d'enginyeria de control..."
+            class="w-full p-3 border border-slate-300 rounded-lg focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none text-sm leading-relaxed mb-4"
+          ></textarea>
+          
+          <!-- Fallback div for printing the content of textarea -->
+          <div id="fallback-q1" class="print-textarea-fallback"></div>
+
+          <!-- Zona per pujar la captura 1 -->
+          <div class="space-y-2 no-print-element">
+            <label class="block text-[11px] font-bold text-slate-700">
+              Captura de pantalla d'aquesta simulació (1r Ordre amb Retard temporal):
+            </label>
+            
+            <div
+              id="drop-zone-q1"
+              onclick="document.getElementById('file-q1').click()"
+              class="border-2 border-dashed border-slate-300 hover:border-teal-500 hover:bg-teal-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <i data-lucide="upload" class="w-6 h-6 text-slate-400"></i>
+              <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+              <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+              <input
+                type="file"
+                id="file-q1"
+                accept="image/*"
+                onchange="handleImageFile(this, 'q1')"
+                class="hidden"
+              />
+            </div>
+
+            <!-- Preview Image Area -->
+            <div id="preview-container-q1" class="hidden relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center">
+              <img id="img-q1" src="" alt="Captura Activitat 1" class="max-h-56 object-contain w-full" />
+              <div class="absolute top-2 right-2">
+                <button
+                  type="button"
+                  onclick="removeImage('q1')"
+                  class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer"
+                >
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span>Eliminar imatge</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Print wrapper to display uploaded image in print mode -->
+          <div id="print-img-q1-wrapper" class="hidden print:block mt-4">
+            <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta (Activitat 1):</span>
+            <img id="print-img-q1" src="" alt="Captura 1" class="max-h-56 object-contain rounded border mt-2" />
+          </div>
+        </div>
+
+        <!-- Pregunta 2 -->
+        <div class="mb-8 border-b border-slate-100 pb-8 print-card">
+          <h3 class="text-sm font-bold text-slate-900 mb-1.5">
+            Activitat 2: Bucle Tancat i la Inestabilitat (Per què el retard és l'enemic de la regulació)
+          </h3>
+          <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+            Configureu el simulador en <b>Bucle Tancat</b> amb <span class="font-mono bg-slate-100 px-0.5 rounded">Setpoint = 2.0</span>. Definiu una planta amb <span class="font-mono bg-slate-100 px-0.5 rounded">K_p = 1.5</span>, <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_1 = 2.0 s</span>, <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_2 = 1.0 s</span> i <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_3 = 0 s</span>.
+            Configureu el regulador PI amb guany <span class="font-mono bg-slate-100 px-0.5 rounded">K_c = 2.0</span> i <span class="font-mono bg-slate-100 px-0.5 rounded">T_i = 4.0 s</span>.
+            Analitzeu la resposta en tres estats: primer sense retard (<span class="font-semibold text-teal-600">&theta; = 0.0 s</span>), després amb retard moderat (<span class="font-semibold text-teal-600">&theta; = 1.2 s</span>), i finalment amb gran retard (<span class="font-semibold text-teal-600">&theta; = 3.0 s</span>).
+            Responeu de manera detallada: Com afecta l'increment del retard a l'estabilitat del sistema en bucle tancat? Per què es produeixen aquestes fortes oscil·lacions tèrmiques o elèctriques? Com expliques físicament el concepte de "prendre decisions amb informació endarrerida"?
+          </p>
+          <textarea
+            id="q2"
+            rows="5"
+            oninput="syncFallbackText('q2', 'fallback-q2')"
+            placeholder="Escriu aquí el teu informe de comportament dinàmic, l'explicació de les oscil·lacions i l'efecte del retard..."
+            class="w-full p-3 border border-slate-300 rounded-lg focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none text-sm leading-relaxed mb-4"
+          ></textarea>
+          
+          <!-- Fallback div for printing -->
+          <div id="fallback-q2" class="print-textarea-fallback"></div>
+
+          <!-- Zona per pujar la captura 2 -->
+          <div class="space-y-2 no-print-element">
+            <label class="block text-[11px] font-bold text-slate-700">
+              Captura de pantalla d'aquesta simulació (Oscil·lació o inestabilitat en Bucle Tancat):
+            </label>
+            
+            <div
+              id="drop-zone-q2"
+              onclick="document.getElementById('file-q2').click()"
+              class="border-2 border-dashed border-slate-300 hover:border-teal-500 hover:bg-teal-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <i data-lucide="upload" class="w-6 h-6 text-slate-400"></i>
+              <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+              <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+              <input
+                type="file"
+                id="file-q2"
+                accept="image/*"
+                onchange="handleImageFile(this, 'q2')"
+                class="hidden"
+              />
+            </div>
+
+            <!-- Preview Image Area -->
+            <div id="preview-container-q2" class="hidden relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center">
+              <img id="img-q2" src="" alt="Captura Activitat 2" class="max-h-56 object-contain w-full" />
+              <div class="absolute top-2 right-2">
+                <button
+                  type="button"
+                  onclick="removeImage('q2')"
+                  class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer"
+                >
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span>Eliminar imatge</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Print wrapper to display uploaded image in print mode -->
+          <div id="print-img-q2-wrapper" class="hidden print:block mt-4">
+            <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta (Activitat 2):</span>
+            <img id="print-img-q2" src="" alt="Captura 2" class="max-h-56 object-contain rounded border mt-2" />
+          </div>
+        </div>
+
+        <!-- Pregunta 3 -->
+        <div class="mb-8 border-b border-slate-100 pb-8 print-card">
+          <h3 class="text-sm font-bold text-slate-900 mb-1.5">
+            Activitat 3: Càlcul analític i l'Estratègia de Sintonització Lenta
+          </h3>
+          <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+            <b>Part 1 (Càlcul Analític):</b> Imaginem una planta amb un guany <span class="font-mono bg-slate-100 px-0.5 rounded">K_p = 2.5</span>, una constant de temps <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_1 = 4.0 s</span>, i un retard o temps mort de <span class="font-mono bg-slate-100 px-0.5 rounded">&theta; = 2.0 s</span> en <b>bucle obert</b>. L'entrada és un escaló de voltatge d'amplitud <span class="font-mono bg-slate-100 px-0.5 rounded">A = 1.2 V</span> aplicat al segon <span class="font-mono bg-slate-100 px-0.5 rounded">t = 1.0 s</span> de la simulació.
+            A quin segon exacte de rellotge del simulador començarà a augmentar el voltatge de sortida de la planta? Quin serà el valor de voltatge final de la corba quan el condensador s'estabilitzi completament en el futur?
+            <br />
+            <b>Part 2 (Sintonització):</b> En bucle tancat amb el retard de <span class="font-semibold text-teal-600">&theta; = 2.0 s</span>, si el controlador oscil·la de manera perillosa amb <span class="font-mono bg-slate-100 px-0.5 rounded">K_c = 2.0</span> i <span class="font-mono bg-slate-100 px-0.5 rounded">T_i = 4.0 s</span>, proveu de baixar el guany a <span class="font-mono bg-slate-100 px-0.5 rounded">K_c = 0.4</span> i pujar el temps integral a <span class="font-mono bg-slate-100 px-0.5 rounded">T_i = 10.0 s</span>. Què s'observa ara? Es redueix l'oscil·lació? Quina contrapartida té aquesta acció sobre la velocitat general del sistema?
+          </p>
+          <textarea
+            id="q3"
+            rows="5"
+            oninput="syncFallbackText('q3', 'fallback-q3')"
+            placeholder="Calcula analíticament l'inici de la resposta i l'alçada final de la corba. Descriu com afecta la baixada de Kc i pujada de Ti en l'atenuació de les oscil·lacions..."
+            class="w-full p-3 border border-slate-300 rounded-lg focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none text-sm leading-relaxed mb-4"
+          ></textarea>
+          
+          <!-- Fallback div for printing -->
+          <div id="fallback-q3" class="print-textarea-fallback"></div>
+
+          <!-- Zona per pujar la captura 3 -->
+          <div class="space-y-2 no-print-element">
+            <label class="block text-[11px] font-bold text-slate-700">
+              Captura de pantalla d'aquesta simulació (Sintonització lenta i estable de la planta amb retard):
+            </label>
+            
+            <div
+              id="drop-zone-q3"
+              onclick="document.getElementById('file-q3').click()"
+              class="border-2 border-dashed border-slate-300 hover:border-teal-500 hover:bg-teal-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <i data-lucide="upload" class="w-6 h-6 text-slate-400"></i>
+              <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+              <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+              <input
+                type="file"
+                id="file-q3"
+                accept="image/*"
+                onchange="handleImageFile(this, 'q3')"
+                class="hidden"
+              />
+            </div>
+
+            <!-- Preview Image Area -->
+            <div id="preview-container-q3" class="hidden relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center">
+              <img id="img-q3" src="" alt="Captura Activitat 3" class="max-h-56 object-contain w-full" />
+              <div class="absolute top-2 right-2">
+                <button
+                  type="button"
+                  onclick="removeImage('q3')"
+                  class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer"
+                >
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span>Eliminar imatge</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Print wrapper to display uploaded image in print mode -->
+          <div id="print-img-q3-wrapper" class="hidden print:block mt-4">
+            <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta (Activitat 3):</span>
+            <img id="print-img-q3" src="" alt="Captura 3" class="max-h-56 object-contain rounded border mt-2" />
+          </div>
+        </div>
+
+        <!-- Conclusions Finals -->
+        <div class="pt-4 print-card">
+          <h3 class="text-sm font-bold text-slate-900 mb-1.5">
+            Conclusió de l'Aprenentatge
+          </h3>
+          <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+            Com a futur/a professional de l'automatització industrial, per què és de vital importància comprovar si un forn, caldera, tanc de nivell o motor té retard abans de procedir a programar el seu bucle PID? Quines dues grans estratègies faries servir per millorar el control d'un procés amb un retard de transport extremadament gran?
+          </p>
+          <textarea
+            id="qFinal"
+            rows="4"
+            oninput="syncFallbackText('qFinal', 'fallback-qFinal')"
+            placeholder="Escriu una síntesi clara amb idees claus i recomanacions d'instal·lació industrial..."
+            class="w-full p-3 border border-slate-300 rounded-lg focus:border-teal-500 focus:ring-1 focus:ring-teal-500 focus:outline-none text-sm leading-relaxed"
+          ></textarea>
+          
+          <!-- Fallback div for printing -->
+          <div id="fallback-qFinal" class="print-textarea-fallback"></div>
+        </div>
+
+        <!-- Nota informativa de lliurament -->
+        <div class="mt-6 flex items-start gap-2.5 bg-blue-50/50 rounded-lg p-4 border border-blue-100 text-xs text-blue-800 leading-relaxed no-print-element">
+          <i data-lucide="alert-circle" class="w-4 h-4 text-blue-600 shrink-0 mt-0.5"></i>
+          <div>
+            <p class="font-bold">Com es realitza el lliurament del document d'examen?</p>
+            <p class="mt-0.5">
+              Teniu dues opcions molt senzilles: podeu fer clic a <b class="text-teal-700">"Imprimir / Desar PDF"</b> per obtenir el document directament (si s'obre una finestra de diàleg normal), o bé utilitzar <b class="text-blue-700">"Desar fitxer HTML"</b> per guardar un document auto-contingut amb totes les captures inserides a l'interior, obrir-lo al vostre ordinador en un navegador normal i prémer <b class="font-mono bg-slate-200 px-0.5 rounded">Ctrl + P</b> per desar-lo com a PDF de manera idèntica.
+            </p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Peu de pàgina de l'aplicació (No es mostra quan s'imprimeix) -->
+  <footer class="bg-slate-900 text-slate-400 py-6 text-center text-xs mt-auto border-t border-slate-800 no-print font-sans">
+    <p>Material docent oficial per al mòdul de mesura i regulació - Cicle de Grau Superior d'Automatització i Robòtica Industrial (ARI).</p>
+    <p class="text-slate-500 mt-1">Dissenyat per al lliurament de l'examen pràctic de l'efecte del retard temporal (&theta;).</p>
+  </footer>
+
+  <!-- MODAL DE DIÀLEG D'AJUDA (S'activa si el navegador bloqueja window.print des d'un iframe sandbox) -->
+  <div id="helpModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 relative">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="p-2 bg-amber-100 text-amber-800 rounded-full shrink-0">
+          <i data-lucide="alert-circle" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Bloqueig d'entorn segur detectat</h3>
+          <p class="text-xs text-slate-500 mt-1">El navegador pot bloquejar la impressió directa perquè aquesta aplicació s'executa dins d'un entorn de proves segur (Sandbox de l'Iframe).</p>
+        </div>
+      </div>
+      
+      <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-xs text-slate-700 space-y-2 mb-5">
+        <p class="font-bold text-slate-900">Com pots desar el teu treball en format PDF perfecte?</p>
+        <ol class="list-decimal pl-4 space-y-1.5 leading-relaxed">
+          <li>Feu clic al botó blau: <b class="text-blue-600">"Desar lliurament (.html)"</b>.</li>
+          <li>Es descarregarà un únic fitxer HTML que inclou totes les teves respostes i les captures que hagis pujat.</li>
+          <li>Obriu aquest fitxer descarregat des del vostre ordinador a qualsevol pestanya del navegador (Chrome, Edge, Firefox, etc.).</li>
+          <li>Premeu <b class="font-mono bg-slate-200 px-1 py-0.5 rounded text-slate-800">Ctrl + P</b> (o Cmd + P a Mac) i seleccioneu <b>"Anomena com a PDF"</b> per desar un informe de pràctica perfecte.</li>
+        </ol>
+      </div>
+
+      <div class="flex justify-end gap-2.5">
+        <button 
+          onclick="exportarHTML(); closeHelpModal();" 
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-colors cursor-pointer"
+        >
+          Desar fitxer ara
+        </button>
+        <button 
+          onclick="closeHelpModal()" 
+          class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+        >
+          Entesos, tancar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPT DE LÒGICA VANILLA JS -->
+  <script>
+    // Global state object for uploaded base64 screenshots
+    const studentScreenshots = {
+      q1: null,
+      q2: null,
+      q3: null
+    };
+
+    // Initialize date input to today
+    document.addEventListener('DOMContentLoaded', () => {
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('studentDate').value = today;
+      
+      // Initialize Lucide icons
+      if (window.lucide) {
+        lucide.createIcons();
+      }
+
+      // Configure Drag & Drop on the zones
+      setupDragAndDrop('q1');
+      setupDragAndDrop('q2');
+      setupDragAndDrop('q3');
+    });
+
+    // Helper to synchronize text value into a printing fallback element
+    function syncFallbackText(inputId, fallbackId) {
+      const inputEl = document.getElementById(inputId);
+      const fallbackEl = document.getElementById(fallbackId);
+      if (inputEl && fallbackEl) {
+        fallbackEl.textContent = inputEl.value;
+      }
+    }
+
+    // Set up dragging actions on drop-zones
+    function setupDragAndDrop(fieldId) {
+      const dropZone = document.getElementById(`drop-zone-${fieldId}`);
+      
+      if (!dropZone) return;
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropZone.classList.add('border-teal-500', 'bg-teal-50/20');
+        }, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, (e) => {
+          e.preventDefault();
+          dropZone.classList.remove('border-teal-500', 'bg-teal-50/20');
+        }, false);
+      });
+
+      dropZone.addEventListener('drop', (e) => {
+        const file = e.dataTransfer.files[0];
+        if (file) {
+          processImageFile(file, fieldId);
+        }
+      }, false);
+    }
+
+    // Process image file selection
+    function handleImageFile(input, fieldId) {
+      const file = input.files[0];
+      if (file) {
+        processImageFile(file, fieldId);
+      }
+    }
+
+    // Convert file to Base64 and display inside preview elements
+    function processImageFile(file, fieldId) {
+      if (!file.type.startsWith('image/')) {
+        alert("Si us plau, puja un fitxer d'imatge vàlid.");
+        return;
+      }
+
+      // Max 4MB size restriction
+      if (file.size > 4 * 1024 * 1024) {
+        alert("La imatge és massa gran. El límit és de 4MB.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64Data = e.target.result;
+        studentScreenshots[fieldId] = base64Data;
+
+        // Show standard preview in screen UI
+        document.getElementById(`img-${fieldId}`).src = base64Data;
+        document.getElementById(`preview-container-${fieldId}`).classList.remove('hidden');
+        document.getElementById(`drop-zone-${fieldId}`).classList.add('hidden');
+
+        // Show inside print-media image wrapper
+        document.getElementById(`print-img-${fieldId}`).src = base64Data;
+        document.getElementById(`print-img-${fieldId}-wrapper`).classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Remove uploaded image reset state
+    function removeImage(fieldId) {
+      studentScreenshots[fieldId] = null;
+      document.getElementById(`img-${fieldId}`).src = "";
+      document.getElementById(`preview-container-${fieldId}`).classList.add('hidden');
+      document.getElementById(`drop-zone-${fieldId}`).classList.remove('hidden');
+
+      // Clear from printing wrapper too
+      document.getElementById(`print-img-${fieldId}`).src = "";
+      document.getElementById(`print-img-${fieldId}-wrapper`).classList.add('hidden');
+      
+      // Reset the file input element so it can be re-selected
+      const inputEl = document.getElementById(`file-${fieldId}`);
+      if (inputEl) {
+        inputEl.value = "";
+      }
+    }
+
+    // Try opening browser's printing service
+    function prepararIImprimir() {
+      // Synchronize all textarea/input data before triggering print
+      syncFallbackText('q1', 'fallback-q1');
+      syncFallbackText('q2', 'fallback-q2');
+      syncFallbackText('q3', 'fallback-q3');
+      syncFallbackText('qFinal', 'fallback-qFinal');
+
+      try {
+        window.print();
+      } catch (e) {
+        document.getElementById('helpModal').classList.remove('hidden');
+      }
+    }
+
+    function closeHelpModal() {
+      document.getElementById('helpModal').classList.add('hidden');
+    }
+
+    // Export a completely self-contained HTML file containing answers & embedded base64 screenshots
+    function exportarHTML() {
+      const nameVal = document.getElementById('studentName').value || 'Sense_Nom';
+      const groupVal = document.getElementById('studentGroup').value || 'Sense_Grup';
+      const dateVal = document.getElementById('studentDate').value || 'Sense_Data';
+
+      const q1Val = document.getElementById('q1').value;
+      const q2Val = document.getElementById('q2').value;
+      const q3Val = document.getElementById('q3').value;
+      const qFinalVal = document.getElementById('qFinal').value;
+
+      const screenshot1HTML = studentScreenshots.q1 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${studentScreenshots.q1}" alt="Captura 1" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const screenshot2HTML = studentScreenshots.q2 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${studentScreenshots.q2}" alt="Captura 2" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const screenshot3HTML = studentScreenshots.q3 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${studentScreenshots.q3}" alt="Captura 3" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const standaloneHTML = `<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pràctica 2: L'efecte del temps mort o retard en els sistemes de control</title>
+  \x3Cscript src="https://cdn.tailwindcss.com">\x3C/script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    @media print {
+      @page {
+        size: A4;
+        margin: 20mm 15mm 20mm 15mm;
+      }
+      body {
+        background-color: white !important;
+        font-size: 11pt !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-card {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 20px !important;
+        border-radius: 8px !important;
+        margin-bottom: 24px !important;
+        background-color: #ffffff !important;
+      }
+      .page-break {
+        page-break-before: always !important;
+        break-before: page !important;
+      }
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-8 max-w-4xl mx-auto">
+  
+  <!-- Header del report lliurat -->
+  <div class="border-b-4 border-slate-900 pb-4 mb-8">
+    <div class="flex justify-between items-start">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-teal-600">Mesura i Regulació - Examen de Laboratori</span>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">Pràctica 2: L'efecte del temps mort o retard (&theta;)</h1>
+        <p class="text-slate-500 text-xs mt-1">Estudi de la influència del retard de transport en el comportament de la planta i la seva estabilitat.</p>
+      </div>
+      <button onclick="window.print()" class="no-print bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-md transition-all">
+        Imprimir Report a PDF
+      </button>
+    </div>
+
+    <!-- Student Details Box -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 bg-slate-100 p-4 rounded-lg border border-slate-200">
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Nom i cognoms</span>
+        <span class="text-sm font-bold text-slate-900">${nameVal}</span>
+      </div>
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Grup de classe</span>
+        <span class="text-sm font-bold text-slate-900">${groupVal}</span>
+      </div>
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Data de lliurament</span>
+        <span class="text-sm font-bold text-slate-900">${dateVal}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activitat 1 -->
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Activitat 1: Anàlisi del retard (&theta;) en Bucle Obert (Sistemes sense regulació)
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Configureu el sistema en Bucle Obert amb K_p = 2.0, &tau;_1 = 3.0 s, l'amplitud a A = 1.0. Expliqueu com canvia la resposta al variar el retard d'energia (&theta;) a 0s, 1.5s, 3s i 5s.
+    </p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">
+      ${q1Val || 'L\'estudiant no ha escrit cap resposta per a aquesta activitat.'}
+    </div>
+    <div class="mt-4">
+      <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+      ${screenshot1HTML}
+    </div>
+  </div>
+
+  <!-- Activitat 2 -->
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Activitat 2: Bucle Tancat i la Inestabilitat (Per què el retard és l'enemic de la regulació)
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Configureu el simulador en Bucle Tancat amb Setpoint = 2.0, K_p = 1.5, &tau;_1 = 2.0 s, &tau;_2 = 1.0 s, K_c = 2.0, T_i = 4.0 s. Analitzeu la resposta amb retard &theta; = 0.0s, 1.2s, i 3.0s.
+    </p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">
+      ${q2Val || 'L\'estudiant no ha escrit cap resposta per a aquesta activitat.'}
+    </div>
+    <div class="mt-4">
+      <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+      ${screenshot2HTML}
+    </div>
+  </div>
+
+  <!-- Activitat 3 -->
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Activitat 3: Càlcul analític i l'Estratègia de Sintonització Lenta
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Per a K_p = 2.5, &tau;_1 = 4.0 s, &theta; = 2.0 s, A = 1.2 V aplicat a t = 1.0s, a quin segon comença a pujar el voltatge i quin és el valor final? A més, provar en bucle tancat reduint K_c a 0.4 i pujant T_i a 10s.
+    </p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">
+      ${q3Val || 'L\'estudiant no ha escrit cap resposta per a aquesta activitat.'}
+    </div>
+    <div class="mt-4">
+      <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+      ${screenshot3HTML}
+    </div>
+  </div>
+
+  <!-- Conclusió final -->
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Conclusió de l'Aprenentatge i Proposta Industrial
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Per què és important mesurar el retard abans de programar el PID? Quines dues grans recomanacions pràctiques donaries?
+    </p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[80px]">
+      ${qFinalVal || 'L\'estudiant no ha escrit cap conclusió.'}
+    </div>
+  </div>
+
+  <div class="mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-400 no-print">
+    <p>Material de lliurament pràctic oficial - IES Ebre. Generat amb l'AI Studio Simulator.</p>
+  </div>
+
+</body>
+</html>`;
+
+      const blob = new Blob([standaloneHTML], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Practica_2_Temps_Mort_${nameVal.trim().replace(/\s+/g, '_')}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  </script>
 
 </body>
 </html>

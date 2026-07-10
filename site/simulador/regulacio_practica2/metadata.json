@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Pràctica 1: Resposta temporal de la planta",
+  "description": "Un laboratori interactiu per estudiar la resposta temporal de la planta i l'efecte del temps mort o retard en bucle obert i bucle tancat (Pràctica 1 i Pràctica 2).",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
