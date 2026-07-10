@@ -3,15 +3,22 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pràctica 2: L'efecte del temps mort o retard en els sistemes de control</title>
+  <title>Pràctica 5: Regulació Proporcional-Integral (PI)</title>
   
-  <!-- Preconnect to Google Fonts -->
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Inter Google Font -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
   <style>
-    /* Premium CSS Print Media Rules for school report lliurament */
+    body {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    /* Premium CSS Print Media Rules */
     @media print {
       @page {
         size: A4;
@@ -20,20 +27,18 @@
       
       body {
         background-color: white !important;
-        color: #0f172a !important; /* slate-900 */
+        color: #0f172a !important;
         font-family: 'Inter', -apple-system, sans-serif !important;
-        font-size: 11.5pt !important;
+        font-size: 11pt !important;
         line-height: 1.5 !important;
         padding: 0 !important;
         margin: 0 !important;
       }
 
-      /* Hide interactive simulator, headers, sliders, scales, and buttons when printing */
+      /* Hide interactive headers, guides, and buttons when printing */
       .print\:hidden, 
       header, 
       footer, 
-      section.lg\:col-span-5, 
-      section.lg\:col-span-7, 
       main, 
       button, 
       input[type="file"],
@@ -55,7 +60,7 @@
       .print-card {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
-        border: 1px solid #cbd5e1 !important; /* slate-300 */
+        border: 1px solid #cbd5e1 !important;
         padding: 24px !important;
         border-radius: 8px !important;
         margin-bottom: 24px !important;
@@ -80,7 +85,7 @@
 
       p {
         font-size: 9.5pt !important;
-        color: #334155 !important; /* slate-700 */
+        color: #334155 !important;
         line-height: 1.5 !important;
       }
 
@@ -91,8 +96,8 @@
 
       .print-textarea-fallback {
         display: block !important;
-        background-color: #f8fafc !important; /* slate-50 */
-        border-left: 4px solid #0d9488 !important; /* teal-600 */
+        background-color: #f8fafc !important;
+        border-left: 4px solid #0d9488 !important;
         border-top: 1px solid #cbd5e1 !important;
         border-right: 1px solid #cbd5e1 !important;
         border-bottom: 1px solid #cbd5e1 !important;
@@ -105,7 +110,7 @@
         line-height: 1.6 !important;
       }
 
-      /* Sizing images crisp on page */
+      /* Sizing images on page */
       img {
         max-width: 100% !important;
         max-height: 240px !important;
@@ -124,12 +129,907 @@
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
-  
-  <!-- Mountpoint for React Vite app -->
-  <div id="root"></div>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
-  <script type="module" src="/src/main.tsx"></script>
+  <!-- Capçalera del document (No es mostra quan s'imprimeix, gestionat per CSS print) -->
+  <header class="bg-slate-900 text-white py-6 px-4 sm:px-8 border-b border-slate-800 print:hidden">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-teal-400 bg-teal-950/80 px-2.5 py-0.5 rounded border border-teal-800">
+            Mòdul de Mesura i Regulació
+          </span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-blue-400 bg-blue-950/80 px-2.5 py-0.5 rounded border border-blue-800">
+            ARI / Robòtica
+          </span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1.5 flex items-center gap-2">
+          Pràctica 5: Regulació Proporcional-Integral (PI)
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">
+          Controlador PI continu — Estudi de com l'acció integral elimina l'error permanent (offset)
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2 w-full md:w-auto">
+        <button id="btnHeaderPrint" class="flex-1 md:flex-none bg-teal-600 hover:bg-teal-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-14.326 0C3.768 7.44 3 8.375 3 9.456V15.75a2.25 2.25 0 0 0 2.25 2.25h1.091M9 9h6M9 12h6"></path></svg>
+          Generar PDF / Imprimir
+        </button>
+        <button id="btnHeaderExport" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer" title="Descarrega el teu treball com a fitxer html llest per obrir i desar directament en PDF">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"></path></svg>
+          Desar lliurament (.html)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contingut principal (Guia teòrica) -->
+  <main class="max-w-4xl w-full mx-auto p-4 sm:p-8 flex-grow print:hidden">
+    <div class="space-y-8">
+      <!-- Secció 1: Enunciat -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">1</span>
+          Enunciat de l'activitat
+        </h2>
+        <div class="text-slate-700 leading-relaxed space-y-4 text-sm">
+          <p>
+            L'objectiu d'aquesta <b>Pràctica 5</b> és estudiar el comportament i la gran utilitat de la <b>regulació Proporcional-Integral (PI)</b> continu per eliminar l'error permanent.
+          </p>
+          <p>
+            En la pràctica anterior vam constatar que un regulador proporcional pur (P pur) té la limitació física d'assegurar l'estabilitat però generant un error permanent (offset). En aquesta activitat introduirem progressivament l'<b>acció integral (<span class="font-semibold text-teal-600">T_i</span>)</b>. Observarem com la integració de l'error al llarg del temps força la variable del procés a convergir <b>exactament al valor desitjat (Setpoint)</b>, alhora que analitzarem com una acció integral massa agressiva (un valor de <span className="font-semibold text-teal-600">T_i</span> molt petit) provoca oscil·lacions i sobrepicos (overshoots) elevats.
+          </p>
+        </div>
+      </div>
+
+      <!-- Secció 2: Fonaments teòrics -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">2</span>
+          Fonaments Teòrics de la Regulació PI i l'Acció Integral
+        </h2>
+        <div class="space-y-6 text-slate-700 text-sm leading-relaxed">
+          <p>
+            El regulador PI combina el control proporcional (que reacciona instantàniament a l'error actual) amb l'acció integral, que acumula els errors passats en el temps:
+          </p>
+
+          <div class="bg-slate-950 text-slate-300 font-mono text-xs p-4 rounded border border-slate-800 space-y-1">
+            <div class="text-teal-400 font-bold">// Equació del regulador PI paral·lel o ideal</div>
+            <div>u(t) = K_p_c · e(t) + (K_p_c / T_i) · &int; e(&tau;) d&tau;</div>
+            <div class="mt-2 text-slate-500">// On:</div>
+            <div>• e(t) = r(t) - y(t)  (Error instantani)</div>
+            <div>• K_p_c : Guany proporcional del controlador</div>
+            <div>• T_i : Constant de temps integral (en segons)</div>
+            <div>• &int; e(&tau;) d&tau; : Integral acumulada de l'error des de t=0</div>
+          </div>
+
+          <!-- Implementació pràctica en programari (JS) -->
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="text-teal-600">&bull;</span>
+              Implementació de l'Algorisme PI en JavaScript (Codi)
+            </h3>
+            <p class="text-xs text-slate-600">
+              En sistemes encastats, autòmats (PLCs) o simulacions en temps real, l'equació contínua es discretitza mitjançant el mètode d'Euler. A continuació es mostra un exemple didàctic en JavaScript:
+            </p>
+            <div class="bg-slate-950 text-slate-300 font-mono text-xs p-4 rounded border border-slate-800 overflow-x-auto space-y-1">
+              <div class="text-teal-400 font-bold">// Variables globals que guarden l'estat històric del bucle</div>
+              <div>let <span class="text-indigo-400">integralError</span> = 0.0; <span class="text-slate-500">// Acumulador de l'error integral</span></div>
+              <div class="mt-2 text-teal-400 font-bold">// Funció executada periòdicament cada 'dt' segons</div>
+              <div>function <span class="text-yellow-400">calcularControlPI</span>(consigna, temperatura, Kpc, Ti, dt, uMax, integralActiva) {"{"}</div>
+              <div class="pl-4">const error = consigna - temperatura;</div>
+              <div class="pl-4 mt-1"><span class="text-slate-500">// 1. Acció Proporcional (P)</span></div>
+              <div class="pl-4">const pTerm = Kpc * error;</div>
+              <div class="pl-4 mt-1"><span class="text-slate-500">// 2. Acció Integral (I) - Suma d'Euler</span></div>
+              <div class="pl-4">if (integralActiva && Ti &gt; 0) {"{"}</div>
+              <div class="pl-8">integralError += error * dt;</div>
+              <div class="pl-4">{"}"} else {"{"}</div>
+              <div class="pl-8">integralError = 0.0;</div>
+              <div class="pl-4">{"}"}</div>
+              <div class="pl-4">const iTerm = (integralActiva && Ti &gt; 0) ? (Kpc / Ti) * integralError : 0.0;</div>
+              <div class="pl-4 mt-1"><span class="text-slate-500">// 3. Esforç ideal combinat</span></div>
+              <div class="pl-4">const uIdeal = pTerm + iTerm;</div>
+              <div class="pl-4 mt-1"><span class="text-slate-500">// 4. Limitació física (Saturació de l'actuador entre 0V i uMax)</span></div>
+              <div class="pl-4">const uSaturada = Math.max(0.0, Math.min(uMax, uIdeal));</div>
+              <div class="pl-4 mt-1"><span class="text-slate-500">// 5. Algorisme Anti-windup (Desaturació de la integral)</span></div>
+              <div class="pl-4">if (uIdeal !== uSaturada && integralActiva && Ti &gt; 0) {"{"}</div>
+              <div class="pl-8 text-slate-500">// Si s'ha saturat i l'error té el byte del mateix signe, desfem l'acumulació</div>
+              <div class="pl-8">if (Math.sign(error) === Math.sign(uIdeal)) {"{"}</div>
+              <div class="pl-12">integralError -= error * dt;</div>
+              <div class="pl-8">{"}"}</div>
+              <div class="pl-4">{"}"}</div>
+              <div class="pl-4 mt-1">return uSaturada;</div>
+              <div>{"}"}</div>
+            </div>
+          </div>
+
+          <!-- Com s'elimina l'offset -->
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="text-teal-600">&bull;</span>
+              Com s'elimina l'error permanent?
+            </h3>
+            <p class="text-slate-600 text-xs">
+              L'acció integral calcula l'àrea total sota la corba de l'error. Vegem com canvia la dinàmica del sistema:
+            </p>
+            <ol class="list-decimal pl-5 text-xs space-y-2 text-slate-700 leading-normal">
+              <li>
+                Mentre hi hagi una diferència entre la consigna i la temperatura (és a dir, <span class="font-mono bg-slate-100 px-1 rounded">e(t) &ne; 0</span>), l'acció integral anirà incrementant de manera progressiva l'esforç de control (<span class="font-mono bg-slate-100 px-1 rounded">u(t)</span>).
+              </li>
+              <li>
+                Fins i tot si l'error es fa molt petit, el terme integral acumulat reté el valor històric per continuar alimentant l'actuador (per exemple, mantenint un corrent mínim a l'escalfador del forn).
+              </li>
+              <li>
+                D'aquesta manera, a diferència de l'acció Proporcional, l'esforç de control <b>pot ser superior a zero (<span class="font-mono bg-slate-100 px-1 rounded">u &gt; 0</span>) encara que l'error s'anul·li del tot (<span class="font-mono bg-slate-100 px-1 rounded">e = 0</span>)</b>.
+              </li>
+              <li>
+                En règim permanent estacionari, la sortida s'ajustarà perfectament a la consigna: l'error permanent esdevé <b>zero (<span class="font-mono bg-slate-100 px-1 rounded">e_offset = 0.000 V</span>)</b>.
+              </li>
+            </ol>
+          </div>
+
+          <!-- Dibuix SVG de l'Acció PI -->
+          <div class="bg-white p-4 rounded-lg border border-slate-200 flex flex-col items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Figura 1: Resposta temporal PI amb sobrepico i convergència exacta</span>
+            <svg class="w-full max-w-md h-44 bg-slate-50/40 rounded border border-slate-100" viewBox="0 0 360 160" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Gridlines -->
+              <path d="M 40 10 L 40 130 M 90 10 L 90 130 M 140 10 L 140 130 M 190 10 L 190 130 M 240 10 L 240 130 M 290 10 L 290 130 M 340 10 L 340 130" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="1 4" />
+              <path d="M 40 130 L 340 130 M 40 106 L 340 106 M 40 82 L 340 82 M 40 58 L 340 58 M 40 34 L 340 34 M 40 10 L 340 10" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="1 4" />
+
+              <!-- Axes -->
+              <path d="M 40 10 L 40 132 M 38 130 L 345 130" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" />
+              
+              <!-- Y-Axis Labels -->
+              <text x="32" y="133" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="end">0V</text>
+              <text x="32" y="109" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="end">1V</text>
+              <text x="32" y="85" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="end">2V</text>
+              <text x="32" y="61" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="end">3V</text>
+              <text x="32" y="37" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="end">4V</text>
+              <text x="32" y="13" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="end">5V</text>
+
+              <!-- X-Axis Labels -->
+              <text x="40" y="142" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="middle">0s</text>
+              <text x="90" y="142" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="middle">2s</text>
+              <text x="140" y="142" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="middle">4s</text>
+              <text x="190" y="142" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="middle">6s</text>
+              <text x="240" y="142" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="middle">8s</text>
+              <text x="290" y="142" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="middle">10s</text>
+              <text x="340" y="142" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="middle">12s</text>
+
+              <!-- Setpoint (r) - Green -->
+              <path d="M 40 82 L 340 82" stroke="#10b981" stroke-width="1.5" stroke-dasharray="3 3" />
+              <text x="45" y="75" fill="#10b981" font-size="8" font-weight="extrabold">Consigna r = 2.0 V (Setpoint)</text>
+
+              <!-- Overshoot indicator -->
+              <path d="M 153 72 L 153 82" stroke="#ef4444" stroke-width="1.2" />
+              <path d="M 150 72 L 156 72 M 150 82 L 156 82" stroke="#ef4444" stroke-width="1.2" />
+              <text x="162" y="79" fill="#ef4444" font-size="8" font-weight="bold">Sobrepico (Overshoot)</text>
+
+              <!-- Output Curve (amber) -->
+              <path id="svgOutputCurve" stroke="#f59e0b" stroke-width="2.5" fill="none" d="M 40 130" />
+              <text x="210" y="112" fill="#f59e0b" font-size="8" font-weight="extrabold">Sortida y(t) exacta (Offset = 0.000 V)</text>
+            </svg>
+          </div>
+
+          <!-- Windup i Velocitat d'integració -->
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="text-teal-600">&bull;</span>
+              L'Efecte de T_i i el Risc de Saturation (Saturació i Windup)
+            </h3>
+            <p class="text-xs">
+              La constant de temps integral <span class="font-semibold text-teal-600">T_i</span> es troba al denominador de l'equació:
+            </p>
+            <div class="bg-slate-900 text-slate-300 font-mono text-center p-2.5 rounded text-xs border border-slate-800">
+              Acció Integral = <span class="text-teal-400">( K_p_c / T_i ) · &int; e(t) dt</span>
+            </div>
+            <ul class="list-disc pl-5 text-xs space-y-1 text-slate-600 leading-normal mt-2">
+              <li>
+                <b>T_i alt (&infin; o gran)</b>: L'acció integral és molt lenta i feble. L'offset s'elimina molt a poc a poc.
+              </li>
+              <li>
+                <b>T_i baix (petit)</b>: L'acció integral s'intensifica i acumula ràpidament. Això fa que el sistema sigui més ràpid, pero acumula massa empenta, provocant un <b>gran sobrepico (overshoot)</b> i un temps d'estabilització llarg amb oscil·lacions.
+              </li>
+              <li>
+                <b>Anti-windup actiu:</b> En el nostre simulador, per evitar que l'acumulador creixi indefinidament quan l'actuador es satura al seu límit físic (<span class="font-mono bg-slate-100 px-1 rounded">U_max</span>), s'ha integrat un algorisme de <b>desaturació condicional (Anti-windup)</b> que suspèn la integració quan l'actuador està saturat.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secció 3: Passos per a la pràctica -->
+      <div class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-teal-100 text-teal-800 text-xs font-bold">3</span>
+          Guia de Treball Pas a Pas
+        </h2>
+        <div class="space-y-4 text-slate-700 text-sm leading-relaxed">
+          <div class="border-l-4 border-teal-500 pl-3 py-1 bg-teal-50/40 rounded-r">
+            <h3 class="font-bold text-slate-900">Pas 1: Activació de l'Acció Integral i eliminació de l'offset</h3>
+            <p class="mt-1 text-slate-600">
+              Configureu la planta de primer ordre pura (<span class="font-mono bg-slate-100 px-1 rounded">K_p = 2.0, &tau;_1 = 3.0 s, inèrcies &tau;_2 = &tau;_3 = 0 s, retard &theta; = 0 s</span>). Activeu el <b>PID Continu</b>, amb consigna <span class="font-mono bg-slate-100 px-1 rounded">r = 2.0 V</span> i guany <span class="font-mono bg-slate-100 px-1 rounded">K_p_c = 1.0</span>.
+              <br />Inicialment amb <span class="font-mono bg-slate-100 px-1 rounded">T_i = &infin;</span>, observeu l'error d'uns 0.67 Volts. Després, <b>activeu l'acció Integral</b> i ajusteu <span class="font-mono bg-slate-100 px-1 rounded">T_i = 10.0 s</span>. Observeu com, amb molta suavitat, la corba taronja de la temperatura s'acosta i s'estabilitza <b>exactament sobre la consigna verda de 2.0 V</b>. Comproveu que l'offset de règim estacionari es redueix a <span class="font-bold text-green-600">0.000 V</span>.
+            </p>
+          </div>
+
+          <div class="border-l-4 border-teal-500 pl-3 py-1 bg-teal-50/40 rounded-r">
+            <h3 class="font-bold text-slate-900">Pas 2: Reducció de T_i i aparició del sobrepico (Overshoot)</h3>
+            <p class="mt-1 text-slate-600">
+              Amb la mateixa planta de primer ordre i mantenint el guany <span class="font-semibold text-indigo-600">K_p_c = 1.0</span>, aneu disminuint el valor de <span class="font-semibold text-teal-600">T_i</span>.
+              Proveu amb <span class="font-mono bg-slate-100 px-1 rounded">T_i = 5.0 s</span>, <span class="font-mono bg-slate-100 px-1 rounded">3.0 s</span>, i finalment <span class="font-mono bg-slate-100 px-1 rounded">1.5 s</span>.
+              Observeu que la pujada és més ràpida, però la temperatura es passa de llarg de la consigna abans d'estabilitzar-se. Consulteu el valor de <b>"Sobrepico Màxim"</b> al panell de rendiment i completeu la taula de dades de l'informe.
+            </p>
+          </div>
+
+          <div class="border-l-4 border-teal-500 pl-3 py-1 bg-teal-50/40 rounded-r">
+            <h3 class="font-bold text-slate-900">Pas 3: Combinació inèrcia/retard + acció integral forta</h3>
+            <p class="mt-1 text-slate-600">
+              Introduïu retard i inèrcies reals: poseu <span class="font-mono bg-slate-100 px-1 rounded">&tau;_2 = 1.0 s</span> i retard <span class="font-mono bg-slate-100 px-1 rounded">&theta; = 1.0 s</span>.
+              Deixeu <span class="font-mono bg-slate-100 px-1 rounded">K_p_c = 2.0</span> i activeu una acció integral molt forta posant <span class="font-mono bg-slate-100 px-1 rounded">T_i = 2.0 s</span>.
+              Observeu com la combinació de retards i una integració agressiva provoca grans oscil·lacions que triguen molt a esmorteir-se o que fins i tot fan que el sistema esdevingui completament inestable (oscil·lacions perpètues).
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- SECCIÓ DE L'INFORME DE L'ALUMNE (Edició en pantalla i completament visible per a impressió) -->
+  <section id="studentReportSection" class="max-w-4xl w-full mx-auto p-4 sm:p-8 pt-0 print:p-0 print:max-w-full">
+    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200">
+      
+      <!-- Capçalera del Report amb accions ràpides -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b-2 border-slate-900 pb-4 mb-6">
+        <div>
+          <h2 class="text-xl font-extrabold text-slate-900 uppercase tracking-tight flex items-center gap-2">
+            <svg class="w-5 h-5 text-indigo-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z"></path></svg>
+            Full de Treball i Lliurament de la Pràctica 5
+          </h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Responeu les preguntes del laboratori sobre l'acció integral, el sobrepico (overshoot) i els retards, adjunteu les captures corresponents, i descarregueu el report final (.html).
+          </p>
+        </div>
+        
+        <!-- Botons d'exportació -->
+        <div class="flex flex-wrap gap-2 w-full md:w-auto">
+          <button id="btnReportPrint" class="flex-1 md:flex-initial bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-all flex items-center justify-center gap-2 cursor-pointer">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-14.326 0C3.768 7.44 3 8.375 3 9.456V15.75a2.25 2.25 0 0 0 2.25 2.25h1.091M9 9h6M9 12h6"></path></svg>
+            Imprimir / Desar PDF
+          </button>
+          <button id="btnReportExport" class="flex-1 md:flex-initial bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-all flex items-center justify-center gap-2 cursor-pointer" title="Descarrega un document HTML complet que inclou les teves respostes i imatges">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"></path></svg>
+            Desar fitxer HTML
+          </button>
+        </div>
+      </div>
+
+      <!-- Dades d'identificació de l'alumne -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-slate-50 p-5 rounded-lg border border-slate-200">
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"></path></svg>
+            Nom i Cognoms de l'alumne/a
+          </label>
+          <input
+            id="studentName"
+            type="text"
+            placeholder="Ex: Joan Garcia i Soler"
+            class="w-full p-2.5 border border-slate-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm bg-white text-slate-900"
+          />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 0 0 3.741-.479 3 3 0 0 0-4.682-2.72m.94 3.198.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0 1 12 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 0 1 6 18.719m12 0a5.97 5.97 0 0 0-.941-3.197m0 0A5.995 5.995 0 0 0 12 12.75a5.995 5.995 0 0 0-5.058 2.772m0 0a3 3 0 0 0-4.681 2.72 8.986 8.986 0 0 0 3.74.477m.94-3.197a5.971 5.971 0 0 0-.94-3.197M15 6.75a3 3 0 1 1-6 0 3 3 0 0 1 6 0Zm6 3a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Zm-13.5 0a2.25 2.25 0 1 1-4.5 0 2.25 2.25 0 0 1 4.5 0Z"></path></svg>
+            Grup de Classe
+          </label>
+          <input
+            id="studentGroup"
+            type="text"
+            placeholder="Ex: 2n Automàtica i Robòtica Industrial"
+            class="w-full p-2.5 border border-slate-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm bg-white text-slate-900"
+          />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <svg class="w-3 h-3 text-slate-400" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5M9 10.5h.008v.008H9V10.5Zm0 3h.008v.008H9v-.008Zm0 3h.008v.008H9v-.008Zm3-6h.008v.008H12V10.5Zm0 3h.008v.008H12v-.008Zm0 3h.008v.008H12v-.008Zm3-6h.008v.008H15V10.5Zm0 3h.008v.008H15v-.008Zm0 3h.008v.008H15v-.008Z"></path></svg>
+            Data del Treball
+          </label>
+          <input
+            id="studentDate"
+            type="date"
+            class="w-full p-2.5 border border-slate-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm bg-white text-slate-900"
+          />
+        </div>
+      </div>
+
+      <!-- Pregunta 1 -->
+      <div class="mb-8 border-b border-slate-100 pb-8">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 1</span>
+          Activació de l'Acció Integral (Ti) i eliminació completa de l'offset
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Configureu la planta amb <span class="font-mono bg-slate-100 px-0.5 rounded">K_p = 2.0</span>, <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_1 = 3.0 s</span> (inèrcies secundàries <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_2 = &tau;_3 = 0 s</span>, retard <span class="font-mono bg-slate-100 px-0.5 rounded">&theta; = 0 s</span>). Seleccioneu el mode <b>PID Continu</b> amb consigna <span class="font-mono bg-slate-100 px-0.5 rounded">r = 2.0 V</span> i guany del controlador <span class="font-semibold text-indigo-600">K_p_c = 1.0</span>. Primer amb <span class="font-mono bg-slate-100 px-0.5 rounded">T_i = &infin;</span>, anoteu l'offset. A continuació, <b>activeu l'acció Integral amb T_i = 10.0 s</b>.
+          <br /><b>Responeu:</b> Descriviu el comportament temporal de la sortida <span class="font-mono bg-slate-100 px-0.5 rounded">y(t)</span>. Aconsegueix finalment igualar de forma exacta el valor de consigna de 2.0V? Quin error d'offset llegeixes ara al panell de rendiment? Expliqueu per què la integració matemàtica de l'error elimina l'offset permanent.
+        </p>
+        <textarea
+          id="q1"
+          rows="5"
+          placeholder="Escriu la teva resposta aquí, detallant el canvi en el valor final de y(t) i com l'acumulació de l'àrea d'error en el temps obliga el controlador a incrementar la sortida u(t) fins que l'error és perfectament nul..."
+          class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed mb-4 text-slate-800 bg-white"
+        ></textarea>
+
+        <!-- Zona per pujar la captura 1 -->
+        <div class="space-y-2">
+          <label class="block text-[11px] font-bold text-slate-700">
+            Captura de pantalla d'aquesta simulació (Eliminació de l'offset amb K_p_c = 1.0 i T_i = 10.0 s):
+          </label>
+          
+          <div id="q1UploadContainer" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors">
+            <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"></path></svg>
+            <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+            <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+          </div>
+          <input type="file" id="q1FileInput" accept="image/*" class="hidden" />
+          
+          <div id="q1PreviewContainer" class="relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center hidden">
+            <img id="q1ImagePreview" src="" alt="Captura Activitat 1" class="max-h-56 object-contain w-full" />
+            <div class="absolute top-2 right-2">
+              <button id="q1BtnRemove" type="button" class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"></path></svg>
+                <span>Eliminar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pregunta 2 -->
+      <div class="mb-8 border-b border-slate-100 pb-8">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 2</span>
+          Efecte de la reducció de Ti: rapidesa i aparició del sobrepico (Overshoot)
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Mantenint exactament els mateixos paràmetres de la planta de 1r ordre i <span class="font-semibold text-indigo-600">K_p_c = 1.0</span>, reduïu gradualment la constant de temps integral del regulador <span class="font-semibold text-teal-600">T_i</span> a <span class="font-mono bg-slate-100 px-0.5 rounded">5.0 s</span>, <span class="font-mono bg-slate-100 px-0.5 rounded">3.0 s</span>, i finalment <span class="font-mono bg-slate-100 px-0.5 rounded">1.5 s</span>.
+          <br /><b>Responeu:</b> Què li passa a la rapidesa de la resposta a mesura que reduïm el valor de <span class="italic">T_i</span>? Quin percentatge de sobrepico (Overshoot %) o excés s'observa al panell de rendiment per a cadascun dels valors? Expliqueu la relació que hi ha entre la força de la integració (denominador de l'acció integral) i l'acumulació excessiva d'esforç de control.
+        </p>
+        <textarea
+          id="q2"
+          rows="5"
+          placeholder="Anoteu els sobrepicos (%) obtinguts per a cada Ti (5s, 3s, 1.5s), comenteu el comportament més oscillatori del sistema i argumenteu per què un Ti massa petit provoca inestabilitat i inèrcia en la frenada..."
+          class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed mb-4 text-slate-800 bg-white"
+        ></textarea>
+
+        <!-- Zona per pujar la captura 2 -->
+        <div class="space-y-2">
+          <label class="block text-[11px] font-bold text-slate-700">
+            Captura de pantalla d'aquesta simulació (Resposta amb overshoot elevat per Ti = 1.5 s):
+          </label>
+          
+          <div id="q2UploadContainer" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors">
+            <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"></path></svg>
+            <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+            <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+          </div>
+          <input type="file" id="q2FileInput" accept="image/*" class="hidden" />
+          
+          <div id="q2PreviewContainer" class="relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center hidden">
+            <img id="q2ImagePreview" src="" alt="Captura Activitat 2" class="max-h-56 object-contain w-full" />
+            <div class="absolute top-2 right-2">
+              <button id="q2BtnRemove" type="button" class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"></path></svg>
+                <span>Eliminar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pregunta 3 -->
+      <div class="mb-8 border-b border-slate-100 pb-8">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 3</span>
+          El perill dels retards temporals combinats amb l'acció integral forta
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Configureu retard i inèrcies reals a la planta posant <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_2 = 1.0 s</span> i retard <span class="font-mono bg-slate-100 px-0.5 rounded">&theta; = 1.0 s</span>. Deixeu la consigna a <span class="font-mono bg-slate-100 px-0.5 rounded">r = 2.0 V</span> i el guany a <span class="font-mono bg-slate-100 px-0.5 rounded">K_p_c = 2.0</span>. A continuació, activeu una acció integral forta posant <span class="font-semibold text-indigo-600">T_i = 2.0 s</span>.
+          <br /><b>Responeu:</b> Què s'observa en la corba de resposta del sistema? Per què el retard d'informació combinat amb l'acció integral genera fortes oscil·lacions sostingudes o fins i tot inestabilitat total? Quins danys mecànics o tèrmics podria patir una planta industrial real (com un forn o una caldera) en aquesta situació?
+        </p>
+        <textarea
+          id="q3"
+          rows="5"
+          placeholder="Descriviu les fortes oscil·lacions i la lentitud d'amortiment causada per la pèrdua de sincronia temporal. Comenteu els perills físics industrials: desgast d'actuadors, sobreescalfament del forn, consum inútil d'energia i estrès tèrmic dels materials..."
+          class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed mb-4 text-slate-800 bg-white"
+        ></textarea>
+
+        <!-- Zona per pujar la captura 3 -->
+        <div class="space-y-2">
+          <label class="block text-[11px] font-bold text-slate-700">
+            Captura de pantalla d'aquesta simulació (Grans oscil·lacions i inestabilitat degut a retard + Ti baix):
+          </label>
+          
+          <div id="q3UploadContainer" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors">
+            <svg class="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0 3 3m-3-3-3 3M6.75 19.5a4.5 4.5 0 0 1-1.41-8.775 5.25 5.25 0 0 1 10.233-2.33 3 3 0 0 1 3.758 3.848A3.752 3.752 0 0 1 18 19.5H6.75Z"></path></svg>
+            <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+            <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+          </div>
+          <input type="file" id="q3FileInput" accept="image/*" class="hidden" />
+          
+          <div id="q3PreviewContainer" class="relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center hidden">
+            <img id="q3ImagePreview" src="" alt="Captura Activitat 3" class="max-h-56 object-contain w-full" />
+            <div class="absolute top-2 right-2">
+              <button id="q3BtnRemove" type="button" class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"></path></svg>
+                <span>Eliminar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pregunta Final / Conclusió -->
+      <div class="mb-8">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Conclusions</span>
+          Conclusions generals sobre l'acció integral i el mètode Anti-windup
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          <b>Responeu:</b> Resumiu de forma clara per què el control proporcional-integral (PI) és superior al proporcional pur en aplicacions de precisió. Així mateix, expliqueu per què és important limitar l'acumulació de l'error integral mitjançant algorismes d'<b>Anti-windup</b> quan els actuadors es saturen.
+        </p>
+        <textarea
+          id="qFinal"
+          rows="4"
+          placeholder="Escriu aquí les teves conclusions de final de pràctica de forma professional, analitzant els avantatges d'eliminar l'offset i per què l'anti-windup és necessari per evitar un overshoot addicional gegant quan la sortida real es manté lluny de la consigna molt de temps..."
+          class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed text-slate-800 bg-white"
+        ></textarea>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Peu de pàgina de l'aplicació -->
+  <footer class="bg-slate-900 text-slate-400 py-6 text-center text-xs mt-auto border-t border-slate-800 print:hidden">
+    <p>Material docent oficial per al mòdul de mesura i regulació - Cicle de Grau Superior d'Automatització i Robòtica Industrial (ARI).</p>
+    <p class="text-slate-500 mt-1">Dissenyat per a l'examen pràctic de l'acció integral, el sobrepico (overshoot) i l'anti-windup.</p>
+  </footer>
+
+  <!-- MODAL DE DIÀLEG D'AJUDA (S'activa si el navegador bloqueja window.print des d'un iframe sandbox) -->
+  <div id="helpModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 relative">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="p-2 bg-amber-100 text-amber-800 rounded-full shrink-0">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z"></path></svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Bloqueig d'entorn segur detectat</h3>
+          <p class="text-xs text-slate-500 mt-1">El navegador pot bloquejar la impressió directa perquè aquesta aplicació s'executa dins d'un entorn de proves segur (Sandbox de l'Iframe).</p>
+        </div>
+      </div>
+      
+      <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-xs text-slate-700 space-y-2 mb-5">
+        <p class="font-bold text-slate-900">Com pots desar el teu treball en format PDF perfecte?</p>
+        <ol class="list-decimal pl-4 space-y-1.5 leading-relaxed">
+          <li>Feu clic al botó blau: <b class="text-blue-600">"Desar lliurament (.html)"</b>.</li>
+          <li>Es descarregarà un únic fitxer HTML que inclou totes les teves respostes i les captures que hagis pujat.</li>
+          <li>Obriu aquest fitxer descarregat des del vostre ordinador a qualsevol pestanya del navegador (Chrome, Edge, Firefox, etc.).</li>
+          <li>Premeu <b class="font-mono bg-slate-200 px-1 py-0.5 rounded text-slate-800">Ctrl + P</b> (o Cmd + P a Mac) i seleccioneu <b>"Anomena com a PDF"</b> per desar un informe de pràctica perfecte.</li>
+        </ol>
+      </div>
+
+      <div class="flex justify-end gap-2.5">
+        <button id="btnModalExport" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-colors cursor-pointer">
+          Desar fitxer ara
+        </button>
+        <button id="btnModalClose" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer">
+          Entesos, tancar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vanilla JS App State & Logics -->
+  <script>
+    // State model
+    const state = {
+      studentName: '',
+      studentGroup: '',
+      studentDate: new Date().toISOString().split('T')[0],
+      q1: '',
+      q1Screenshot: null,
+      q2: '',
+      q2Screenshot: null,
+      q3: '',
+      q3Screenshot: null,
+      qFinal: ''
+    };
+
+    // Load from localStorage on startup
+    function loadState() {
+      try {
+        const saved = localStorage.getItem('ari_practica_5_answers');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          Object.assign(state, parsed);
+        }
+      } catch (e) {
+        console.error("Could not load local storage data:", e);
+      }
+      
+      // Sync fields to elements
+      document.getElementById('studentName').value = state.studentName || '';
+      document.getElementById('studentGroup').value = state.studentGroup || '';
+      document.getElementById('studentDate').value = state.studentDate || new Date().toISOString().split('T')[0];
+      document.getElementById('q1').value = state.q1 || '';
+      document.getElementById('q2').value = state.q2 || '';
+      document.getElementById('q3').value = state.q3 || '';
+      document.getElementById('qFinal').value = state.qFinal || '';
+
+      // Set up base64 image previews
+      updateImageDisplay('q1');
+      updateImageDisplay('q2');
+      updateImageDisplay('q3');
+    }
+
+    // Save to localStorage
+    function saveState() {
+      try {
+        localStorage.setItem('ari_practica_5_answers', JSON.stringify(state));
+      } catch (e) {
+        console.error("Could not save to localStorage:", e);
+      }
+    }
+
+    // Bind text inputs
+    function bindInputs() {
+      const textInputs = [
+        { id: 'studentName', key: 'studentName' },
+        { id: 'studentGroup', key: 'studentGroup' },
+        { id: 'studentDate', key: 'studentDate' },
+        { id: 'q1', key: 'q1' },
+        { id: 'q2', key: 'q2' },
+        { id: 'q3', key: 'q3' },
+        { id: 'qFinal', key: 'qFinal' }
+      ];
+
+      textInputs.forEach(inputInfo => {
+        const el = document.getElementById(inputInfo.id);
+        el.addEventListener('input', (e) => {
+          state[inputInfo.key] = e.target.value;
+          saveState();
+        });
+      });
+    }
+
+    // Image uploading & drag-and-drop helpers
+    function updateImageDisplay(prefix) {
+      const uploadContainer = document.getElementById(`${prefix}UploadContainer`);
+      const previewContainer = document.getElementById(`${prefix}PreviewContainer`);
+      const imgPreview = document.getElementById(`${prefix}ImagePreview`);
+      const base64Val = state[`${prefix}Screenshot`];
+
+      if (base64Val) {
+        imgPreview.src = base64Val;
+        uploadContainer.classList.add('hidden');
+        previewContainer.classList.remove('hidden');
+      } else {
+        imgPreview.src = '';
+        uploadContainer.classList.remove('hidden');
+        previewContainer.classList.add('hidden');
+      }
+    }
+
+    function handleFile(file, prefix) {
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        alert("Si us plau, puja un fitxer d'imatge vàlid.");
+        return;
+      }
+      if (file.size > 4 * 1024 * 1024) {
+        alert("La imatge és massa gran. El límit és de 4MB.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target.result;
+        state[`${prefix}Screenshot`] = base64;
+        saveState();
+        updateImageDisplay(prefix);
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function setUpUploads() {
+      const prefixes = ['q1', 'q2', 'q3'];
+
+      prefixes.forEach(prefix => {
+        const uploadContainer = document.getElementById(`${prefix}UploadContainer`);
+        const fileInput = document.getElementById(`${prefix}FileInput`);
+        const btnRemove = document.getElementById(`${prefix}BtnRemove`);
+
+        // Click uploads
+        uploadContainer.addEventListener('click', () => {
+          fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+          const file = e.target.files[0];
+          handleFile(file, prefix);
+          // Reset file input so same file can be uploaded again if deleted
+          fileInput.value = '';
+        });
+
+        // Drag & Drop
+        uploadContainer.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          uploadContainer.classList.add('border-indigo-500', 'bg-indigo-50/30');
+        });
+
+        uploadContainer.addEventListener('dragleave', () => {
+          uploadContainer.classList.remove('border-indigo-500', 'bg-indigo-50/30');
+        });
+
+        uploadContainer.addEventListener('drop', (e) => {
+          e.preventDefault();
+          uploadContainer.classList.remove('border-indigo-500', 'bg-indigo-50/30');
+          const file = e.dataTransfer.files[0];
+          handleFile(file, prefix);
+        });
+
+        // Remove image
+        btnRemove.addEventListener('click', () => {
+          state[`${prefix}Screenshot`] = null;
+          saveState();
+          updateImageDisplay(prefix);
+        });
+      });
+    }
+
+    // Modal behavior
+    const helpModal = document.getElementById('helpModal');
+    function showModal() {
+      helpModal.classList.remove('hidden');
+    }
+    function hideModal() {
+      helpModal.classList.add('hidden');
+    }
+
+    document.getElementById('btnModalClose').addEventListener('click', hideModal);
+    document.getElementById('btnModalExport').addEventListener('click', () => {
+      exportHTML();
+      hideModal();
+    });
+
+    // Handle Printing
+    function triggerPrint() {
+      try {
+        window.print();
+      } catch (e) {
+        showModal();
+      }
+    }
+
+    document.getElementById('btnHeaderPrint').addEventListener('click', triggerPrint);
+    document.getElementById('btnReportPrint').addEventListener('click', triggerPrint);
+
+    // Export HTML Report with Embedded Answers and Base64 Screenshots
+    function exportHTML() {
+      const nameStr = state.studentName || 'Sense_Nom';
+      const groupStr = state.studentGroup || 'Sense_Grup';
+      const dateStr = state.studentDate || 'Sense_Data';
+
+      const screenshot1HTML = state.q1Screenshot 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${state.q1Screenshot}" alt="Captura 1" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const screenshot2HTML = state.q2Screenshot 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${state.q2Screenshot}" alt="Captura 2" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const screenshot3HTML = state.q3Screenshot 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${state.q3Screenshot}" alt="Captura 3" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const standaloneHTML = `<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pràctica 5: Introducció a la Regulació Proporcional-Integral (PI)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    @media print {
+      @page {
+        size: A4;
+        margin: 20mm 15mm 20mm 15mm;
+      }
+      body {
+        background-color: white !important;
+        font-size: 11pt !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-card {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 20px !important;
+        border-radius: 8px !important;
+        margin-bottom: 24px !important;
+        background-color: #ffffff !important;
+      }
+      .page-break {
+        page-break-before: always !important;
+        break-before: page !important;
+      }
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-8 max-w-4xl mx-auto">
+  
+  <!-- Header del report lliurat -->
+  <div class="border-b-4 border-slate-900 pb-4 mb-8">
+    <div class="flex justify-between items-start">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-teal-600">Mesura i Regulació - Examen de Laboratori</span>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">Pràctica 5: Regulació Proporcional-Integral (PI)</h1>
+        <p class="text-slate-500 text-xs mt-1">Estudiar com l'acció integral elimina l'error permanent (offset) i l'efecte de Ti en el sobrepico (overshoot).</p>
+      </div>
+      <button onclick="window.print()" class="no-print bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-md transition-all">
+        Imprimir Report a PDF
+      </button>
+    </div>
+
+    <!-- Student Details Box -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 bg-slate-100 p-4 rounded-lg border border-slate-200">
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Nom i cognoms</span>
+        <span class="text-sm font-bold text-slate-900">${nameStr}</span>
+      </div>
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Grup de classe</span>
+        <span class="text-sm font-bold text-slate-900">${groupStr}</span>
+      </div>
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Data de lliurament</span>
+        <span class="text-sm font-bold text-slate-900">${dateStr}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activitat 1 -->
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Activitat 1: Activació de l'Acció Integral (Ti) i eliminació completa de l'offset
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Configureu la planta amb K_p = 2.0, &tau;_1 = 3.0 s (inèrcies secundàries &tau;_2 = &tau;_3 = 0 s, retard &theta; = 0 s). Seleccioneu el mode PID Continu amb consigna r = 2.0 V i guany del controlador K_p_c = 1.0. Primer amb T_i = &infin;, anoteu l'offset. A continuació, activeu l'acció Integral amb T_i = 10.0 s. Descriviu el comportament temporal de la sortida y(t). Aconsegueix finalment igualar de forma exacta el valor de consigna de 2.0V? Quin error d'offset llegeixes ara al panell de rendiment? Expliqueu per què la integració matemàtica de l'error elimina l'offset permanent.
+    </p>
+    <div class="text-sm font-semibold uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">
+      ${state.q1 || "L'estudiant no ha escrit cap resposta per a aquesta activitat."}
+    </div>
+    <div class="mt-4">
+      <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+      ${screenshot1HTML}
+    </div>
+  </div>
+
+  <!-- Activitat 2 -->
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Activitat 2: Efecte de la reducció de Ti: rapidesa i aparició del sobrepico (Overshoot)
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Mantenint exactament els mateixos paràmetres de la planta de 1r ordre i K_p_c = 1.0, reduïu gradualment la constant de temps integral del regulador T_i a 5.0 s, 3.0 s, i finalment 1.5 s. Què li passa a la rapidesa de la resposta a mesura que reduïm el valor de T_i? Quin percentatge de sobrepico (Overshoot %) o excés s'observa al panell de rendiment per a cadascun dels valors? Expliqueu la relació que hi ha entre la força de la integració i l'acumulació d'esforç de control.
+    </p>
+    <div class="text-sm font-semibold uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">
+      ${state.q2 || "L'estudiant no ha escrit cap resposta per a aquesta activitat."}
+    </div>
+    <div class="mt-4">
+      <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+      ${screenshot2HTML}
+    </div>
+  </div>
+
+  <!-- Activitat 3 -->
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Activitat 3: El perill dels retards temporals combinats amb l'acció integral forta
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Configureu retard i inèrcies reals a la planta posant &tau;_2 = 1.0 s i retard &theta; = 1.0 s. Deixeu la consigna a r = 2.0 V i el guany a K_p_c = 2.0. A continuació, activeu una acció integral forta posant T_i = 2.0 s. Què s'observa en la corba de resposta del sistema? Per què el retard d'informació combinat amb l'acció integral genera fortes oscil·lacions sostingudes o fins i tot inestabilitat total? Quins danys mecànics o tèrmics podria patir una planta industrial real en aquesta situació?
+    </p>
+    <div class="text-sm font-semibold uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">
+      ${state.q3 || "L'estudiant no ha escrit cap resposta per a aquesta activitat."}
+    </div>
+    <div class="mt-4">
+      <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+      ${screenshot3HTML}
+    </div>
+  </div>
+
+  <!-- Conclusió final -->
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Conclusions generals sobre l'acció integral i el mètode Anti-windup
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Resumiu de forma clara per què el control proporcional-integral (PI) és superior al proporcional pur en aplicacions de precisió. Així mateix, expliqueu per demanar que és important limitar l'acumulació de l'error integral mitjançant algorismes d'Anti-windup quan els actuadors es saturen.
+    </p>
+    <div class="text-sm font-semibold uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[80px]">
+      ${state.qFinal || "L'estudiant no ha escrit cap conclusió."}
+    </div>
+  </div>
+
+  <div class="mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-400 no-print">
+    <p>Material de lliurament pràctic oficial - IES Ebre. Generat amb l'AI Studio Simulator.</p>
+  </div>
+
+</body>
+</html>`;
+
+      const blob = new Blob([standaloneHTML], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = "Practica_5_PI_Regulation_" + nameStr.trim().replace(/\s+/g, '_') + ".html";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    document.getElementById('btnHeaderExport').addEventListener('click', exportHTML);
+    document.getElementById('btnReportExport').addEventListener('click', exportHTML);
+
+    // Calculate beautifully damped analytical curve for SVG (Figure 1)
+    function generateSVGCurve() {
+      let path = "M 40 130";
+      const paddingLeft = 40;
+      const plotWidth = 300;
+      const plotHeight = 120;
+      
+      const zeta = 0.45;
+      const wn = 1.0;
+      const wd = wn * Math.sqrt(1 - zeta * zeta);
+      const dt = 0.1;
+      
+      for (let t = 0; 12.01 >= t; t += dt) {
+        const x = paddingLeft + (t / 12) * plotWidth;
+        let yVal = 0.0;
+        if (t >= 1.0) {
+          const tSim = t - 1.0;
+          const envelope = Math.exp(-zeta * wn * tSim);
+          const oscillation = Math.cos(wd * tSim) + (zeta / Math.sqrt(1 - zeta * zeta)) * Math.sin(wd * tSim);
+          yVal = 2.0 * (1 - envelope * oscillation);
+        }
+        const y = 130 - (yVal / 5.0) * plotHeight;
+        path += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+      }
+      document.getElementById('svgOutputCurve').setAttribute('d', path);
+    }
+
+    // Initialize
+    window.addEventListener('DOMContentLoaded', () => {
+      loadState();
+      bindInputs();
+      setUpUploads();
+      generateSVGCurve();
+    });
+  </script>
 
 </body>
 </html>

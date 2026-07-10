@@ -1,0 +1,8 @@
+{
+  "name": "Remix: Pràctica 4: Control Proporcional (P) pur i l\u0027error permanent (offset) Objectiu: Analitzar les limitacions del control proporcional pur. Activitat: Utilitzant el mode de controlador PID amb constants   i  , comprovar visualment que, per molt que augmentem el guany proporcional ( ), la sortida del procés mai arriba al valor desitjat (Setpoint), generant sempre un error permanent en règim estacionari.",
+  "description": "Simulador educatiu de regulació i control: Pràctica 5: Introducció a la Regulació Proporcional-Integral (PI)",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
