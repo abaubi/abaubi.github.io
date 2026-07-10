@@ -1,0 +1,11 @@
+{
+  "name": "practica-9",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "npx serve -p 3000",
+    "build": "mkdir -p dist && cp index.html dist/index.html"
+  },
+  "dependencies": {
+    "serve": "^14.2.1"
+  }
+}

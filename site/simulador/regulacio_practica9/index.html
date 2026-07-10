@@ -3,133 +3,768 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pràctica 6: Regulació Proporcional-Integral-Derivativa (PID) completa</title>
+  <title>Pràctica 9: Sintonització de controladors (Mètode de Ziegler-Nichols en Llaç Obert)</title>
   
-  <!-- Preconnect to Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        }
+      }
+    }
+  </script>
 
   <style>
-    /* Premium CSS Print Media Rules for school report lliurament */
+    .scrollbar-thin::-webkit-scrollbar { width: 6px; height: 6px; }
+    .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+    .scrollbar-thin::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+    
     @media print {
-      @page {
-        size: A4;
-        margin: 15mm 15mm 15mm 15mm;
-      }
-      
-      body {
-        background-color: white !important;
-        color: #0f172a !important; /* slate-900 */
-        font-family: 'Inter', -apple-system, sans-serif !important;
-        font-size: 11.5pt !important;
-        line-height: 1.5 !important;
-        padding: 0 !important;
-        margin: 0 !important;
-      }
-
-      /* Hide interactive simulator, headers, sliders, scales, and buttons when printing */
-      .print\:hidden, 
-      header, 
-      footer, 
-      section.lg\:col-span-5, 
-      section.lg\:col-span-7, 
-      main, 
-      button, 
-      input[type="file"],
-      .no-print {
-        display: none !important;
-      }
-
-      /* Allow student report section to expand and print in full width */
-      section#studentReportSection,
-      section {
-        width: 100% !important;
-        max-width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        display: block !important;
-      }
-
-      /* Avoid cards/activities splitting across pages in middle of a paragraph */
-      .print-card {
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-        border: 1px solid #cbd5e1 !important; /* slate-300 */
-        padding: 24px !important;
-        border-radius: 8px !important;
-        margin-bottom: 24px !important;
-        background-color: #ffffff !important;
-      }
-
-      /* Title styling inside print report */
-      h2 {
-        font-size: 14pt !important;
-        font-weight: 800 !important;
-        color: #0f172a !important;
-        border-bottom: 2px solid #0f172a !important;
-        padding-bottom: 6px !important;
-      }
-
-      h3 {
-        font-size: 11pt !important;
-        font-weight: 700 !important;
-        color: #1e293b !important;
-        margin-bottom: 8px !important;
-      }
-
-      p {
-        font-size: 9.5pt !important;
-        color: #334155 !important; /* slate-700 */
-        line-height: 1.5 !important;
-      }
-
-      /* Hide form textareas and display the print-only div with text content */
-      textarea {
-        display: none !important;
-      }
-
-      .print-textarea-fallback {
-        display: block !important;
-        background-color: #f8fafc !important; /* slate-50 */
-        border-left: 4px solid #0d9488 !important; /* teal-600 */
-        border-top: 1px solid #cbd5e1 !important;
-        border-right: 1px solid #cbd5e1 !important;
-        border-bottom: 1px solid #cbd5e1 !important;
-        padding: 16px !important;
-        border-radius: 0 8px 8px 0 !important;
-        font-size: 10pt !important;
-        color: #0f172a !important;
-        white-space: pre-wrap !important;
-        min-height: 100px !important;
-        line-height: 1.6 !important;
-      }
-
-      /* Sizing images crisp on page */
-      img {
-        max-width: 100% !important;
-        max-height: 240px !important;
-        object-fit: contain !important;
-        border-radius: 6px !important;
-        margin-top: 12px !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-      }
-
-      /* Page break controls */
-      .page-break {
-        page-break-before: always !important;
-        break-before: page !important;
-      }
+      @page { size: A4; margin: 15mm 15mm 15mm 15mm; }
+      body { background-color: white !important; color: #0f172a !important; font-family: 'Inter', -apple-system, sans-serif !important; font-size: 11.5pt !important; line-height: 1.5 !important; padding: 0 !important; margin: 0 !important; }
+      .print\:hidden, header, footer, #guiaDidacticaContainer, main, button, input[type="file"], .no-print { display: none !important; }
+      section#studentReportSection, section { width: 100% !important; max-width: 100% !important; padding: 0 !important; margin: 0 !important; display: block !important; }
+      .print-card { page-break-inside: avoid !important; break-inside: avoid !important; border: 1px solid #cbd5e1 !important; padding: 24px !important; border-radius: 8px !important; margin-bottom: 24px !important; background-color: #ffffff !important; }
+      #print-full-width-section { grid-column: span 12 / span 12 !important; }
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
-  
-  <!-- Mountpoint for React Vite app -->
-  <div id="root"></div>
+<body class="bg-slate-50 text-slate-800 min-h-screen font-sans flex flex-col">
 
-  <script type="module" src="/src/main.tsx"></script>
+  <!-- Capçalera del document -->
+  <header class="bg-slate-900 text-white py-6 px-4 sm:px-8 border-b border-slate-800 print:hidden">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-teal-400 bg-teal-950/80 px-2.5 py-0.5 rounded border border-teal-800">Mòdul de Mesura i Regulació</span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-blue-400 bg-blue-950/80 px-2.5 py-0.5 rounded border border-blue-800">ARI / Robòtica</span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1.5 flex items-center gap-2 text-white">
+          Pràctica 9: Sintonització de controladors (Ziegler-Nichols en Llaç Obert)
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">Determinació de constants (K, L, τ) mitjançant la corba de reacció en S i configuració del bucle tancat PI / PID per homologar els KPIs.</p>
+      </div>
+      <div class="flex flex-wrap gap-2 w-full md:w-auto">
+        <button onclick="handlePrint()" class="flex-1 md:flex-none bg-teal-600 hover:bg-teal-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer border border-teal-500">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Generar PDF / Imprimir
+        </button>
+        <button onclick="handleExportHTML()" class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer border border-blue-500" title="Descarrega el teu treball com a fitxer html llest per obrir i desar directament en PDF">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Desar lliurament (.html)
+        </button>
+      </div>
+    </div>
+  </header>
 
+  <!-- Contingut principal (Guia teòrica) -->
+  <main class="max-w-4xl w-full mx-auto p-4 sm:p-8 flex flex-col gap-8 flex-grow print:hidden">
+    <!-- Guia didàctica -->
+    <section class="space-y-8" id="guiaDidacticaContainer">
+      <!-- Secció 1: Enunciat i Objectiu -->
+      <div id="sectionEnunciat" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2" id="headerEnunciat">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">1</span>
+          Enunciat i Objectiu de la Pràctica 9 (Ziegler-Nichols en Llaç Obert)
+        </h2>
+        <div class="text-slate-700 leading-relaxed space-y-4 text-sm" id="bodyEnunciat">
+          <p>L'objectiu de la <b>Pràctica 9</b> és aplicar el mètode de <b>Sintonia de Llaç Obert (Ziegler-Nichols)</b>, que es basa en l'anàlisi de la resposta temporal d'una planta de segon ordre en bucle obert (sense el regulador actiu) quan és sotmesa a una excitació de tipus graó.</p>
+          <p>En l'àmbit industrial, aquest assaig permet extreure els paràmetres dinàmics essencials de la planta de manera ràpida i senzilla: el <b>guany (K)</b>, el <b>retard mort (L)</b> i la <b>constant de temps (τ)</b>. A partir d'aquestes tres variables, s'apliquen un conjunt de relacions matemàtiques fixes per calcular de forma directe els paràmetres del controlador P, PI o PID.</p>
+          <p><b>Activitat principal:</b> Realitzareu un assaig en llaç obert aplicant un escaló de potència al PWM de l'actuador (Δu = 1000). A partir de la corba de reacció obtinguda, calculareu la configuració òptima dels reguladors PI i PID complets i en comprovareu l'eficàcia en llaç tancat davant dels estrictes indicadors clau de rendiment (<b>KPIs de disseny</b>).</p>
+        </div>
+      </div>
+
+      <!-- Secció 2: Fonaments teòrics -->
+      <div id="sectionTeoria" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2" id="headerTeoria">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">2</span>
+          Fonaments de la Sintonia per Llaç Obert (Ziegler-Nichols)
+        </h2>
+        <div class="space-y-6 text-slate-700 text-sm leading-relaxed" id="bodyTeoria">
+          <p>L'assaig s'inicia estabilitzant la planta en repòs absolut (<span class="font-mono bg-slate-100 px-1 rounded">u = 0</span>). Seguidament, s'aplica un escaló brusc de sortida manual (<span class="font-mono bg-slate-100 px-1 rounded">Δu</span>, per exemple, de 0 a 1000 u. PWM) i s'enregistra la corba de reacció en S.</p>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1">
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-600 font-mono">Guany del Procés (K)</span>
+              <span class="text-sm font-semibold text-slate-900">K = Δy / Δu = ΔLux / ΔPWM</span>
+              <span class="text-[11px] text-slate-500 leading-tight">Mesura la sensibilitat física de la planta: la variació del sensor de lluminositat respecte a la potència aplicada.</span>
+            </div>
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1">
+              <span class="text-xs font-bold uppercase tracking-wider text-teal-600 font-mono">Retard Temporal (L)</span>
+              <span class="text-sm font-semibold text-slate-900">Temps mort inicial (s)</span>
+              <span class="text-[11px] text-slate-500 leading-tight">El període des que s'aplica l'escaló fins que el sensor comença a detectar un canvi (inèrcies de transport).</span>
+            </div>
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1">
+              <span class="text-xs font-bold uppercase tracking-wider text-fuchsia-600 font-mono">Const. de Temps (τ)</span>
+              <span class="text-sm font-semibold text-slate-900">Temps al 63.2% de Δy</span>
+              <span class="text-[11px] text-slate-500 leading-tight">El temps necessari perquè la lluminositat assoleixi el 63.2% del salt total una vegada superat el retard.</span>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-xs text-left border-collapse border border-slate-200 rounded-lg overflow-hidden">
+              <thead>
+                <tr class="bg-slate-100 text-slate-700 uppercase font-bold">
+                  <th class="p-2 border border-slate-200">Tipus Controlador</th>
+                  <th class="p-2 border border-slate-200">Guany Proporcional (Kp)</th>
+                  <th class="p-2 border border-slate-200">Temps Integral (Ti)</th>
+                  <th class="p-2 border border-slate-200">Temps Derivatiu (Td)</th>
+                  <th class="p-2 border border-slate-200">Equació Equivalent Ki / Kd</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr class="hover:bg-slate-50">
+                  <td class="p-2 border border-slate-200 font-bold text-slate-800">Proporcional (P)</td>
+                  <td class="p-2 border border-slate-200 font-mono">τ / (K · L)</td>
+                  <td class="p-2 border border-slate-200 text-slate-400 font-mono">—</td>
+                  <td class="p-2 border border-slate-200 text-slate-400 font-mono">—</td>
+                  <td class="p-2 border border-slate-200 text-slate-600 font-mono">Ki = 0 / Kd = 0</td>
+                </tr>
+                <tr class="hover:bg-slate-50">
+                  <td class="p-2 border border-slate-200 font-bold text-indigo-600">Proporcional-Integral (PI)</td>
+                  <td class="p-2 border border-slate-200 font-mono text-indigo-600">0.9 · τ / (K · L)</td>
+                  <td class="p-2 border border-slate-200 font-mono">3 · L</td>
+                  <td class="p-2 border border-slate-200 text-slate-400 font-mono">—</td>
+                  <td class="p-2 border border-slate-200 text-indigo-600 font-mono">Ki = Kp / (3 · L)</td>
+                </tr>
+                <tr class="hover:bg-slate-50">
+                  <td class="p-2 border border-slate-200 font-bold text-teal-600">Complet (PID)</td>
+                  <td class="p-2 border border-slate-200 font-mono text-teal-600">1.2 · τ / (K · L)</td>
+                  <td class="p-2 border border-slate-200 font-mono">2 · L</td>
+                  <td class="p-2 border border-slate-200 font-mono">0.5 · L</td>
+                  <td class="p-2 border border-slate-200 text-teal-600 font-bold font-mono">Ki = Kp / (2 · L) <br />Kd = Kp · 0.5 · L</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="bg-white p-5 rounded-lg border border-slate-200 flex flex-col items-center gap-3" id="visualSgRepresentation">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-600 flex items-center gap-1.5">
+              <span class="w-2 h-2 bg-indigo-500 rounded-full"></span>Figura 1: Gràfic de la corba de reacció en S i identificació de L i τ
+            </span>
+            <svg class="w-full max-w-lg h-60 bg-[#020617] rounded-xl border border-slate-800 px-4 py-3" viewBox="0 0 400 240" fill="none" xmlns="http://www.w3.org/2000/svg" id="svgGraficTeoric">
+              <text x="200" y="24" fill="#94a3b8" font-size="10" font-weight="bold" letter-spacing="1" text-anchor="middle">GRÀFIC DE LA CORBA DE REACCIÓ EN S</text>
+              <path d="M 50 175 L 350 175" stroke="#1e293b" stroke-width="1" stroke-dasharray="3 3" />
+              <path d="M 50 80 L 350 80" stroke="#334155" stroke-width="1" />
+              <path d="M 50 115 L 350 115" stroke="#334155" stroke-width="1" stroke-dasharray="2 3" stroke-opacity="0.8" />
+              <path d="M 50 40 L 50 185" stroke="#475569" stroke-width="1.5" stroke-linecap="round" />
+              <path d="M 45 180 L 370 180" stroke="#475569" stroke-width="1.5" stroke-linecap="round" />
+              <text x="35" y="60" fill="#94a3b8" font-size="11" font-weight="bold" text-anchor="middle">y (L)</text>
+              <text x="355" y="174" fill="#94a3b8" font-size="10" font-weight="bold">t (Temps)</text>
+              <text x="55" y="168" fill="#94a3b8" font-size="10" font-weight="600">y_inicial (Repòs)</text>
+              <text x="265" y="72" fill="#38bdf8" font-size="10" font-weight="bold">y_final (Lux Màx)</text>
+              <text x="250" y="110" fill="#64748b" font-size="8" font-weight="600">63.2% de Δy</text>
+              <path d="M 90 185 L 255 70" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="3 3" />
+              <path d="M 50 175 L 105 175 C 135 175, 145 150, 170 127.5 C 195 105, 230 80, 310 80 L 350 80" stroke="#38bdf8" stroke-width="3" fill="none" stroke-linecap="round"/>
+              <path d="M 50 175 L 50 205" stroke="#334155" stroke-width="1" stroke-dasharray="2 3" />
+              <path d="M 105 175 L 105 205" stroke="#334155" stroke-width="1" stroke-dasharray="2 3" />
+              <path d="M 245 80 L 245 205" stroke="#334155" stroke-width="1" stroke-dasharray="2 3" />
+              <path d="M 50 195 L 105 195" stroke="#f97316" stroke-width="1.5" />
+              <path d="M 55 191 L 50 195 L 55 199" stroke="#f97316" stroke-width="1.5" fill="none" stroke-linecap="round" />
+              <path d="M 100 191 L 105 195 L 100 199" stroke="#f97316" stroke-width="1.5" fill="none" stroke-linecap="round" />
+              <text x="77.5" y="210" fill="#f97316" font-size="9" font-weight="bold" text-anchor="middle">L (Retard)</text>
+              <path d="M 105 195 L 245 195" stroke="#10b981" stroke-width="1.5" />
+              <path d="M 110 191 L 105 195 L 110 199" stroke="#10b981" stroke-width="1.5" fill="none" stroke-linecap="round" />
+              <path d="M 240 191 L 245 195 L 240 199" stroke="#10b981" stroke-width="1.5" fill="none" stroke-linecap="round" />
+              <text x="175" y="210" fill="#10b981" font-size="9" font-weight="bold" text-anchor="middle">τ (Const. Temps)</text>
+            </svg>
+            <div class="w-full text-xs text-slate-300 bg-slate-900 p-4 rounded-lg border border-slate-800 mt-1 space-y-2">
+              <p class="leading-relaxed">El <span class="text-[#f97316] font-bold">retard (L)</span> és l'eix mort de temps des del graó d'entrada fins on comença a aixecar-se la línia tangent vermella. La <span class="text-[#10b981] font-bold">constant de temps (τ)</span> és la projecció de la tangent sobre els nivells de repòs i de saturació màxima de llum.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secció 3: Especificacions de disseny (KPIs) -->
+      <div id="sectionKPIRequirements" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2" id="headerKPIRequirements">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">3</span>
+          Especificacions de Disseny del Client (KPIs d'Homologació)
+        </h2>
+        <div class="space-y-4 text-slate-700 text-sm leading-relaxed" id="bodyKPIRequirements">
+          <p>Per homologar el nostre controlador PID sota la sintonia de Ziegler-Nichols per Llaç Obert, el bucle tancat ha de satisfer els següents indicadors de qualitat enfront d'un escaló a t = 1.0 s amb consigna r = 500 lx (o 3.0 V equivalents):</p>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1">
+              <span class="text-xs font-bold uppercase tracking-wider text-teal-600">1. Error permanent (Offset)</span>
+              <span class="text-lg font-extrabold text-slate-950 font-mono">Offset ≤ 2.0 lx</span>
+              <span class="text-[11px] text-slate-500 leading-tight">La resposta s'ha de clavar de forma extremadament precisa al voltant de la consigna.</span>
+            </div>
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1">
+              <span class="text-xs font-bold uppercase tracking-wider text-indigo-600">2. Temps de Pujada (Rise Time)</span>
+              <span class="text-lg font-extrabold text-slate-950 font-mono">t_r ≤ 3.5 s</span>
+              <span class="text-[11px] text-slate-500 leading-tight">El temps transcorregut fins que la il·luminació assoleix per primera vegada el 90% de la consigna.</span>
+            </div>
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1">
+              <span class="text-xs font-bold uppercase tracking-wider text-amber-600">3. Sobrepic Màxim (Overshoot)</span>
+              <span class="text-lg font-extrabold text-slate-950 font-mono">Mp ≤ 15.0 %</span>
+              <span class="text-[11px] text-slate-500 leading-tight">L'oscil·lació inicial de seguretat no ha de depassar els 575 lx davant la consigna de 500 lx.</span>
+            </div>
+            <div class="bg-slate-50 p-3.5 rounded-lg border border-slate-200 flex flex-col gap-1">
+              <span class="text-xs font-bold uppercase tracking-wider text-blue-600">4. Temps d'Estabilització (Settling Time)</span>
+              <span class="text-lg font-extrabold text-slate-950 font-mono">t_s ≤ 8.0 s</span>
+              <span class="text-[11px] text-slate-500 leading-tight">El temps en que la mesura del sensor entra i es manté de forma permanent dins de la banda del ±2% de la consigna.</span>
+            </div>
+          </div>
+          <p class="text-xs text-amber-600 bg-amber-50 p-3 rounded-lg border border-amber-200 leading-normal font-medium">
+            ⚠️ <b>Atenció:</b> El mètode clàssic de Ziegler-Nichols sol introduir respostes una mica agressives amb sobrepics propers al 20-30%. L'addició precisa de l'acció derivada és crucial per esmorteir el control i homologar amb èxit els KPIs!
+          </p>
+        </div>
+      </div>
+
+      <!-- Secció 4: Exemple de Càlcul Complet -->
+      <div id="sectionExempleCalcul" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2" id="headerExempleCalcul">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold font-sans">4</span>
+          Exemple de Càlcul de Paràmetres i Constants PID
+        </h2>
+        <div class="space-y-4 text-slate-700 text-sm leading-relaxed" id="bodyExempleCalcul">
+          <p>Imaginem que realitzem l'assaig en manual aplicant un graó d'actuació de <span class="font-mono bg-slate-100 px-1 rounded">Δu = 1000 u. PWM</span> (passem la potència de 0 a 1000). A partir del registre de la corba en S del sensor, s'obtenen les següents lectures físiques:</p>
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 font-mono text-xs space-y-1.5 text-slate-800">
+            <div>• Lluminositat inicial (Repòs): <span class="font-bold text-slate-900">y_inicial = 150 lx</span></div>
+            <div>• Lluminositat final (Estabilitzada): <span class="font-bold text-slate-900">y_final = 750 lx</span></div>
+            <div>• Increment de llum (Δy): <span class="font-bold text-slate-900">750 lx - 150 lx = 600 lx</span></div>
+            <div>• Temps d'inici de l'escaló: <span class="font-bold text-slate-900">t_escalo = 1.00 s</span></div>
+            <div>• Temps on la corba comença a pujar (creuament de la tangent): <span class="font-bold text-slate-900">t_tangent = 1.40 s</span></div>
+            <div>• Temps on s'assoleix el 63.2% del canvi total (~529 lx): <span class="font-bold text-slate-900">t_63.2 = 3.60 s</span></div>
+          </div>
+          <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider mt-4">1. Càlcul dels 3 paràmetres de la planta</h3>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="p-3 bg-amber-50/50 rounded border border-amber-200">
+              <span class="block text-[10px] font-bold text-amber-800 uppercase">Guany de la planta (K)</span>
+              <span class="block text-sm font-mono font-bold mt-1 text-slate-900">K = Δy / Δu = 600 / 1000 = 0.60</span>
+            </div>
+            <div class="p-3 bg-teal-50/50 rounded border border-teal-200">
+              <span class="block text-[10px] font-bold text-teal-800 uppercase">Retard mort (L)</span>
+              <span class="block text-sm font-mono font-bold mt-1 text-slate-900">L = t_tangent - t_escalo = 0.40 s</span>
+            </div>
+            <div class="p-3 bg-fuchsia-50/50 rounded border border-fuchsia-200">
+              <span class="block text-[10px] font-bold text-fuchsia-800 uppercase">Constant de temps (τ)</span>
+              <span class="block text-sm font-mono font-bold mt-1 text-slate-900">τ = t_63.2 - t_tangent = 2.20 s</span>
+            </div>
+          </div>
+          <h3 class="text-xs font-bold text-slate-900 uppercase tracking-wider mt-4">2. Aplicació de les equacions de Ziegler-Nichols</h3>
+          <div class="space-y-3">
+            <div class="p-4 bg-indigo-50/30 rounded-lg border border-indigo-100">
+              <span class="font-bold text-xs text-indigo-900 block mb-1">A) Sintonització del Controlador PI</span>
+              <div class="font-mono text-xs space-y-1.5 text-slate-800">
+                <div>• Kp = 0.9 · τ / (K · L) = 0.9 · 2.20 / (0.60 · 0.40) = 1.98 / 0.24 = <span class="font-extrabold text-indigo-700 text-sm">8.25</span></div>
+                <div>• Ti = 3 · L = 3 · 0.40 s = <span class="font-bold text-slate-900">1.20 s</span></div>
+                <div>• Ki = Kp / Ti = 8.25 / 1.20 = <span class="font-extrabold text-indigo-700 text-sm">6.875 s⁻¹</span></div>
+              </div>
+            </div>
+            <div class="p-4 bg-teal-50/30 rounded-lg border border-teal-100">
+              <span class="font-bold text-xs text-teal-900 block mb-1">B) Sintonització del Controlador PID Complet</span>
+              <div class="font-mono text-xs space-y-1.5 text-slate-800">
+                <div>• Kp = 1.2 · τ / (K · L) = 1.2 · 2.20 / (0.60 · 0.40) = 2.64 / 0.24 = <span class="font-extrabold text-teal-700 text-sm">11.00</span></div>
+                <div>• Ti = 2 · L = 2 · 0.40 s = <span class="font-bold text-slate-900">0.80 s</span> ⇒ Ki = Kp / Ti = 11.00 / 0.80 = <span class="font-extrabold text-teal-700 text-sm">13.75 s⁻¹</span></div>
+                <div>• Td = 0.5 · L = 0.5 · 0.40 s = <span class="font-bold text-slate-900">0.20 s</span> ⇒ Kd = Kp · Td = 11.00 · 0.20 = <span class="font-extrabold text-teal-700 text-sm">2.20 s</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secció 5: Algorisme de Autotuning en JavaScript -->
+      <div id="sectionAlgorismeAutotuning" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2" id="headerAlgorismeAutotuning">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold font-sans">5</span>
+          Algorisme en JavaScript per a la Programació d'Autotuning
+        </h2>
+        <div class="space-y-4 text-slate-700 text-sm leading-relaxed" id="bodyAlgorismeAutotuning">
+          <p>Per implementar un autotuning automàtic en un ordinador industrial, un autòmat programable (PLC) o un microcontrolador (com un microprocessador que monitoritzi la il·luminació), podem programar un algorisme de detecció en JavaScript. Aquest mètode utilitza el mètode pràctic de <b>dos punts característics (28.3% i 63.2%)</b> per identificar <span class="font-mono">L</span> i <span class="font-mono">tau</span> de manera immuna al soroll del sensor de luxs, evitant els errors de calcular la tangent de manera numèrica directe:</p>
+          <div class="relative group rounded-lg overflow-hidden border border-slate-200 shadow-inner bg-slate-950 p-4">
+            <div class="flex justify-between items-center text-[10px] text-slate-400 font-bold uppercase mb-2">
+              <span>algorisme_autotuning.js</span>
+              <span class="text-emerald-500 font-bold font-sans">Vanilla JS / TS</span>
+            </div>
+            <pre class="text-xs font-mono text-slate-300 overflow-x-auto whitespace-pre leading-relaxed scrollbar-thin">/**
+ * Algorisme d'identificació i autotuning de Ziegler-Nichols (Llaç Obert)
+ * @param {Array<{t: number, y: number, u: number}>} samples Historial de mostres d'assaig
+ * @returns {Object} Joc final de paràmetres Kp, Ki, Kd i model de planta
+ */
+function calcularAutotuningZN(samples) {
+  if (samples.length < 10) return null;
+
+  // 1. Cercar estat inicial (u_repòs i y_inicial d'estabilització)
+  const initialSamples = samples.slice(0, 5);
+  const y_inicial = initialSamples.reduce((acc, s) => acc + s.y, 0) / 5;
+  const u_inicial = initialSamples.reduce((acc, s) => acc + s.u, 0) / 5;
+
+  // 2. Detectar l'escaló (graó d'entrada Δu) i el seu instant inicial t0
+  let t_escalo = 0;
+  let u_final = u_inicial;
+  for (let i = 1; i < samples.length; i++) {
+    if (samples[i].u > samples[i-1].u + 100) { // Salt significatiu de PWM
+      t_escalo = samples[i].t;
+      u_final = samples[samples.length - 1].u;
+      break;
+    }
+  }
+  const delta_u = u_final - u_inicial;
+  if (delta_u <= 0) return null;
+
+  // 3. Cercar el valor d'estabilització final y_final (mitjana del final)
+  const finalSamples = samples.slice(-10);
+  const y_final = finalSamples.reduce((acc, s) => acc + s.y, 0) / 10;
+  const delta_y = y_final - y_inicial;
+  if (delta_y <= 10) return null; // Resposta inaudible o nul·la
+
+  // Calcular guany del procés K
+  const K = delta_y / delta_u;
+
+  // 4. Mètode dels 2 punts (immunitat al soroll):
+  // Determinarem el temps quan s'assoleix el 28.3% i el 63.2% de l'increment total de y
+  const y_target28 = y_inicial + 0.283 * delta_y;
+  const y_target63 = y_inicial + 0.632 * delta_y;
+
+  let t_28 = -1;
+  let t_63 = -1;
+
+  for (let i = 0; i < samples.length; i++) {
+    if (samples[i].t >= t_escalo) {
+      if (t_28 === -1 && samples[i].y >= y_target28) {
+        t_28 = samples[i].t;
+      }
+      if (t_63 === -1 && samples[i].y >= y_target63) {
+        t_63 = samples[i].t;
+      }
+    }
+  }
+
+  if (t_28 === -1 || t_63 === -1) return null;
+
+  // Càlcul dels temps transcorreguts des de l'escaló
+  const t28_elapsed = t_28 - t_escalo;
+  const t63_elapsed = t_63 - t_escalo;
+
+  // Fórmules del model de segon ordre aproximat:
+  const tau = 1.5 * (t63_elapsed - t28_elapsed);
+  const L = t63_elapsed - tau;
+
+  // Evitar valors negatius o zero per inestabilitats
+  const L_ajustat = Math.max(0.1, L);
+  const tau_ajustada = Math.max(0.1, tau);
+
+  // 5. Càlcul dels reguladors de Ziegler-Nichols (Llaç Obert)
+  // Regulador PI
+  const Kp_pi = (0.9 * tau_ajustada) / (K * L_ajustat);
+  const Ti_pi = 3 * L_ajustat;
+  const Ki_pi = Kp_pi / Ti_pi;
+
+  // Regulador PID complet
+  const Kp_pid = (1.2 * tau_ajustada) / (K * L_ajustat);
+  const Ti_pid = 2 * L_ajustat;
+  const Td_pid = 0.5 * L_ajustat;
+  const Ki_pid = Kp_pid / Ti_pid;
+  const Kd_pid = Kp_pid * Td_pid;
+
+  return {
+    planta: { K, L: L_ajustat, tau: tau_ajustada, delta_y, delta_u },
+    PI: { Kp: Kp_pi, Ki: Ki_pi, Kd: 0 },
+    PID: { Kp: Kp_pid, Ki: Ki_pid, Kd: Kd_pid }
+  };
+}</pre>
+          </div>
+          <p class="text-xs text-slate-500 italic mt-1">
+            *Nota: L'ús de mètodes basats en punts característics és la pràctica estàndard en autotunings d'equips industrials per evitar de fer derivades directes de senyals sorollosos, fet que faria fallar el mètode de la tangent geomètrica directa de la Figura 1.
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- SECCIÓ DE L'INFORME DE L'ALUMNE -->
+  <section class="max-w-4xl w-full mx-auto p-4 sm:p-8 pt-0 print:p-0 print:max-w-full">
+    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200" id="studentReportSection">
+      
+      <!-- Capçalera del Report amb accions ràpides -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b-2 border-slate-900 pb-4 mb-6">
+        <div>
+          <h2 class="text-xl font-extrabold text-slate-900 uppercase tracking-tight flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-indigo-600"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+            Full de Treball i Lliurament de la Pràctica 9
+          </h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Responeu les preguntes de laboratori sobre la sintonització automàtica de controladors per Llaç Obert (mètode de Ziegler-Nichols) i adjunteu les captures corresponents per homologar el vostre report de pràctiques (.html).
+          </p>
+        </div>
+        
+        <div class="flex flex-wrap gap-2 w-full md:w-auto">
+          <button onclick="handlePrint()" class="flex-1 md:flex-initial bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-all flex items-center justify-center gap-2 cursor-pointer border border-teal-500">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+            Imprimir / Desar PDF
+          </button>
+          <button onclick="handleExportHTML()" class="flex-1 md:flex-initial bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-all flex items-center justify-center gap-2 cursor-pointer border border-blue-500" title="Descarrega un document HTML complet que inclou les teves respostes i imatges">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Desar fitxer HTML
+          </button>
+        </div>
+      </div>
+
+      <!-- Dades d'identificació de l'alumne -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-slate-50 p-5 rounded-lg border border-slate-200">
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3 text-slate-400"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            Nom i Cognoms de l'alumne/a
+          </label>
+          <input type="text" id="studentName" placeholder="Ex: Joan Garcia i Soler" class="w-full p-2.5 border border-slate-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm bg-white text-slate-900" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3 text-slate-400"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            Grup de Classe
+          </label>
+          <input type="text" id="studentGroup" placeholder="Ex: 2n Automàtica i Robòtica Industrial" class="w-full p-2.5 border border-slate-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm bg-white text-slate-900" />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3 text-slate-400"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Data del Treball
+          </label>
+          <input type="date" id="studentDate" class="w-full p-2.5 border border-slate-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm bg-white text-slate-900" />
+        </div>
+      </div>
+
+      <!-- Pregunta 1 -->
+      <div class="mb-8 border-b border-slate-100 pb-8">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 1</span>
+          Assaig de resposta temporal en Llaç Obert (Identificació de paràmetres K, L i τ)
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Configureu el controlador en mode <b>Manual (Bucle Obert)</b> amb u = 0% de repòs i espereu que s'estabilitzi completament la lluminositat de la planta digital. Després, genereu un salt brusc del 100% de potència (Δu = 1000 u. de PWM, passant de 0 a 1000). Enregistreu la corba de reacció en S des de l'inici del salt. Mitjançant la gràfica d'historial, determineu l'increment de llum total (Δy), el retard mort (L) i la constant de temps (τ) d'escombrada fins al 63.2% del valor final. Calculeu el guany de la planta (K = Δy / Δu).
+          <br /><b>Pregunta:</b> Quins valors de Δy, K, L i τ heu identificat de la corba de reacció? Expliqueu breument el significat físic del retard mort L (temps mort) i la constant de temps τ per a aquest procés de lluminositat.
+        </p>
+        <textarea id="q1" rows="5" placeholder="Anoteu els valors identificats. Per exemple: a partir de la corba de reacció en S hem mesurat un repòs de y_inicial = 150 lx i un valor final de y_final = 750 lx, donant un increment Δy = 600 lx. Amb un graó d'actuació de Δu = 1000, el guany del procés és K = 600 / 1000 = 0.60. Hem registrat un retard mort L = 0.40 s d'inèrcia i un valor de 63.2% de Δy (~529 lx) assolit en τ = 2.20 s. El retard representa el temps que tarda el filament a escalfar-se i emetre llum, i τ reflecteix la inèrcia tèrmica i lumínica del sistema..." class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed mb-4 text-slate-800 bg-white"></textarea>
+
+        <!-- Zona per pujar la captura 1 -->
+        <div class="space-y-2">
+          <label class="block text-[11px] font-bold text-slate-700">Captura de pantalla d'aquesta simulació (Corba de reacció en S obtinguda en Bucle Obert):</label>
+          <div id="dropZone1" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors" onclick="document.getElementById('fileInput1').click()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-slate-400"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+            <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+            <input type="file" id="fileInput1" accept="image/*" class="hidden" onchange="handleImageUpload(event, 1)" />
+          </div>
+          <div id="previewZone1" class="hidden relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center">
+            <img id="previewImage1" src="" alt="Captura Activitat 1" class="max-h-56 object-contain w-full" />
+            <div class="absolute top-2 right-2">
+              <button type="button" onclick="removeImage(1)" class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                <span>Eliminar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pregunta 2 -->
+      <div class="mb-8 border-b border-slate-100 pb-8">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 2</span>
+          Càlcul de paràmetres i implementació de control PI per Ziegler-Nichols
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Amb els paràmetres K, L i τ identificats a l'Activitat 1, apliqueu les equacions de la taula de Ziegler-Nichols de Llaç Obert per calcular els paràmetres d'un controlador <b>PI</b>: Kp = 0.9 · τ / (K · L) i Ti = 3 · L, d'on obtenim el guany integral Ki = Kp / Ti. Configureu aquests valors al simulador, activeu el mode de control automàtic PID i demaneu un salt cap a la consigna r = 500 lx.
+          <br /><b>Pregunta:</b> Mostreu detalladament les fórmules i els càlculs numèrics utilitzats per obtenir Kp i Ki. Descriviu com es comporta la resposta temporal del control PI resultants (temps de pujada, sobrepic o inestabilitats). S'ha aconseguit eliminar completament l'error residual permanent (offset)?
+        </p>
+        <textarea id="q2" rows="5" placeholder="Presenteu el càlcul matemàtic complet. Per exemple: Kp = 0.9 * (2.20 / (0.60 * 0.40)) = 0.9 * 9.17 = 7.35. Ti = 3 * 0.40 = 1.20 s => Ki = Kp / Ti = 7.35 / 1.20 = 6.13 s⁻¹. En provar aquesta sintonia, observem que l'acció integral elimina l'offset residual de manera eficient, estabilitzant el sistema en 500 lx exactament. No obstant, l'absència d'acció derivada genera un sobrepic significatiu que voreja el 22%, cosa que incompleix el requisit estricte del client d'un overshoot ≤ 15%..." class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed mb-4 text-slate-800 bg-white"></textarea>
+
+        <div class="space-y-2">
+          <label class="block text-[11px] font-bold text-slate-700">Captura de pantalla d'aquesta simulació (Controlador configurat en mode PI amb eliminació de l'offset):</label>
+          <div id="dropZone2" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors" onclick="document.getElementById('fileInput2').click()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-slate-400"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+            <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+            <input type="file" id="fileInput2" accept="image/*" class="hidden" onchange="handleImageUpload(event, 2)" />
+          </div>
+          <div id="previewZone2" class="hidden relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center">
+            <img id="previewImage2" src="" alt="Captura Activitat 2" class="max-h-56 object-contain w-full" />
+            <div class="absolute top-2 right-2">
+              <button type="button" onclick="removeImage(2)" class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                <span>Eliminar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pregunta 3 -->
+      <div class="mb-8 border-b border-slate-100 pb-8">
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 3</span>
+          Sintonització final del control PID complet per Ziegler-Nichols
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          Apliqueu ara les directrius matemàtiques per calcular els coeficients d'un regulador <b>PID complet</b>: Kp = 1.2 · τ / (K · L), Ti = 2 · L, Td = 0.5 · L (Ki = Kp / Ti i Kd = Kp · Td). Configureu-los en el panell, executeu un escaló en llaç tancat fins a r = 500 lx i verifiqueu l'homologació de les mètriques enfront de tots els KPIs requerits pel client.
+          <br /><b>Pregunta:</b> Escriviu els càlculs i el vostre joc final sintonitzat (Kp, Ki, Kd) per al PID complet. Detalleu els KPIs obtinguts (temps de pujada, sobrepic màxim, temps d'estabilització i offset). Expliqueu com l'acció derivada Kd realitza un efecte amortidor que permet complir simultàniament l'estabilitat i la velocitat desitjades.
+        </p>
+        <textarea id="q3" rows="5" placeholder="Anoteu el càlcul matemàtic complet. Per exemple: Kp = 1.2 * (2.20 / (0.60 * 0.40)) = 11.00. Ti = 2 * 0.40 = 0.80 s => Ki = Kp / Ti = 11.00 / 0.80 = 13.75 s⁻¹. Td = 0.5 * 0.40 = 0.20 s => Kd = Kp * Td = 11.00 * 0.20 = 2.20 s. Després de configurar aquests valors, comprovem que s'homologuen tots els indicadors: Offset = 0 lx (≤ 2.0 lx), Rise time = 1.8 s (≤ 3.5 s), Overshoot = 11.2% (≤ 15.0%), Settling time = 4.8 s (≤ 8.0 s). L'acció derivada disminueix dràsticament l'overshoot i estabilitza el senyal..." class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed mb-4 text-slate-800 bg-white"></textarea>
+
+        <div class="space-y-2">
+          <label class="block text-[11px] font-bold text-slate-700">Captura de pantalla d'aquesta simulació (Regulació PID final sintonitzada, complint amb els 4 KPIs exigits en verd):</label>
+          <div id="dropZone3" class="border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors" onclick="document.getElementById('fileInput3').click()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6 text-slate-400"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+            <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+            <input type="file" id="fileInput3" accept="image/*" class="hidden" onchange="handleImageUpload(event, 3)" />
+          </div>
+          <div id="previewZone3" class="hidden relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center">
+            <img id="previewImage3" src="" alt="Captura Activitat 3" class="max-h-56 object-contain w-full" />
+            <div class="absolute top-2 right-2">
+              <button type="button" onclick="removeImage(3)" class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+                <span>Eliminar</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pregunta Final / Conclusió -->
+      <div>
+        <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+          <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Conclusions</span>
+          Avantatges i riscos de l'assaig en Llaç Obert en l'àmbit industrial
+        </h3>
+        <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+          <b>Responeu:</b> Resumiu un resum de bones pràctiques per a l'ús de mètodes d'assaig de corba de reacció en S. Quins riscos té realitzar aquest tipus d'assaig amb un salt del 100% de potència (bucle obert) directament a camp sobre maquinària física real (com un reactor tèrmic o un motor industrial) en lloc d'un simulador segur? Quines alternatives existeixen per sintonitzar sistemes crítics que no es poden obrir de forma segura?
+        </p>
+        <textarea id="qFinal" rows="4" placeholder="Escriu aquí les teves conclusions. Expliqueu com perills com sobreescalfaments perillosos, vibracions, picats o trencament de l'actuador limiten la viabilitat de l'assaig de bucle obert a camp real. Comenteu l'ús d'assaigs basats en models reduïts o el mètode de llaç tancat d'Åström (assaig de relé amb histèresi) com a mètodes més segurs que no requereixen obrir el llaç de control del tot, ni portar el procés a la saturació extrema..." class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed text-slate-800 bg-white"></textarea>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-slate-900 text-slate-400 py-6 text-center text-xs mt-auto border-t border-slate-800 print:hidden">
+    <p>Material docent oficial per al mòdul de mesura i regulació - Cicle de Grau Superior d'Automatització i Robòtica Industrial (ARI).</p>
+    <p class="text-slate-500 mt-1">Dissenyat per a la sintonització automàtica PID de Ziegler-Nichols per Llaç Obert, homologant els KPIs de disseny requerits.</p>
+  </footer>
+
+  <!-- Modal d'Ajuda -->
+  <div id="helpModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 relative animate-in fade-in zoom-in-95 duration-200">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="p-2 bg-amber-100 text-amber-800 rounded-full shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-6 h-6"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Bloqueig d'entorn segur detectat</h3>
+          <p class="text-xs text-slate-500 mt-1">El navegador pot bloquejar la impressió directa perquè aquesta aplicació s'executa dins d'un entorn de proves segur (Sandbox de l'Iframe).</p>
+        </div>
+      </div>
+      <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-xs text-slate-700 space-y-2 mb-5">
+        <p class="font-bold text-slate-900">Com pots desar el teu treball en format PDF perfecte?</p>
+        <ol class="list-decimal pl-4 space-y-1.5 leading-relaxed">
+          <li>Feu clic al botó blau: <b class="text-blue-600">"Desar lliurament (.html)"</b>.</li>
+          <li>Es descarregarà un únic fitxer HTML que inclou totes les teves respostes i les captures que hagis pujat.</li>
+          <li>Obriu aquest fitxer descarregat des del vostre ordinador a qualsevol pestanya del navegador (Chrome, Edge, Firefox, etc.).</li>
+          <li>Premeu <b class="font-mono bg-slate-200 px-1 py-0.5 rounded text-slate-800">Ctrl + P</b> (o Cmd + P a Mac) i seleccioneu <b>"Anomena com a PDF"</b> per desar un informe de pràctica perfecte.</li>
+        </ol>
+      </div>
+      <div class="flex justify-end gap-2.5">
+        <button onclick="handleExportHTML(); hideHelpModal();" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-colors cursor-pointer">Desar fitxer ara</button>
+        <button onclick="hideHelpModal()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer">Entesos, tancar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Configurar data d'avui per defecte
+    document.getElementById('studentDate').valueAsDate = new Date();
+
+    // Emmagatzematge en memòria de les imatges base64
+    const imagesData = {
+      1: null,
+      2: null,
+      3: null
+    };
+
+    function handleImageUpload(e, index) {
+      const file = e.target.files?.[0];
+      processFile(file, index);
+    }
+
+    function processFile(file, index) {
+      if (!file) return;
+      if (!file.type.startsWith('image/')) {
+        alert("Si us plau, puja un fitxer d'imatge vàlid.");
+        return;
+      }
+      if (file.size > 4 * 1024 * 1024) {
+        alert("La imatge és massa gran. El límit és de 4MB.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target.result;
+        imagesData[index] = base64;
+        document.getElementById('previewImage' + index).src = base64;
+        document.getElementById('dropZone' + index).classList.add('hidden');
+        document.getElementById('previewZone' + index).classList.remove('hidden');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeImage(index) {
+      imagesData[index] = null;
+      document.getElementById('previewImage' + index).src = '';
+      document.getElementById('fileInput' + index).value = '';
+      document.getElementById('previewZone' + index).classList.add('hidden');
+      document.getElementById('dropZone' + index).classList.remove('hidden');
+    }
+
+    // Drag and drop handlers
+    [1, 2, 3].forEach(index => {
+      const dropZone = document.getElementById('dropZone' + index);
+      dropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropZone.classList.add('border-indigo-500', 'bg-indigo-50/20');
+      });
+      dropZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-indigo-500', 'bg-indigo-50/20');
+      });
+      dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-indigo-500', 'bg-indigo-50/20');
+        const file = e.dataTransfer.files?.[0];
+        processFile(file, index);
+      });
+    });
+
+    function showHelpModal() {
+      document.getElementById('helpModal').classList.remove('hidden');
+    }
+
+    function hideHelpModal() {
+      document.getElementById('helpModal').classList.add('hidden');
+    }
+
+    function handlePrint() {
+      try {
+        window.print();
+      } catch (e) {
+        showHelpModal();
+      }
+    }
+
+    function handleExportHTML() {
+      const nameStr = document.getElementById('studentName').value || 'Sense_Nom';
+      const groupStr = document.getElementById('studentGroup').value || 'Sense_Grup';
+      const dateStr = document.getElementById('studentDate').value || 'Sense_Data';
+
+      const getScreenshotHTML = (index) => {
+        if (imagesData[index]) {
+          return `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${imagesData[index]}" alt="Captura Activitat ${index}" class="max-h-72 object-contain w-full rounded" /></div>`;
+        }
+        return '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+      };
+
+      const q1 = document.getElementById('q1').value || 'L\'estudiant no ha escrit cap resposta per a aquesta activitat.';
+      const q2 = document.getElementById('q2').value || 'L\'estudiant no ha escrit cap resposta per a aquesta activitat.';
+      const q3 = document.getElementById('q3').value || 'L\'estudiant no ha escrit cap resposta per a aquesta activitat.';
+      const qFinal = document.getElementById('qFinal').value || 'L\'estudiant no ha escrit cap conclusió.';
+
+      // Escape HTML tags in answers to avoid script injection in exported HTML
+      const escapeHTML = (str) => str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+      const standaloneHTML = `<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pràctica 9: Sintonització de controladors (Mètode de Ziegler-Nichols en Llaç Obert)</title>
+  <script src="https://cdn.tailwindcss.com"><\/script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; color: #0f172a; }
+    @media print {
+      @page { size: A4; margin: 20mm 15mm 20mm 15mm; }
+      body { background-color: white !important; font-size: 11pt !important; }
+      .no-print { display: none !important; }
+      .print-card { page-break-inside: avoid !important; break-inside: avoid !important; border: 1px solid #e2e8f0 !important; padding: 20px !important; border-radius: 8px !important; margin-bottom: 24px !important; background-color: #ffffff !important; }
+      .page-break { page-break-before: always !important; break-before: page !important; }
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-8 max-w-4xl mx-auto">
+  <div class="border-b-4 border-slate-900 pb-4 mb-8">
+    <div class="flex justify-between items-start">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-indigo-600">Mesura i Regulació - Examen de Laboratori</span>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">Pràctica 9: Sintonització de controladors (Mètode de Ziegler-Nichols en Llaç Obert)</h1>
+        <p class="text-slate-500 text-xs mt-1">Regulació PID — Trobar el joc de paràmetres ideals (Kp, Ki, Kd) mitjançant l'anàlisi de la corba de reacció en S per assolir els KPIs de disseny.</p>
+      </div>
+      <button onclick="window.print()" class="no-print bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-md transition-all">Imprimir Report a PDF</button>
+    </div>
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 bg-slate-100 p-4 rounded-lg border border-slate-200">
+      <div><span class="block text-[10px] font-bold uppercase text-slate-500">Nom i cognoms</span><span class="text-sm font-bold text-slate-900">${escapeHTML(nameStr)}</span></div>
+      <div><span class="block text-[10px] font-bold uppercase text-slate-500">Grup de classe</span><span class="text-sm font-bold text-slate-900">${escapeHTML(groupStr)}</span></div>
+      <div><span class="block text-[10px] font-bold uppercase text-slate-500">Data de lliurament</span><span class="text-sm font-bold text-slate-900">${escapeHTML(dateStr)}</span></div>
+    </div>
+  </div>
+
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">Activitat 1: Assaig de resposta temporal en Llaç Obert (Identificació de paràmetres K, L i τ)</h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed"><b>Enunciat:</b> Configureu el controlador en mode Manual (Bucle Obert) amb u = 0% de repòs i espereu que s'estabilitzi completament la lluminositat de la planta digital. Després, genereu un salt brusc del 100% de potència (Δu = 1000 u. de PWM, passant de 0 a 1000). Enregistreu la gràfica de la corba de reacció en S des de l'inici del salt. Mitjançant la gràfica d'historial, determineu l'increment de llum total (Δy), el retard mort (L) i la constant de temps (τ) d'escombrada fins al 63.2% del valor final. Calculeu el guany de la planta (K = Δy / Δu). Quins valors de Δy, K, L i τ heu identificat de la corba de reacció? Expliqueu breument el significat físic del retard mort L (temps mort) i la constant de temps τ per a aquest procés de lluminositat.</p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">${escapeHTML(q1)}</div>
+    <div class="mt-4"><span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>${getScreenshotHTML(1)}</div>
+  </div>
+
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">Activitat 2: Càlcul de paràmetres i implementació de control PI per Ziegler-Nichols</h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed"><b>Enunciat:</b> Amb els paràmetres K, L i τ identificats a l'Activitat 1, apliqueu les equacions de la taula de Ziegler-Nichols de Llaç Obert per calcular els paràmetres d'un controlador PI: Kp = 0.9 · τ / (K · L) i Ti = 3 · L, d'on obtenim el guany integral Ki = Kp / Ti. Configureu aquests valors al simulador, activeu el mode de control automàtic PID i demaneu un salt cap a la consigna r = 500 lx. Mostreu detalladament les fórmules i els càlculs numèrics utilitzats per obtenir Kp i Ki. Descriviu com se comporta la resposta temporal del control PI resultants (temps de pujada, sobrepic o inestabilitats). S'ha aconseguit eliminar completament l'error residual permanent (offset)?</p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">${escapeHTML(q2)}</div>
+    <div class="mt-4"><span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>${getScreenshotHTML(2)}</div>
+  </div>
+
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">Activitat 3: Sintonització final del control PID complet per Ziegler-Nichols</h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed"><b>Enunciat:</b> Apliqueu ara les directrius matemàtiques per calcular els coeficients d'un regulador PID complet: Kp = 1.2 · τ / (K · L), Ti = 2 · L, Td = 0.5 · L (Ki = Kp / Ti i Kd = Kp · Td). Configureu-los en el panell, executeu un escaló en llaç tancat fins a r = 500 lx i verifiqueu l'homologació de les mètriques enfront de tots els KPIs requerits pel client. Escriviu els càlculs i el vostre joc final sintonitzat (Kp, Ki, Kd) per al PID complet. Detalleu els KPIs obtinguts (temps de pujada, sobrepic màxim, temps d'estabilització i offset). Expliqueu com l'acció derivada Kd realitza un efecte amortidor que permet complir simultàniament l'estabilitat i la velocitat desitjades.</p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">${escapeHTML(q3)}</div>
+    <div class="mt-4"><span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>${getScreenshotHTML(3)}</div>
+  </div>
+
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">Conclusions: Avantatges i riscos de l'assaig en Llaç Obert en l'àmbit industrial</h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed"><b>Enunciat:</b> Resumiu un resum de bones pràctiques per a l'ús de mètodes d'assaig de corba de reacció en S. Quins riscos té realitzar aquest tipus d'assaig amb un salt del 100% de potència (bucle obert) directament a camp sobre maquinària física real (com un reactor térmic o un motor industrial) en lloc d'un simulador segur? Quines alternatives existeixen per sintonitzar sistemes crítics que no es poden obrir de forma segura?</p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[80px]">${escapeHTML(qFinal)}</div>
+  </div>
+
+  <div class="mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-400 no-print">
+    <p>Material de lliurament pràctic oficial - IES Ebre. Generat amb el Simulador PID de Ziegler-Nichols per Llaç Obert.</p>
+  </div>
+</body>
+</html>`;
+
+      const blob = new Blob([standaloneHTML], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Practica_9_Ziegler_Nichols_Llac_Obert_${nameStr.trim().replace(/\s+/g, '_')}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+  </script>
 </body>
 </html>

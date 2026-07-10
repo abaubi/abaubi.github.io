@@ -1,0 +1,6 @@
+{
+  "name": "Pràctica 9: Ziegler-Nichols",
+  "description": "Assaig per llaç obert amb JavaScript pur i HTML autònom.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
