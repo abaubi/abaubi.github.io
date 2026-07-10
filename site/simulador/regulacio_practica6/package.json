@@ -1,0 +1,13 @@
+{
+  "name": "practica-6-pid",
+  "private": true,
+  "version": "1.0.0",
+  "type": "commonjs",
+  "scripts": {
+    "dev": "node server.js",
+    "build": "mkdir -p dist && cp index.html dist/index.html",
+    "lint": "echo 'No linting required'"
+  },
+  "dependencies": {},
+  "devDependencies": {}
+}

@@ -1,0 +1,8 @@
+{
+  "name": "Pràctica 6: Regulació Proporcional-Integral-Derivativa (PID) completa",
+  "description": "Un simulador interactiu complet en React i Tailwind per analitzar l'efecte esmorteïdor de l'acció derivativa (Td) sobre sistemes de control de bucle tancat amb retard.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

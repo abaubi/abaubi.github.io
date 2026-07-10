@@ -10,8 +10,22 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Lucide Icons Browser CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
   <style>
-    /* Premium CSS Print Media Rules for school report lliurament */
+    /* Global Styles */
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    /* Print Media Rules for official school report */
     @media print {
       @page {
         size: A4;
@@ -21,29 +35,33 @@
       body {
         background-color: white !important;
         color: #0f172a !important; /* slate-900 */
-        font-family: 'Inter', -apple-system, sans-serif !important;
-        font-size: 11.5pt !important;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 11pt !important;
         line-height: 1.5 !important;
         padding: 0 !important;
         margin: 0 !important;
       }
 
-      /* Hide interactive simulator, headers, sliders, scales, and buttons when printing */
+      /* Hide interactive simulator, headers, buttons, and other utilities when printing */
       .print\:hidden, 
       header, 
       footer, 
-      section.lg\:col-span-5, 
-      section.lg\:col-span-7, 
       main, 
       button, 
       input[type="file"],
-      .no-print {
+      .no-print,
+      #guiaDidacticaContainer,
+      #informeAlumneHeader,
+      #identificationSection,
+      .input-wrapper,
+      .upload-zone,
+      textarea {
         display: none !important;
       }
 
       /* Allow student report section to expand and print in full width */
-      section#studentReportSection,
-      section {
+      #studentReportSection,
+      #printReportArea {
         width: 100% !important;
         max-width: 100% !important;
         padding: 0 !important;
@@ -60,6 +78,7 @@
         border-radius: 8px !important;
         margin-bottom: 24px !important;
         background-color: #ffffff !important;
+        display: block !important;
       }
 
       /* Title styling inside print report */
@@ -84,15 +103,11 @@
         line-height: 1.5 !important;
       }
 
-      /* Hide form textareas and display the print-only div with text content */
-      textarea {
-        display: none !important;
-      }
-
+      /* Display the print-only div with text content */
       .print-textarea-fallback {
         display: block !important;
         background-color: #f8fafc !important; /* slate-50 */
-        border-left: 4px solid #0d9488 !important; /* teal-600 */
+        border-left: 4px solid #4f46e5 !important; /* indigo-600 */
         border-top: 1px solid #cbd5e1 !important;
         border-right: 1px solid #cbd5e1 !important;
         border-bottom: 1px solid #cbd5e1 !important;
@@ -124,12 +139,1086 @@
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen">
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+
+  <!-- HEADER DE L'APLICACIÓ (print:hidden) -->
+  <header class="bg-slate-900 text-white shadow-xl border-b border-slate-800 py-6 px-4 sm:px-8 print:hidden">
+    <div class="max-w-4xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-teal-400 bg-teal-950/80 px-2.5 py-0.5 rounded border border-teal-800">
+            Mòdul de Mesura i Regulació
+          </span>
+          <span class="text-xs font-semibold uppercase tracking-wider text-indigo-400 bg-indigo-950/80 px-2.5 py-0.5 rounded border border-indigo-800">
+            ARI / Robòtica
+          </span>
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-extrabold tracking-tight mt-1.5 flex items-center gap-2">
+          Pràctica 6: Regulació Proporcional-Integral-Derivativa (PID) completa
+        </h1>
+        <p class="text-slate-400 text-sm mt-1">
+          Controlador PID continu — Analitzar l'efecte esmorteïdor de l'acció derivativa (Td) sobre el transitori
+        </p>
+      </div>
+      <div class="flex flex-wrap gap-2 w-full md:w-auto">
+        <button 
+          onclick="handlePrint()" 
+          class="flex-1 md:flex-none bg-teal-600 hover:bg-teal-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
+        >
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          Generar PDF / Imprimir
+        </button>
+        <button 
+          onclick="handleExportHTML()" 
+          class="flex-1 md:flex-none bg-blue-600 hover:bg-blue-700 text-white px-4 py-2.5 rounded-lg font-semibold shadow-md transition-all flex items-center justify-center gap-2 text-xs sm:text-sm cursor-pointer"
+          title="Descarrega el teu treball com a fitxer html llest per obrir i desar directament en PDF"
+        >
+          <i data-lucide="download" class="w-4 h-4"></i>
+          Desar lliurament (.html)
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTINGUT PRINCIPAL: GUIA DIDÀCTICA (print:hidden) -->
+  <main class="max-w-4xl w-full mx-auto p-4 sm:p-8 flex-grow print:hidden">
+    <div class="space-y-8" id="guiaDidacticaContainer">
+      
+      <!-- Secció 1: Enunciat -->
+      <div id="sectionEnunciat" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2" id="headerEnunciat">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">1</span>
+          Enunciat de l'activitat
+        </h2>
+        <div class="text-slate-700 leading-relaxed space-y-4 text-sm" id="bodyEnunciat">
+          <p>
+            L'objectiu d'aquesta <b>Pràctica 6</b> és analitzar de forma pràctica l'<b>efecte esmorteïdor de l'acció derivativa (<span class="font-semibold text-indigo-600">T_d</span>)</b> en un sistema de control de temperatura o posició en llaç tancat (PID).
+          </p>
+          <p>
+            En les pràctiques anteriors, vam comprovar que l'acció Proporcional combinada amb l'acció Integral (regulador PI) és molt útil per aconseguir error permanent nul. No obstant això, quan la planta té fortes inèrcies (múltiples constants de temps com <span class="font-semibold text-indigo-600">&tau;_2</span> i <span class="font-semibold text-indigo-600">&tau;_3</span>) o retard temporal significatiu (<span class="font-semibold text-indigo-600">&theta;</span>), el control PI esdevé altament oscil·latori o inestable, requerint molt de temps per estabilitzar-se. 
+          </p>
+          <p>
+            Introduint la <b>constant de temps derivada (<span class="font-semibold text-indigo-600">T_d</span>)</b> aconseguirem un efecte "anticipador" o "fre predictiu". L'acció derivativa mesura la velocitat a la qual varia l'error i actua en contra d'aquest canvi, esmorteïnt radicalment les oscil·lacions i disminuint notablement el sobrepic (overshoot) de la planta.
+          </p>
+        </div>
+      </div>
+
+      <!-- Secció 2: Fonaments teòrics -->
+      <div id="sectionTeoria" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2" id="headerTeoria">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">2</span>
+          Fonaments Teòrics de la Regulació PID Completa
+        </h2>
+        <div class="space-y-6 text-slate-700 text-sm leading-relaxed" id="bodyTeoria">
+          <p>
+            Un regulador PID calcula de manera simultània tres accions diferents basades en el senyal d'error <span class="font-mono bg-slate-100 px-1 rounded">e(t)</span>, sumant els seus efectes per calcular el senyal de control final <span class="font-mono bg-slate-100 px-1 rounded">u(t)</span>:
+          </p>
+
+          <div class="bg-slate-950 text-slate-300 font-mono text-xs p-4 rounded border border-slate-800 space-y-1" id="codeFormulaPI">
+            <div class="text-indigo-400 font-bold">// Equació paral·lela ideal del regulador PID</div>
+            <div>u(t) = K_p_c · e(t) + (K_p_c / T_i) · &int; e(&tau;) d&tau; + K_p_c · T_d · [ de(t) / dt ]</div>
+            <div class="mt-2 text-slate-500">// On:</div>
+            <div>• K_p_c : Guany proporcional del controlador (força bruta de reacció)</div>
+            <div>• T_i : Constant de temps integral (elimina l'offset acumulant errors)</div>
+            <div>• T_d : Constant de temps derivada (anticipa i frena mesurant la tendència)</div>
+            <div>• de(t)/dt : Velocitat instantània de canvi de l'error</div>
+          </div>
+
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2" id="teoriaPredictor">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2" id="headerPredictor">
+              <span class="text-indigo-600">&bull;</span>
+              L'Acció Derivativa com a "Fre Predictor"
+            </h3>
+            <p class="text-slate-600 text-xs leading-relaxed">
+              Mentre que l'acció Proporcional mira el present i la Integral mira el passat, la Derivativa <b>mira cap al futur</b> (fa una predicció lineal basada en el pendent actual de l'error):
+            </p>
+            <ul class="list-disc pl-5 text-xs space-y-1 text-slate-700">
+              <li>
+                Quan la temperatura o posició del procés comença a pujar ràpidament cap a la consigna, l'error disminueix ràpidament. Això vol dir que la derivada de l'error és <b>negativa</b> (<span class="font-mono bg-slate-100 px-1 rounded">de/dt &lt; 0</span>).
+              </li>
+              <li>
+                L'acció derivativa, en multiplicar-se per aquest pendent negatiu, resta de l'esforç de control (<span class="font-mono bg-slate-100 px-1 rounded">u(t)</span>), actuant com un <b>fre aerodinàmic o amortidor actiu</b>.
+              </li>
+              <li>
+                Aquest efecte evita que la planta es passi de llarg de la consigna (redueix l'overshoot) i suprimeix les oscil·lacions transitories ràpidament.
+              </li>
+            </ul>
+          </div>
+
+          <!-- Implementació pràctica en programari (JS) -->
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-3" id="jsPIImplementation">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2">
+              <span class="text-indigo-600">&bull;</span>
+              Algorisme PID Complet en JavaScript (Euler discretitzat)
+            </h3>
+            <p class="text-xs text-slate-600">
+              A continuació es detalla la implementació exacta de l'algorisme de regulació PID en sistemes encastats reals, com PLCs, microcontroladors o el nostre propi simulador en temps real:
+            </p>
+            <div class="bg-slate-950 text-slate-300 font-mono text-xs p-4 rounded border border-slate-800 overflow-x-auto space-y-1">
+              <div class="text-indigo-400 font-bold">// Variables globals que s'han de conservar entre cada cicle de mostreig</div>
+              <div>let <span class="text-indigo-400">integralError</span> = 0.0; <span class="text-slate-500">// Acumulador de l'acció integral</span></div>
+              <div>let <span class="text-indigo-400">lastError</span> = 0.0;     <span className="text-slate-500">// Error del cicle anterior per calcular la derivada</span></div>
+              <div class="mt-2 text-indigo-400 font-bold">// Funció de control executada periòdicament cada 'dt' segons</div>
+              <div>function <span class="text-yellow-400">calcularControlPID</span>(consigna, mesura, Kpc, Ti, Td, dt, uMax) {"{"}</div>
+              <div class="pl-4">const error = consigna - mesura;</div>
+              
+              <div class="pl-4 mt-2 text-slate-500">// 1. Acció Proporcional (P)</div>
+              <div class="pl-4">const pTerm = Kpc * error;</div>
+              
+              <div class="pl-4 mt-2 text-slate-500">// 2. Acció Integral (I)</div>
+              <div class="pl-4">if (Ti &gt; 0 && Ti !== Infinity) {"{"}</div>
+              <div class="pl-8">integralError += error * dt;</div>
+              <div class="pl-4">{"}"} else {"{"}</div>
+              <div class="pl-8">integralError = 0.0;</div>
+              <div class="pl-4">{"}"}</div>
+              <div class="pl-4">const iTerm = (Ti &gt; 0 && Ti !== Infinity) ? (Kpc / Ti) * integralError : 0.0;</div>
+              
+              <div class="pl-4 mt-2 text-slate-500">// 3. Acció Derivativa (D) - Velocitat instantània del canvi d'error</div>
+              <div class="pl-4">const dTerm = (Td &gt; 0) ? Kpc * Td * ((error - lastError) / dt) : 0.0;</div>
+              
+              <div class="pl-4 mt-2 text-slate-500">// 4. Esforç Ideal Combinat</div>
+              <div class="pl-4">const uIdeal = pTerm + iTerm + dTerm;</div>
+              
+              <div class="pl-4 mt-2 text-slate-500">// 5. Saturació física de l'actuador (Límit de maquinari)</div>
+              <div class="pl-4">const uSaturada = Math.max(0.0, Math.min(uMax, uIdeal));</div>
+              
+              <div class="pl-4 mt-2 text-slate-500">// 6. Anti-windup condicional per evitar la saturació integral</div>
+              <div class="pl-4">if (uIdeal !== uSaturada && Ti &gt; 0 && Ti !== Infinity) {"{"}</div>
+              <div class="pl-8">if (Math.sign(error) === Math.sign(uIdeal)) {"{"}</div>
+              <div class="pl-12">integralError -= error * dt; <span class="text-slate-500">// Desfà la integració inútil</span></div>
+              <div class="pl-8">{"}"}</div>
+              <div class="pl-4">{"}"}</div>
+              
+              <div class="pl-4 mt-2">lastError = error; <span class="text-slate-500">// Desar l'error actual per al proper cicle</span></div>
+              <div class="pl-4">return uSaturada;</div>
+              <div>{"}"}</div>
+            </div>
+          </div>
+
+          <!-- Dibuix SVG de l'Acció PID en contrast amb PI -->
+          <div class="bg-white p-4 rounded-lg border border-slate-200 flex flex-col items-center gap-2" id="visualSgRepresentation">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Figura 1: Efecte de l'acció derivada (PI vs PID complet)</span>
+            <svg class="w-full max-w-md h-44 bg-slate-50/40 rounded border border-slate-100" viewBox="0 0 360 160" id="svgGraficTeoric">
+              <!-- Gridlines -->
+              <path d="M 40 10 L 40 130 M 90 10 L 90 130 M 140 10 L 140 130 M 190 10 L 190 130 M 240 10 L 240 130 M 290 10 L 290 130 M 340 10 L 340 130" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="1 4" />
+              <path d="M 40 130 L 340 130 M 40 106 L 340 106 M 40 82 L 340 82 M 40 58 L 340 58 M 40 34 L 340 34 M 40 10 L 340 10" stroke="#e2e8f0" stroke-width="0.5" stroke-dasharray="1 4" />
+
+              <!-- Axes -->
+              <path d="M 40 10 L 40 132 M 38 130 L 345 130" stroke="#94a3b8" stroke-width="1.5" stroke-linecap="round" />
+              
+              <!-- Y-Axis Labels -->
+              <text x="32" y="133" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="end">0V</text>
+              <text x="32" y="109" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="end">1V</text>
+              <text x="32" y="85" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="end">2V</text>
+              <text x="32" y="61" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="end">3V</text>
+              <text x="32" y="37" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="end">4V</text>
+              <text x="32" y="13" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="end">5V</text>
+
+              <!-- X-Axis Labels -->
+              <text x="40" y="142" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="middle">0s</text>
+              <text x="90" y="142" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="middle">2s</text>
+              <text x="140" y="142" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="middle">4s</text>
+              <text x="190" y="142" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="middle">6s</text>
+              <text x="240" y="142" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="middle">8s</text>
+              <text x="290" y="142" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="middle">10s</text>
+              <text x="340" y="142" fill="#94a3b8" font-size="7" font-weight="bold" text-anchor="middle">12s</text>
+
+              <!-- Setpoint (r) - Green -->
+              <path d="M 40 82 L 340 82" stroke="#10b981" stroke-width="1.5" stroke-dasharray="3 3" />
+              <text x="45" y="75" fill="#10b981" font-size="8" font-weight="extrabold">Consigna r = 2.0 V (Setpoint)</text>
+
+              <!-- Highly Oscillatory PI Curve (Dotted orange) -->
+              <path id="path-pi" stroke="#f59e0b" stroke-width="1.2" stroke-dasharray="2 2" fill="none" />
+              <text x="210" y="122" fill="#f59e0b" font-size="7.5" font-weight="semibold">Control PI: Fortes oscil·lacions</text>
+
+              <!-- Damped PID Curve (Solid teal) -->
+              <path id="path-pid" stroke="#0d9488" stroke-width="2.5" fill="none" />
+              <text x="210" y="100" fill="#0d9488" font-size="8" font-weight="extrabold">Control PID (Td &gt; 0): Resposta esmorteïda</text>
+            </svg>
+          </div>
+
+          <!-- El perill del soroll -->
+          <div class="bg-slate-50 p-4 rounded-lg border border-slate-200 space-y-2" id="teoriaSaturacioWindup">
+            <h3 class="font-bold text-slate-900 flex items-center gap-2" id="headerWindup">
+              <span class="text-indigo-600">&bull;</span>
+              El Perill dels Sorolls i el "Derivative Kick" en T_d alta
+            </h3>
+            <p class="text-xs leading-relaxed">
+              Tot i que l'acció de derivar aporta una enorme estabilitat, presenta dos greus problemes físics en aplicacions reals:
+            </p>
+            <ul class="list-disc pl-5 text-xs space-y-1.5 text-slate-600 leading-normal">
+              <li>
+                <b>Amplificació del soroll d'alta freqüència:</b> Qualsevol sensor físic (per exemple una sonda de temperatura PT100) té petites fluctuacions de soroll d'alta freqüència. Com que la derivada mesura velocitat de canvi, la derivada de fluctuacions molt ràpides (pendent molt vertical) genera un senyal enorme, provocant que l'actuador commuti bruscament, fent vibrar elements mecànics i danyant les vàlvules.
+              </li>
+              <li>
+                <b>Filtre de derivació:</b> Per aquest motiu, en la pràctica industrial s'afegeix un filtre pas-baix d'alta freqüència en sèrie amb el derivador, d'aquesta manera es processa només la tendència macro de la temperatura i es descarta el soroll micro del sensor.
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secció 3: Passos per a la pràctica -->
+      <div id="sectionPassos" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-lg font-bold text-slate-900 border-b pb-2 mb-4 flex items-center gap-2" id="headerPassosTreball">
+          <span class="flex items-center justify-center w-6 h-6 rounded-full bg-indigo-100 text-indigo-800 text-xs font-bold">3</span>
+          Guia de Treball Pas a Pas
+        </h2>
+        <div class="space-y-4 text-slate-700 text-sm leading-relaxed" id="bodyPassosTreball">
+          <div class="border-l-4 border-amber-500 pl-3 py-1 bg-amber-50/40 rounded-r" id="pasTreball1">
+            <h3 class="font-bold text-slate-900">Pas 1: Resposta d'un sistema molt oscil·latori amb regulació PI (Td = 0 s)</h3>
+            <p class="mt-1 text-slate-600">
+              Configureu el simulador extern amb retard i inèrcies reals: <span class="font-mono bg-slate-100 px-1 rounded">&tau;_1 = 3.0 s, &tau;_2 = 1.5 s, &tau;_3 = 0.5 s, retard &theta; = 0.8 s</span>.
+              Activeu el <b>PID Continu</b>, amb consigna <span class="font-mono bg-slate-100 px-1 rounded">r = 2.0 V</span>, guany <span class="font-mono bg-slate-100 px-1 rounded">K_p_c = 2.5</span> i constant integral <span class="font-mono bg-slate-100 px-1 rounded">T_i = 4.0 s</span>. Inicialment, configureu la constant derivada a <span class="font-mono bg-slate-100 px-1 rounded">T_d = 0.0 s</span>.
+              <br />Observeu com les inèrcies acumulades i el temps mort fan que el sistema lliuri fortes oscil·lacions transitories amb un sobrepic molt elevat. Anoteu el sobrepic (%) i el temps d'estabilització.
+            </p>
+          </div>
+
+          <div class="border-l-4 border-indigo-500 pl-3 py-1 bg-indigo-50/40 rounded-r" id="pasTreball2">
+            <h3 class="font-bold text-slate-900">Pas 2: Introducció de l'acció derivada (Td) com a fre predictiu</h3>
+            <p class="mt-1 text-slate-600">
+              Amb els mateixos paràmetres físics de la planta, aneu introduint gradualment acció derivada.
+              Proveu a pujar el valor a <span class="font-mono bg-slate-100 px-1 rounded">T_d = 0.5 s</span>, després <span class="font-mono bg-slate-100 px-1 rounded">1.0 s</span>, i finalment <span class="font-mono bg-slate-100 px-1 rounded">1.5 s</span>.
+              Observeu com a mesura que puja <span class="font-semibold text-indigo-600">T_d</span>, les ones es redueixen notablement en amplitud, el sobrepic baixa radicalment i el temps d'estabilització és molt menor. Fixeu-vos com la corba de control blava s'anticipa fent una davallada ràpida del voltatge per frenar la sortida abans d'arribar a la consigna.
+            </p>
+          </div>
+
+          <div class="border-l-4 border-red-500 pl-3 py-1 bg-red-50/40 rounded-r" id="pasTreball3">
+            <h3 class="font-bold text-slate-900">Pas 3: L'inconvenient d'un excés d'acció derivada (Td massa gran)</h3>
+            <p class="mt-1 text-slate-600">
+              Pugeu la constant derivada <span class="font-semibold text-indigo-600">T_d</span> per sobre dels límits de seguretat escolar (proveu <span class="font-mono bg-slate-100 px-1 rounded">T_d = 3.5 s</span> o <span class="font-mono bg-slate-100 px-1 rounded">4.5 s</span>).
+              Mireu el senyal blau de control: veureu l'aparició de ràpides oscil·lacions brusques (micro-commutacions). Argumenteu per què aquests impulsos danyarien els actuadors en entorns de fàbrica.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- SECCIÓ DE L'INFORME DE L'ALUMNE (Sempre visible en pantalla i per imprimir) -->
+  <section class="max-w-4xl w-full mx-auto p-4 sm:p-8 pt-0 print:p-0 print:max-w-full" id="studentReportSection">
+    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-slate-200">
+      
+      <!-- Capçalera del Report amb accions ràpides -->
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b-2 border-slate-900 pb-4 mb-6" id="informeAlumneHeader">
+        <div>
+          <h2 class="text-xl font-extrabold text-slate-900 uppercase tracking-tight flex items-center gap-2">
+            <i data-lucide="file-text" class="w-5 h-5 text-indigo-600 shrink-0"></i>
+            Full de Treball i Lliurament de la Pràctica 6
+          </h2>
+          <p class="text-xs text-slate-500 mt-1">
+            Responeu les preguntes del laboratori sobre l'acció derivativa (Td) com a fre predictiu, l'esmorteïment del transitori i els riscos de sobre-derivació, adjunteu les captures i descarregueu el report final (.html).
+          </p>
+        </div>
+        
+        <!-- Botons d'exportació alternatius (a dalt del formulari) -->
+        <div class="flex flex-wrap gap-2 w-full md:w-auto">
+          <button
+            onclick="handlePrint()"
+            class="flex-1 md:flex-initial bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-all flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            Imprimir / Desar PDF
+          </button>
+          <button
+            onclick="handleExportHTML()"
+            class="flex-1 md:flex-initial bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-all flex items-center justify-center gap-2 cursor-pointer"
+            title="Descarrega un document HTML complet que inclou les teves respostes i imatges"
+          >
+            <i data-lucide="download" class="w-4 h-4"></i>
+            Desar fitxer HTML
+          </button>
+        </div>
+      </div>
+
+      <!-- Dades d'identificació de l'alumne (print:hidden) -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-slate-50 p-5 rounded-lg border border-slate-200 print:hidden" id="identificationSection">
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <i data-lucide="user" class="w-3 h-3 text-slate-400"></i>
+            Nom i Cognoms de l'alumne/a
+          </label>
+          <input
+            id="student-name"
+            type="text"
+            placeholder="Ex: Joan Garcia i Soler"
+            class="w-full p-2.5 border border-slate-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm bg-white text-slate-900"
+          />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <i data-lucide="users" class="w-3 h-3 text-slate-400"></i>
+            Grup de Classe
+          </label>
+          <input
+            id="student-group"
+            type="text"
+            placeholder="Ex: 2n Automàtica i Robòtica Industrial"
+            class="w-full p-2.5 border border-slate-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm bg-white text-slate-900"
+          />
+        </div>
+        <div>
+          <label class="block text-[10px] font-bold uppercase text-slate-600 mb-1.5 flex items-center gap-1">
+            <i data-lucide="calendar" class="w-3 h-3 text-slate-400"></i>
+            Data del Treball
+          </label>
+          <input
+            id="student-date"
+            type="date"
+            class="w-full p-2.5 border border-slate-300 rounded focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm bg-white text-slate-900"
+          />
+        </div>
+      </div>
+
+      <!-- PORTFOLIO DE RESPOSTES DE L'INFORME (Aquest bloc s'utilitza tant en pantalla com per imprimir) -->
+      <div id="printReportArea" class="space-y-8">
+        
+        <!-- Header per a l'impressió directa (hidden en pantalla, block en print) -->
+        <div class="hidden print:block border-b-4 border-slate-900 pb-4 mb-8">
+          <div class="flex justify-between items-start">
+            <div>
+              <span class="text-xs font-bold uppercase tracking-wider text-indigo-600">Mesura i Regulació - Examen de Laboratori</span>
+              <h1 class="text-2xl font-extrabold text-slate-900 mt-1">Pràctica 6: Regulació Proporcional-Integral-Derivativa (PID) completa</h1>
+              <p class="text-slate-500 text-xs mt-1">Analitzar l'efecte esmorteïdor i l'anticipació de l'acció derivativa (Td) sobre el transitori en llaç tancat.</p>
+            </div>
+          </div>
+
+          <!-- Student Details Box (visible només per a l'impressió) -->
+          <div class="grid grid-cols-3 gap-4 mt-6 bg-slate-100 p-4 rounded-lg border border-slate-200">
+            <div>
+              <span class="block text-[9px] font-bold uppercase text-slate-500">Nom i cognoms</span>
+              <span id="print-name" class="text-sm font-bold text-slate-900"></span>
+            </div>
+            <div>
+              <span class="block text-[9px] font-bold uppercase text-slate-500">Grup de classe</span>
+              <span id="print-group" class="text-sm font-bold text-slate-900"></span>
+            </div>
+            <div>
+              <span class="block text-[9px] font-bold uppercase text-slate-500">Data de lliurament</span>
+              <span id="print-date" class="text-sm font-bold text-slate-900"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pregunta 1 -->
+        <div class="print-card border-b border-slate-100 pb-8 last:border-0 last:pb-0" id="cardQ1">
+          <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+            <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 1</span>
+            Estudi d'un sistema oscil·latori amb regulació PI (Sense acció derivada, Td = 0 s)
+          </h3>
+          <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+            <b>Enunciat:</b> Configureu la planta amb retard i múltiples constants d'inèrcia: <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_1 = 3.0 s</span>, <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_2 = 1.5 s</span>, <span class="font-mono bg-slate-100 px-0.5 rounded">&tau;_3 = 0.5 s</span> i retard temporal <span class="font-mono bg-slate-100 px-0.5 rounded">&theta; = 0.8 s</span>. Seleccioneu el mode <b>PID Continu</b> amb consigna <span class="font-mono bg-slate-100 px-0.5 rounded">r = 2.0 V</span>, guany <span class="font-semibold text-indigo-600">K_p_c = 2.5</span>, acció integral <span class="font-mono bg-slate-100 px-0.5 rounded">T_i = 4.0 s</span> i acció derivada desactivada (<span class="font-mono bg-slate-100 px-0.5 rounded">T_d = 0.0 s</span>).
+            <br /><b>Responeu:</b> Descriviu el comportament temporal de la sortida de la planta <span class="font-mono bg-slate-100 px-0.5 rounded">y(t)</span>. Quin percentatge de sobrepic (Overshoot %) i quin temps d'estabilització s'indica al panell de rendiment? Expliqueu per què la presència conjunta de retard i inèrcies addicionals fa tan inestable un bucle de control que només té acció proporcional-integral (PI).
+          </p>
+          <div class="input-wrapper mb-4">
+            <textarea
+              id="q1-textarea"
+              rows="5"
+              placeholder="Anoteu els valors de sobrepic i temps d'estabilització. Expliqueu com el retard d'informació de la planta fa que l'acció de control arribi amb un desfasament de fase que alimenta l'acumulació integral en el sentit erroni, fent créixer l'oscil·lació temporal de la temperatura..."
+              class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed text-slate-800 bg-white"
+            ></textarea>
+          </div>
+          <!-- Fallback per a la versió impresa (invisible en pantalla, visible en impressió) -->
+          <div class="hidden print-textarea-fallback mb-4" id="q1-fallback">L'estudiant no ha escrit cap resposta per a aquesta activitat.</div>
+
+          <!-- Zona per pujar la captura 1 -->
+          <div class="space-y-2">
+            <label class="block text-[11px] font-bold text-slate-700">
+              Captura de pantalla d'aquesta simulació (Oscil·lació severa amb control PI, K_p_c = 2.5, T_i = 4.0 s i T_d = 0.0 s):
+            </label>
+            
+            <!-- Upload Zone -->
+            <div
+              id="upload-zone-1"
+              class="upload-zone border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <i data-lucide="upload" class="w-6 h-6 text-slate-400"></i>
+              <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+              <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+              <input
+                type="file"
+                id="file-input-1"
+                accept="image/*"
+                class="hidden"
+              />
+            </div>
+
+            <!-- Preview Zone -->
+            <div id="preview-container-1" class="hidden relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center">
+              <img id="preview-img-1" src="" alt="Captura Activitat 1" class="max-h-56 object-contain w-full" />
+              <div class="absolute top-2 right-2 no-print">
+                <button
+                  type="button"
+                  onclick="removeImage(1)"
+                  class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold"
+                >
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span>Eliminar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pregunta 2 -->
+        <div class="print-card border-b border-slate-100 pb-8 last:border-0 last:pb-0 page-break" id="cardQ2">
+          <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+            <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 2</span>
+            Introducció de l'acció derivada (Td) per esmorteïmer la resposta (Efecte predictor)
+          </h3>
+          <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+            <b>Enunciat:</b> Mantenint exactament els mateixos paràmetres de la planta i el regulador (Kp_c = 2.5, Ti = 4.0 s), activeu l'acció derivada ajustant gradualment el valor de <span class="font-semibold text-indigo-600">T_d</span> a <span class="font-mono bg-slate-100 px-0.5 rounded">0.5 s</span>, <span class="font-mono bg-slate-100 px-0.5 rounded">1.0 s</span>, i finalment <span class="font-mono bg-slate-100 px-0.5 rounded">1.5 s</span>.
+            <br /><b>Responeu:</b> Com evoluciona el sobrepic (Overshoot %) i el temps d'estabilització a mesura que incrementem el valor de <span class="italic">T_d</span>? Observeu la corba blava de control <span class="font-mono bg-slate-100 px-0.5 rounded">u(t)</span>: descriviu com actua a l'inici de la simulació per esmorteir la pujada. Expliqueu físicament la relació entre la velocitat de variació de l'error i la força d'amortiment oposada per l'acció derivada.
+          </p>
+          <div class="input-wrapper mb-4">
+            <textarea
+              id="q2-textarea"
+              rows="5"
+              placeholder="Anoteu els sobrepicos (%) i els temps d'estabilització obtinguts per a cada Td (0.5s, 1s, 1.5s). Després comenteu com es redueix drasticament l'oscil·lació. Expliqueu com la derivada de l'error frena de forma anticipada la potència u(t) per evitar passar-se de la consigna..."
+              class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed text-slate-800 bg-white"
+            ></textarea>
+          </div>
+          <div class="hidden print-textarea-fallback mb-4" id="q2-fallback">L'estudiant no ha escrit cap resposta per a aquesta activitat.</div>
+
+          <!-- Zona per pujar la captura 2 -->
+          <div class="space-y-2">
+            <label class="block text-[11px] font-bold text-slate-700">
+              Captura de pantalla d'aquesta simulació (Resposta optimitzada amb overshoot mínim i estabilitat gràcies a T_d = 1.2 s o similar):
+            </label>
+            
+            <!-- Upload Zone -->
+            <div
+              id="upload-zone-2"
+              class="upload-zone border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <i data-lucide="upload" class="w-6 h-6 text-slate-400"></i>
+              <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+              <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+              <input
+                type="file"
+                id="file-input-2"
+                accept="image/*"
+                class="hidden"
+              />
+            </div>
+
+            <!-- Preview Zone -->
+            <div id="preview-container-2" class="hidden relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center">
+              <img id="preview-img-2" src="" alt="Captura Activitat 2" class="max-h-56 object-contain w-full" />
+              <div class="absolute top-2 right-2 no-print">
+                <button
+                  type="button"
+                  onclick="removeImage(2)"
+                  class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold"
+                >
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span>Eliminar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pregunta 3 -->
+        <div class="print-card border-b border-slate-100 pb-8 last:border-0 last:pb-0 page-break" id="cardQ3">
+          <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+            <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Activitat 3</span>
+            El perill d'un excés d'acció derivada (Td excessivament alta)
+          </h3>
+          <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+            <b>Enunciat:</b> Mantenint exactament la mateixa planta i paràmetres, forceu un excés d'acció de regulació derivada posant <span class="font-semibold text-indigo-600">T_d</span> a valors molt elevats (proveu <span class="font-mono bg-slate-100 px-0.5 rounded">3.5 s</span> o <span class="font-mono bg-slate-100 px-0.5 rounded">4.5 s</span>). Observeu el gràfic.
+            <br /><b>Responeu:</b> Quin canvi radical experimenta la corba blava de l'esforç de control <span class="font-mono bg-slate-100 px-0.5 rounded">u(t)</span>? Expliqueu físicament per què l'excés de guany de derivació genera transitoris bruscos o micro-oscil·lacions d'alta freqüència en l'actuador. Com afectaria això a la vida de servei d'una electrovàlvula industrial o un relé real? Com es soluciona aquest defecte a la indústria?
+          </p>
+          <div class="input-wrapper mb-4">
+            <textarea
+              id="q3-textarea"
+              rows="5"
+              placeholder="Descriviu els pics de commutació brusc de u(t). Expliqueu el dany físic de la vàlvula (desgast de l'engranatge, dany térmic) i expliqueu la necessitat d'utilitzar un filtre de derivació (filtre pas-baix) per mitigar el soroll d'alta freqüència del sensor..."
+              class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed text-slate-800 bg-white"
+            ></textarea>
+          </div>
+          <div class="hidden print-textarea-fallback mb-4" id="q3-fallback">L'estudiant no ha escrit cap resposta per a aquesta activitat.</div>
+
+          <!-- Zona per pujar la captura 3 -->
+          <div class="space-y-2">
+            <label class="block text-[11px] font-bold text-slate-700">
+              Captura de pantalla d'aquesta simulació (Oscil·lació ràpida de control per excés d'acció derivada, T_d = 4.0 s o superior):
+            </label>
+            
+            <!-- Upload Zone -->
+            <div
+              id="upload-zone-3"
+              class="upload-zone border-2 border-dashed border-slate-300 hover:border-indigo-500 hover:bg-indigo-50/20 rounded-lg p-5 flex flex-col items-center justify-center gap-1.5 cursor-pointer transition-colors"
+            >
+              <i data-lucide="upload" class="w-6 h-6 text-slate-400"></i>
+              <span class="text-xs font-semibold text-slate-700">Fes clic o arrossega una imatge aquí</span>
+              <span class="text-[10px] text-slate-400">PNG, JPG o GIF fins a 4MB</span>
+              <input
+                type="file"
+                id="file-input-3"
+                accept="image/*"
+                class="hidden"
+              />
+            </div>
+
+            <!-- Preview Zone -->
+            <div id="preview-container-3" class="hidden relative group max-w-xl border border-slate-200 rounded-lg overflow-hidden bg-slate-50 flex items-center justify-center">
+              <img id="preview-img-3" src="" alt="Captura Activitat 3" class="max-h-56 object-contain w-full" />
+              <div class="absolute top-2 right-2 no-print">
+                <button
+                  type="button"
+                  onclick="removeImage(3)"
+                  class="bg-red-600 hover:bg-red-700 text-white rounded p-1.5 text-xs transition-colors shadow flex items-center gap-1 cursor-pointer font-bold"
+                >
+                  <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                  <span>Eliminar</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pregunta Final / Conclusió -->
+        <div class="print-card border-b border-slate-100 pb-8 last:border-0 last:pb-0 page-break" id="cardQFinal">
+          <h3 class="text-sm font-bold text-slate-900 mb-1.5 flex items-center gap-1.5">
+            <span class="bg-indigo-100 text-indigo-800 text-xs px-2 py-0.5 rounded font-extrabold">Conclusions</span>
+            Conclusions generals sobre la regulació PID completa i l'acció derivada (Td)
+          </h3>
+          <p class="text-xs text-slate-600 mb-3 leading-relaxed">
+            <b>Responeu:</b> Resumiu de forma clara les tres accions combinades d'un controlador PID (Proporcional, Integral, Derivat) i expliqueu quin és el paper de cadascuna per aconseguir un control de precisió, ràpid, estable i sense error.
+          </p>
+          <div class="input-wrapper mb-4">
+            <textarea
+              id="qFinal-textarea"
+              rows="4"
+              placeholder="Escriu aquí les teves conclusions, justificant per què el PID és el regulador més implementat industrialment i com l'acció de frenada derivada permet utilitzar Kp_c més alts per a respostes molt més veloces de l'habitual..."
+              class="w-full p-3 border border-slate-300 rounded-lg focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 focus:outline-none text-sm leading-relaxed text-slate-800 bg-white"
+            ></textarea>
+          </div>
+          <div class="hidden print-textarea-fallback mb-4" id="qFinal-fallback">L'estudiant no ha escrit cap conclusió.</div>
+        </div>
+
+      </div>
+
+      <!-- Footer de lliurament oficial en mode imprès -->
+      <div class="hidden print:block mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-400">
+        <p>Material de lliurament pràctic oficial - IES Ebre. Generat amb el Simulador PID interactiu.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- PEU DE PÀGINA DE L'APLICACIÓ (print:hidden) -->
+  <footer class="bg-slate-900 text-slate-400 py-6 text-center text-xs mt-auto border-t border-slate-800 print:hidden">
+    <p>Material docent oficial per al mòdul de mesura i regulació - Cicle de Grau Superior d'Automatització i Robòtica Industrial (ARI).</p>
+    <p class="text-slate-500 mt-1">Dissenyat per a l'examen pràctic de l'acció derivada, l'amortiment (damping) i la regulació PID completa.</p>
+  </footer>
+
+  <!-- MODAL DE DIÀLEG D'AJUDA (S'activa si el navegador bloqueja window.print des d'un iframe sandbox, print:hidden) -->
+  <div id="helpModal" class="hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 print:hidden">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 border border-slate-200 relative">
+      <div class="flex items-start gap-3 mb-4">
+        <div class="p-2 bg-amber-100 text-amber-800 rounded-full shrink-0">
+          <i data-lucide="alert-circle" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Bloqueig d'entorn segur detectat</h3>
+          <p class="text-xs text-slate-500 mt-1">El navegador pot bloquejar la impressió directa perquè aquesta aplicació s'executa dins d'un entorn de proves segur (Sandbox de l'Iframe).</p>
+        </div>
+      </div>
+      
+      <div class="bg-slate-50 rounded-lg p-4 border border-slate-200 text-xs text-slate-700 space-y-2 mb-5">
+        <p class="font-bold text-slate-900">Com pots desar el teu treball en format PDF perfecte?</p>
+        <ol class="list-decimal pl-4 space-y-1.5 leading-relaxed">
+          <li>Feu clic al botó blau: <b class="text-blue-600">"Desar lliurament (.html)"</b>.</li>
+          <li>Es descarregarà un únic fitxer HTML que inclou totes les teves respostes i les captures que hagis pujat.</li>
+          <li>Obriu aquest fitxer descarregat des del vostre ordinador a qualsevol pestanya del navegador (Chrome, Edge, Firefox, etc.).</li>
+          <li>Premeu <b class="font-mono bg-slate-200 px-1 py-0.5 rounded text-slate-800">Ctrl + P</b> (o Cmd + P a Mac) i seleccioneu <b>"Anomena com a PDF"</b> per desar un informe de pràctica perfecte.</li>
+        </ol>
+      </div>
+
+      <div class="flex justify-end gap-2.5">
+        <button 
+          onclick="triggerDownloadAndCloseHelpModal()" 
+          class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-semibold shadow transition-colors cursor-pointer"
+        >
+          Desar fitxer ara
+        </button>
+        <button 
+          onclick="closeHelpModal()" 
+          class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+        >
+          Entesos, tancar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT PRINCIPAL -->
+  <script>
+    // State representation for student answers
+    const state = {
+      studentName: '',
+      studentGroup: '',
+      studentDate: new Date().toISOString().split('T')[0],
+      q1: '',
+      q1Screenshot: null,
+      q2: '',
+      q2Screenshot: null,
+      q3: '',
+      q3Screenshot: null,
+      qFinal: ''
+    };
+
+    // Initialize local storage on load
+    function loadStateFromLocalStorage() {
+      try {
+        const saved = localStorage.getItem('pid_practice6_answers');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          Object.assign(state, parsed);
+        }
+      } catch (e) {
+        console.error('Error loading answers from localStorage', e);
+      }
+    }
+
+    // Save state to local storage
+    function saveStateToLocalStorage() {
+      try {
+        localStorage.setItem('pid_practice6_answers', JSON.stringify(state));
+      } catch (e) {
+        console.error('Error saving answers to localStorage', e);
+      }
+    }
+
+    // Synchronize UI from internal state
+    function updateUIFromState() {
+      // Inputs
+      document.getElementById('student-name').value = state.studentName;
+      document.getElementById('student-group').value = state.studentGroup;
+      document.getElementById('student-date').value = state.studentDate;
+      document.getElementById('q1-textarea').value = state.q1;
+      document.getElementById('q2-textarea').value = state.q2;
+      document.getElementById('q3-textarea').value = state.q3;
+      document.getElementById('qFinal-textarea').value = state.qFinal;
+
+      // Print fallbacks and details
+      document.getElementById('print-name').textContent = state.studentName || 'Sense Nom';
+      document.getElementById('print-group').textContent = state.studentGroup || 'Sense Grup';
+      document.getElementById('print-date').textContent = state.studentDate || 'Sense Data';
+
+      document.getElementById('q1-fallback').textContent = state.q1 || "L'estudiant no ha escrit cap resposta per a aquesta activitat.";
+      document.getElementById('q2-fallback').textContent = state.q2 || "L'estudiant no ha escrit cap resposta per a aquesta activitat.";
+      document.getElementById('q3-fallback').textContent = state.q3 || "L'estudiant no ha escrit cap resposta per a aquesta activitat.";
+      document.getElementById('qFinal-fallback').textContent = state.qFinal || "L'estudiant no ha escrit cap conclusió.";
+
+      // Image Upload Previews
+      for (let i = 1; i <= 3; i++) {
+        const screenshotVal = state[`q${i}Screenshot`];
+        const uploadZone = document.getElementById(`upload-zone-${i}`);
+        const previewContainer = document.getElementById(`preview-container-${i}`);
+        const previewImg = document.getElementById(`preview-img-${i}`);
+
+        if (screenshotVal) {
+          uploadZone.classList.add('hidden');
+          previewContainer.classList.remove('hidden');
+          previewImg.src = screenshotVal;
+        } else {
+          uploadZone.classList.remove('hidden');
+          previewContainer.classList.add('hidden');
+          previewImg.src = '';
+        }
+      }
+    }
+
+    // Set up event listeners for input synchronization
+    function setupInputListeners() {
+      const mappings = [
+        { id: 'student-name', key: 'studentName', printId: 'print-name' },
+        { id: 'student-group', key: 'studentGroup', printId: 'print-group' },
+        { id: 'student-date', key: 'studentDate', printId: 'print-date' },
+        { id: 'q1-textarea', key: 'q1', fallbackId: 'q1-fallback' },
+        { id: 'q2-textarea', key: 'q2', fallbackId: 'q2-fallback' },
+        { id: 'q3-textarea', key: 'q3', fallbackId: 'q3-fallback' },
+        { id: 'qFinal-textarea', key: 'qFinal', fallbackId: 'qFinal-fallback' }
+      ];
+
+      mappings.forEach(({ id, key, printId, fallbackId }) => {
+        const inputEl = document.getElementById(id);
+        if (!inputEl) return;
+
+        inputEl.addEventListener('input', (e) => {
+          const val = e.target.value;
+          state[key] = val;
+          saveStateToLocalStorage();
+
+          if (printId) {
+            document.getElementById(printId).textContent = val || 'Sense Especificar';
+          }
+          if (fallbackId) {
+            document.getElementById(fallbackId).textContent = val || (key === 'qFinal' ? "L'estudiant no ha escrit cap conclusió." : "L'estudiant no ha escrit cap resposta per a aquesta activitat.");
+          }
+        });
+      });
+    }
+
+    // Handle Image uploads via click & drag-and-drop
+    function setupImageUploadHandlers() {
+      for (let i = 1; i <= 3; i++) {
+        const fileInput = document.getElementById(`file-input-${i}`);
+        const uploadZone = document.getElementById(`upload-zone-${i}`);
+
+        if (!fileInput || !uploadZone) continue;
+
+        // Click zone trigger
+        uploadZone.addEventListener('click', () => {
+          fileInput.click();
+        });
+
+        // File input changed
+        fileInput.addEventListener('change', (e) => {
+          const file = e.target.files?.[0];
+          processImageFile(file, i);
+        });
+
+        // Drag and drop events
+        uploadZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          uploadZone.classList.add('border-indigo-500', 'bg-indigo-50/20');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+          uploadZone.classList.remove('border-indigo-500', 'bg-indigo-50/20');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          uploadZone.classList.remove('border-indigo-500', 'bg-indigo-50/20');
+          const file = e.dataTransfer.files?.[0];
+          processImageFile(file, i);
+        });
+      }
+    }
+
+    // Read and convert file to base64
+    function processImageFile(file, index) {
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+        alert("Si us plau, selecciona una imatge vàlida (PNG, JPG o GIF).");
+        return;
+      }
+
+      if (file.size > 4 * 1024 * 1024) {
+        alert("La imatge és massa gran. El límit és de 4MB.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64 = e.target?.result;
+        state[`q${index}Screenshot`] = base64;
+        saveStateToLocalStorage();
+        updateUIFromState();
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // Remove uploaded image
+    window.removeImage = function(index) {
+      state[`q${index}Screenshot`] = null;
+      
+      // Clear file input value to allow uploading same image again
+      const fileInput = document.getElementById(`file-input-${index}`);
+      if (fileInput) fileInput.value = '';
+
+      saveStateToLocalStorage();
+      updateUIFromState();
+    }
+
+    // Print page trigger
+    window.handlePrint = function() {
+      try {
+        window.print();
+      } catch (e) {
+        openHelpModal();
+      }
+    };
+
+    // Modal helpers
+    function openHelpModal() {
+      document.getElementById('helpModal').classList.remove('hidden');
+    }
+
+    window.closeHelpModal = function() {
+      document.getElementById('helpModal').classList.add('hidden');
+    };
+
+    window.triggerDownloadAndCloseHelpModal = function() {
+      handleExportHTML();
+      closeHelpModal();
+    };
+
+    // Standalone HTML report generator with embedded answers & base64 screenshots
+    window.handleExportHTML = function() {
+      const nameStr = state.studentName || 'Sense_Nom';
+      const groupStr = state.studentGroup || 'Sense_Grup';
+      const dateStr = state.studentDate || 'Sense_Data';
+
+      const screenshot1HTML = state.q1Screenshot 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${state.q1Screenshot}" alt="Captura 1" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const screenshot2HTML = state.q2Screenshot 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${state.q2Screenshot}" alt="Captura 2" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const screenshot3HTML = state.q3Screenshot 
+        ? `<div class="mt-4 border border-slate-200 rounded-lg p-2 bg-white max-w-2xl"><img src="${state.q3Screenshot}" alt="Captura 3" class="max-h-72 object-contain w-full rounded" /></div>` 
+        : '<p class="text-xs text-slate-400 italic bg-slate-50 p-2 rounded mt-2 border">No s\'ha adjuntat cap captura de pantalla.</p>';
+
+      const standaloneHTML = `<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pràctica 6: Regulació Proporcional-Integral-Derivativa (PID) completa</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    @media print {
+      @page {
+        size: A4;
+        margin: 20mm 15mm 20mm 15mm;
+      }
+      body {
+        background-color: white !important;
+        font-size: 11pt !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-card {
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+        border: 1px solid #e2e8f0 !important;
+        padding: 20px !important;
+        border-radius: 8px !important;
+        margin-bottom: 24px !important;
+        background-color: #ffffff !important;
+      }
+      .page-break {
+        page-break-before: always !important;
+        break-before: page !important;
+      }
+    }
+  </style>
+</head>
+<body class="p-4 sm:p-8 max-w-4xl mx-auto">
   
-  <!-- Mountpoint for React Vite app -->
-  <div id="root"></div>
+  <!-- Header del report lliurat -->
+  <div class="border-b-4 border-slate-900 pb-4 mb-8">
+    <div class="flex justify-between items-start">
+      <div>
+        <span class="text-xs font-bold uppercase tracking-wider text-indigo-600">Mesura i Regulació - Examen de Laboratori</span>
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mt-1">Pràctica 6: Regulació Proporcional-Integral-Derivativa (PID) completa</h1>
+        <p class="text-slate-500 text-xs mt-1">Analitzar l'efecte esmorteïdor i l'anticipació de l'acció derivativa (Td) sobre el transitori en llaç tancat.</p>
+      </div>
+      <button onclick="window.print()" class="no-print bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-md transition-all">
+        Imprimir Report a PDF
+      </button>
+    </div>
 
-  <script type="module" src="/src/main.tsx"></script>
+    <!-- Student Details Box -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6 bg-slate-100 p-4 rounded-lg border border-slate-200">
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Nom i cognoms</span>
+        <span class="text-sm font-bold text-slate-900">\${escapeHtml(nameStr)}</span>
+      </div>
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Grup de classe</span>
+        <span class="text-sm font-bold text-slate-900">\${escapeHtml(groupStr)}</span>
+      </div>
+      <div>
+        <span class="block text-[10px] font-bold uppercase text-slate-500">Data de lliurament</span>
+        <span class="text-sm font-bold text-slate-900">\${escapeHtml(dateStr)}</span>
+      </div>
+    </div>
+  </div>
 
+  <!-- Activitat 1 -->
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Activitat 1: Estudi d'un sistema oscil·latori amb regulació PI (Td = 0 s)
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Configureu la planta amb retard i múltiples constants d'inèrcia (&tau;_1 = 3.0 s, &tau;_2 = 1.5 s, &tau;_3 = 0.5 s, &theta; = 0.8 s). Seleccioneu el mode PID Continu amb consigna r = 2.0 V, K_p_c = 2.5, T_i = 4.0 s i T_d = 0.0 s. Descriviu el comportament temporal de la sortida y(t). Quin percentatge de sobrepic (Overshoot %) i quin temps d'estabilització s'indica al panell de rendiment? Expliqueu per quina raó la presència de retard i inèrcies addicionals fa tan inestable un bucle de control que només té acció proporcional-integral (PI).
+    </p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">\${escapeHtml(state.q1) || 'L\\\'estudiant no ha escrit cap resposta per a aquesta activitat.'}</div>
+    <div class="mt-4">
+      <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+      ${screenshot1HTML}
+    </div>
+  </div>
+
+  <!-- Activitat 2 -->
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Activitat 2: Introducció de l'acció derivada (Td) per esmorteïmer la resposta
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Mantenint exactament els mateixos paràmetres de la planta i el regulador, activeu l'acció derivada ajustant gradualment el valor de T_d a 0.5 s, 1.0 s, i finalment 1.5 s. Com evoluciona el sobrepic (Overshoot %) i el temps d'estabilització a mesura que incrementem el valor de T_d? Observeu la corba blava de control u(t): descriviu com actua a l'inici de la simulació per esmorteir la pujada. Expliqueu físicament la relació entre la velocitat de variació de l'error i la força d'amortiment oposada per l'acció derivada.
+    </p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">\${escapeHtml(state.q2) || 'L\\\'estudiant no ha escrit cap resposta per a aquesta activitat.'}</div>
+    <div class="mt-4">
+      <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+      ${screenshot2HTML}
+    </div>
+  </div>
+
+  <!-- Activitat 3 -->
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 mb-8 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Activitat 3: El perill d'un excés d'acció derivada (Td excessivament alta)
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Mantenint la mateixa planta i paràmetres, forceu un excés d'acció de regulació derivada posant T_d a valors molt elevats (3.5 s o 4.5 s). Quin canvi radical experimenta la corba blava de l'esforç de control u(t)? Expliqueu físicament per què l'excés de guany de derivació genera transitoris bruscos o micro-oscil·lacions d'alta freqüència en l'actuador. Com afectaria això a la vida de servei d'una electrovàlvula industrial real? Com es soluciona aquest defecte a la indústria?
+    </p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[100px]">\${escapeHtml(state.q3) || 'L\\\'estudiant no ha escrit cap resposta per a aquesta activitat.'}</div>
+    <div class="mt-4">
+      <span class="text-[10px] font-bold text-slate-500 block">Gràfica de simulació adjunta:</span>
+      ${screenshot3HTML}
+    </div>
+  </div>
+
+  <!-- Conclusió final -->
+  <div class="print-card bg-white p-6 rounded-xl border border-slate-200 shadow-sm page-break">
+    <h2 class="text-md font-bold text-slate-900 border-b pb-1.5 mb-3">
+      Conclusions generals sobre la regulació PID completa i l'acció derivada (Td)
+    </h2>
+    <p class="text-xs text-slate-600 mb-4 leading-relaxed">
+      <b>Enunciat:</b> Resumiu de forma clara les tres accions combinades d'un controlador PID (Proporcional, Integral, Derivat) i expliqueu quin és el paper de cadascuna per aconseguir un control de precisió, ràpid, stable i sense error.
+    </p>
+    <div class="text-sm font-semibold text-slate-800 uppercase text-[10px] mb-1 text-teal-600">Resposta de l'estudiant:</div>
+    <div class="bg-slate-50 p-4 rounded border border-slate-200 text-sm whitespace-pre-wrap text-slate-800 leading-relaxed min-h-[80px]">\${escapeHtml(state.qFinal) || 'L\\\'estudiant no ha escrit cap conclusió.'}</div>
+  </div>
+
+  <div class="mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-400 no-print">
+    <p>Material de lliurament pràctic oficial - IES Ebre. Generat amb el Simulador PID interactiu.</p>
+  </div>
+
+</body>
+</html>`;
+
+      const blob = new Blob([standaloneHTML], { type: 'text/html;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `Practica_6_PID_Completa_${nameStr.trim().replace(/\s+/g, '_')}.html`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    };
+
+    // Helper to escape HTML to prevent XSS in exported file
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // Mathematical SVG Path generators
+    function generatePaths() {
+      // Highly oscillatory PI curve generator
+      const generatePIPath = () => {
+        let path = "M 40 130";
+        const paddingLeft = 40;
+        const plotWidth = 300;
+        const plotHeight = 120;
+        
+        const zeta = 0.15;
+        const wn = 1.2;
+        const wd = wn * Math.sqrt(1 - zeta * zeta);
+        const dt = 0.1;
+        
+        for (let t = 0; t <= 12; t += dt) {
+          const x = paddingLeft + (t / 12) * plotWidth;
+          let yVal = 0.0;
+          if (t >= 1.0) {
+            const tSim = t - 1.0;
+            const envelope = Math.exp(-zeta * wn * tSim);
+            const oscillation = Math.cos(wd * tSim) + (zeta / Math.sqrt(1 - zeta * zeta)) * Math.sin(wd * tSim);
+            yVal = 2.0 * (1 - envelope * oscillation);
+          }
+          const y = 130 - (yVal / 5.0) * plotHeight;
+          path += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+        }
+        return path;
+      };
+
+      // Beautifully damped PID curve generator
+      const generatePIDPath = () => {
+        let path = "M 40 130";
+        const paddingLeft = 40;
+        const plotWidth = 300;
+        const plotHeight = 120;
+        
+        const zeta = 0.65;
+        const wn = 1.2;
+        const wd = wn * Math.sqrt(1 - zeta * zeta);
+        const dt = 0.1;
+        
+        for (let t = 0; t <= 12; t += dt) {
+          const x = paddingLeft + (t / 12) * plotWidth;
+          let yVal = 0.0;
+          if (t >= 1.0) {
+            const tSim = t - 1.0;
+            const envelope = Math.exp(-zeta * wn * tSim);
+            const oscillation = Math.cos(wd * tSim) + (zeta / Math.sqrt(1 - zeta * zeta)) * Math.sin(wd * tSim);
+            yVal = 2.0 * (1 - envelope * oscillation);
+          }
+          const y = 130 - (yVal / 5.0) * plotHeight;
+          path += ` L ${x.toFixed(1)} ${y.toFixed(1)}`;
+        }
+        return path;
+      };
+
+      document.getElementById('path-pi').setAttribute('d', generatePIPath());
+      document.getElementById('path-pid').setAttribute('d', generatePIDPath());
+    }
+
+    // App Initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      // 1. Load data from local storage
+      loadStateFromLocalStorage();
+
+      // 2. Synchronize UI inputs and states
+      updateUIFromState();
+
+      // 3. Setup event handlers
+      setupInputListeners();
+      setupImageUploadHandlers();
+
+      // 4. Generate visual path curves inside learning guide
+      generatePaths();
+
+      // 5. Initialize lucide icons
+      lucide.createIcons();
+    });
+  </script>
 </body>
 </html>
