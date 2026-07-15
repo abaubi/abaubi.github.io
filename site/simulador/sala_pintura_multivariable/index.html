@@ -1,0 +1,2116 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sala de Pintura - Control Multivariable</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .font-mono { font-family: 'JetBrains Mono', monospace; }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #1e293b;
+      height: 4px;
+      border-radius: 9999px;
+      outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 10px;
+      height: 10px;
+      border-radius: 9999px;
+      background: currentColor;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen p-4 flex flex-col justify-between selection:bg-emerald-500/30">
+
+  <div class="max-w-7xl mx-auto w-full space-y-4">
+    <!-- HEADER -->
+    <header class="bg-slate-900/90 rounded-xl p-3 border border-slate-800 shadow-md flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-2">
+        <div class="bg-emerald-500/10 p-1.5 rounded-lg border border-emerald-500/20">
+          <svg class="w-5 h-5 text-emerald-400 animate-pulse" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z"/></svg>
+        </div>
+        <div>
+          <h1 class="text-sm font-black tracking-tight bg-gradient-to-r from-emerald-400 to-teal-300 bg-clip-text text-transparent">SALA DE PINTURA MULTIVARIABLE (SCADA)</h1>
+          <span class="text-[9.5px] text-slate-400 block -mt-0.5 font-medium">Institut de l'Ebre - Agustí Baubí - abaubi@xtec.cat</span>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3 bg-slate-950/50 p-1.5 rounded-lg border border-slate-800/80 grow justify-between md:justify-end">
+        <div class="flex items-center gap-1.5">
+          <span class="text-[9.5px] font-black text-slate-400 uppercase tracking-wider">Estat Lògic:</span>
+          <span id="process-state" class="px-2 py-0.5 rounded text-[9px] font-bold bg-slate-900 text-emerald-400 border border-slate-800 shadow">IDLE</span>
+        </div>
+        <div class="hidden md:block w-px h-5 bg-slate-800"></div>
+        <div class="flex items-center gap-1.5">
+          <span class="text-[9.5px] font-black text-slate-400 uppercase tracking-wider">Presets:</span>
+          <div class="flex gap-1">
+            <button onclick="applyPreset('estable')" class="px-1.5 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-bold text-slate-300 transition">Estable</button>
+            <button onclick="applyPreset('optimitzat')" class="px-1.5 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-bold text-slate-300 transition">Optimitzat (Ràpid)</button>
+            <button onclick="applyPreset('p')" class="px-1.5 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-bold text-slate-300 transition">Només P</button>
+            <button onclick="applyPreset('inestable')" class="px-1.5 py-0.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded text-[9px] font-bold text-slate-300 transition">Inestable</button>
+          </div>
+        </div>
+        <div class="hidden md:block w-px h-5 bg-slate-800"></div>
+        <div class="flex items-center gap-3">
+          <div class="flex items-center gap-1.5">
+            <span class="text-[9px] font-bold text-slate-300">AW Temp</span>
+            <button id="btn-aw-temp" onclick="toggleAW('temp')" class="w-8 h-4.5 flex items-center border rounded-full p-0.5 transition-all bg-emerald-950 border-emerald-800">
+              <span class="bg-white w-3 h-3 rounded-full shadow transform translate-x-3.5 transition-transform"></span>
+            </button>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <span class="text-[9px] font-bold text-slate-300">AW Hum</span>
+            <button id="btn-aw-hum" onclick="toggleAW('hum')" class="w-8 h-4.5 flex items-center border rounded-full p-0.5 transition-all bg-emerald-950 border-emerald-800">
+              <span class="bg-white w-3 h-3 rounded-full shadow transform translate-x-3.5 transition-transform"></span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- GRID CENTRAL -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      
+      <!-- COLUMNA ESQUERRA -->
+      <div class="lg:col-span-7 flex flex-col gap-4">
+        
+        <!-- MQTT PANEL -->
+        <div class="bg-slate-900/95 rounded-xl p-3 border border-slate-800 shadow-lg">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-850 pb-2 mb-2 gap-2">
+            <div class="flex items-center gap-2">
+              <span id="mqtt-dot" class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+              <span class="text-[10px] font-black text-slate-200 uppercase tracking-wider">MQTT SCADA CONTROL (iesebre/salapintura/)</span>
+            </div>
+            <div class="flex items-center gap-1.5 flex-wrap">
+              <button onclick="toggleHelpModal()" class="px-2 py-0.5 bg-amber-600/20 hover:bg-amber-600/30 text-amber-300 hover:text-amber-200 border border-amber-500/30 rounded text-[9px] font-bold transition flex items-center gap-1 cursor-pointer">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z"/></svg>
+                AJUDA
+              </button>
+              <button onclick="toggleTelemetryWindow()" class="px-2 py-0.5 bg-slate-950 hover:bg-slate-800 border border-slate-800 text-slate-300 text-[9px] font-bold rounded transition flex items-center gap-1">
+                Config. Granular Telemetria
+              </button>
+              <button id="btn-mqtt-conn" onclick="toggleMqttConnection()" class="px-3 py-0.5 bg-rose-900 hover:bg-rose-800 text-rose-100 text-[9px] font-bold rounded transition border border-rose-800/40">Connectar Broker</button>
+            </div>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-4 gap-2 text-[10px]">
+            <div class="flex flex-col"><label class="text-slate-500 font-bold">Adreça Broker WS</label><input type="text" id="mqtt-host" value="wss://broker.hivemq.com:8884/mqtt" class="bg-slate-950 border border-slate-800 rounded p-1 text-slate-200 outline-none font-mono"></div>
+            <div class="flex flex-col"><label class="text-slate-500 font-bold">Topic Base</label><input type="text" id="mqtt-topic" value="iesebre/salapintura/" class="bg-slate-950 border border-slate-800 rounded p-1 text-slate-200 outline-none font-mono"></div>
+            <div class="flex flex-col"><label class="text-slate-500 font-bold">Usuari (Opcional)</label><input type="text" id="mqtt-user" value="" class="bg-slate-950 border border-slate-800 rounded p-1 text-slate-200 outline-none font-mono"></div>
+            <div class="flex flex-col"><label class="text-slate-500 font-bold">Contrasenya (Opcional)</label><input type="password" id="mqtt-pass" value="" class="bg-slate-950 border border-slate-800 rounded p-1 text-slate-200 outline-none font-mono"></div>
+          </div>
+        </div>
+
+        <!-- PLANTA FÍSICA (SCADA + REGULADORS) -->
+        <div class="bg-slate-900/90 rounded-xl p-3 border border-slate-800 shadow-md">
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-3">
+            
+            <!-- CONTROLS REGULADORS (col-span-5) -->
+            <div class="md:col-span-5 space-y-3">
+              <!-- TEMPERATURA -->
+              <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-850/80">
+                <div class="flex justify-between items-center mb-1">
+                  <span class="text-[10px] font-black text-rose-400 tracking-wide uppercase">T. Calefactor (ºC)</span>
+                  <select id="temp-mode" onchange="setControlMode('temp', this.value)" class="bg-slate-900 border border-slate-800 text-[9px] font-bold rounded px-1 text-slate-300 outline-none">
+                    <option value="PID">PID</option>
+                    <option value="ON_OFF">On-Off</option>
+                    <option value="HYSTERESIS">Histeresi</option>
+                    <option value="MQTT">Manual/MQTT</option>
+                  </select>
+                </div>
+                <div class="space-y-2" id="grid-temp-params">
+                  <div id="sld-temp-sp" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+                  <div id="sld-temp-kp" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+                  <div id="sld-temp-ki" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+                  <div id="sld-temp-kd" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+                  <div id="sld-temp-hist" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+                  <div id="sld-temp-ext" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+                  <div id="sld-temp-inertia" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+                  <div id="sld-temp-pert" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+                </div>
+                <!-- Heater output value -->
+                <div class="mt-2 text-[9px] font-mono text-slate-400">
+                  <div class="flex justify-between mb-0.5"><span>Potència Calefactor (u<sub>T</sub>):</span><span id="txt-temp-out" class="text-rose-400 font-bold">0.0%</span></div>
+                  <div class="w-full h-1 bg-slate-900 rounded-full overflow-hidden"><div id="bar-temp-out" class="h-full bg-rose-500" style="width:0%"></div></div>
+                </div>
+              </div>
+
+              <!-- HUMIDITAT -->
+              <div class="bg-slate-950/80 p-2.5 rounded-xl border border-slate-850/80">
+                <div class="flex justify-between items-center mb-1">
+                  <span class="text-[10px] font-black text-sky-400 tracking-wide uppercase">H. vàlvula vapor (%)</span>
+                  <select id="hum-mode" onchange="setControlMode('hum', this.value)" class="bg-slate-900 border border-slate-800 text-[9px] font-bold rounded px-1 text-slate-300 outline-none">
+                    <option value="PID">PID</option>
+                    <option value="ON_OFF">On-Off</option>
+                    <option value="HYSTERESIS">Histeresi</option>
+                    <option value="MQTT">Manual/MQTT</option>
+                  </select>
+                </div>
+                <div class="space-y-2" id="grid-hum-params">
+                  <div id="sld-hum-sp" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+                  <div id="sld-hum-kp" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+                  <div id="sld-hum-ki" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+                  <div id="sld-hum-kd" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+                  <div id="sld-hum-hist" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+                  <div id="sld-hum-ext" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+                  <div id="sld-hum-inertia" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+                  <div id="sld-hum-pert" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+                </div>
+                <!-- Steam output value -->
+                <div class="mt-2 text-[9px] font-mono text-slate-400">
+                  <div class="flex justify-between mb-0.5"><span>Obertura Vàlvula (u<sub>H</sub>):</span><span id="txt-hum-out" class="text-sky-400 font-bold">0.0%</span></div>
+                  <div class="w-full h-1 bg-slate-900 rounded-full overflow-hidden"><div id="bar-hum-out" class="h-full bg-sky-500" style="width:0%"></div></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- VISUAL PLANT CANVAS (col-span-7) i controls de la simulació de dalt -->
+            <div class="md:col-span-7 flex flex-col gap-3">
+              <!-- CONTROLS DE LA SIMULACIÓ I PROGRÉS DEL CICLE -->
+              <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-850 space-y-2 shadow-sm">
+                <div class="flex flex-wrap justify-between items-center gap-2">
+                  <div class="flex gap-1.5">
+                    <button id="btn-play" onclick="toggleRunning()" class="px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow transition">
+                      <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> <span>Iniciar Cicle</span>
+                    </button>
+                    <button onclick="stepSim()" class="px-2.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 transition">Pas a Pas</button>
+                    <button onclick="resetSim()" class="px-2.5 py-1.5 bg-rose-950/60 hover:bg-rose-900 text-rose-200 rounded-lg text-xs font-semibold border border-rose-900/40 transition">Reset</button>
+                  </div>
+
+                  <!-- VELOCITAT SIMULACIÓ -->
+                  <div class="flex items-center gap-1 bg-slate-900 p-0.5 rounded border border-slate-800">
+                    <span class="text-[7px] font-black text-slate-500 uppercase tracking-wider px-1">Velocitat:</span>
+                    <div class="flex gap-0.5">
+                      <button id="speed-x1" onclick="setSimSpeed(1)" class="px-1.5 py-0.5 rounded text-[8px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800 transition">x1</button>
+                      <button id="speed-x2" onclick="setSimSpeed(2)" class="px-1.5 py-0.5 rounded text-[8px] font-bold bg-slate-950 text-slate-400 border border-slate-800 transition">x2</button>
+                      <button id="speed-x4" onclick="setSimSpeed(4)" class="px-1.5 py-0.5 rounded text-[8px] font-bold bg-slate-950 text-slate-400 border border-slate-800 transition">x4</button>
+                      <button id="speed-x8" onclick="setSimSpeed(8)" class="px-1.5 py-0.5 rounded text-[8px] font-bold bg-slate-950 text-slate-400 border border-slate-800 transition">x8</button>
+                      <button id="speed-x10" onclick="setSimSpeed(10)" class="px-1.5 py-0.5 rounded text-[8px] font-bold bg-slate-950 text-slate-400 border border-slate-800 transition">x10</button>
+                    </div>
+                  </div>
+
+                  <!-- INDICADORS DE TEMPS -->
+                  <div class="flex items-center gap-1.5 text-[8.5px] font-mono">
+                    <div class="bg-slate-900 px-2 py-1 rounded border border-slate-850 text-slate-400">Temps Fase: <span id="txt-phase-timer" class="text-white font-bold">0.0s / 20s</span></div>
+                    <div class="bg-slate-900 px-2 py-1 rounded border border-slate-850 text-slate-400">Total Cicle: <span id="txt-cycle-timer" class="text-white font-bold">0.0s</span></div>
+                  </div>
+                </div>
+
+                <!-- Barra de progrés del cicle -->
+                <div class="bg-slate-900/40 p-1.5 rounded-lg border border-slate-900">
+                  <div class="flex justify-between text-[7.5px] font-black text-slate-500 uppercase mb-1">
+                    <span>Progrés Cicle de Pintura</span>
+                    <span id="txt-cycle-progress-pct" class="text-emerald-400 font-mono">0%</span>
+                  </div>
+                  <div class="w-full h-1 bg-slate-950 rounded-full overflow-hidden relative border border-slate-900">
+                    <div id="bar-cycle-progress" class="absolute top-0 bottom-0 left-0 bg-gradient-to-r from-emerald-500 to-teal-400" style="width:0%"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SIMULATOR CANVAS CONTAINER -->
+              <div class="relative min-h-[300px] flex flex-col bg-slate-950 rounded-xl border border-slate-800 p-1 items-center justify-center overflow-hidden">
+                <canvas id="canvas-paint-booth" class="w-full h-full min-h-[280px] block bg-slate-950 rounded-lg"></canvas>
+                
+                <div class="absolute top-2 left-2 flex flex-col gap-0.5 bg-slate-950/95 p-1 rounded border border-slate-800/80">
+                  <span class="text-[7.5px] font-bold text-slate-500 uppercase">Sonda Temp (0-10V)</span>
+                  <div class="text-[9.5px] font-mono font-bold text-rose-400 flex justify-between gap-1">
+                    <span id="txt-sensor-temp-pv">20.0 ºC</span>
+                    <span id="txt-sensor-temp-volt" class="text-slate-500">2.00 V</span>
+                  </div>
+                </div>
+                
+                <div class="absolute top-2 right-2 flex flex-col gap-0.5 bg-slate-950/95 p-1 rounded border border-slate-800/80 items-end">
+                  <span class="text-[7.5px] font-bold text-slate-500 uppercase">Sonda Hum (0-10V)</span>
+                  <div class="text-[9.5px] font-mono font-bold text-sky-400 flex justify-between gap-1">
+                    <span id="txt-sensor-hum-volt" class="text-slate-500">4.00 V</span>
+                    <span id="txt-sensor-hum-pv">40.0 %</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- PERFIL DEL CICLE DE PINTURA (FASES EN VERTICAL) -->
+              <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-850/80 space-y-1.5 shadow-sm">
+                <span class="text-[9.5px] font-black text-slate-300 uppercase tracking-wider block border-b border-slate-900 pb-1 mb-1">PERFIL DEL CICLE DE PINTURA (FASES EN VERTICAL)</span>
+                <div class="flex flex-col gap-1.5">
+                  <div class="bg-slate-900/40 p-1.5 rounded border border-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <span class="text-[8.5px] font-black text-emerald-400">FASE 1: APLICACIÓ</span>
+                    <div class="grid grid-cols-3 gap-2 text-[8.5px] w-full sm:w-auto">
+                      <div class="flex items-center gap-1"><label class="text-slate-500 font-bold whitespace-nowrap">Durada:</label><input type="number" id="inp-f1-dur" value="20" onchange="setPhaseConfig('fase1', 'duration', this.value)" class="w-10 bg-slate-950 border border-slate-800 rounded text-center outline-none py-0.5 font-mono text-slate-200"> <span class="text-slate-500">s</span></div>
+                      <div class="flex items-center gap-1"><label class="text-slate-500 font-bold whitespace-nowrap">SP Temp:</label><input type="number" id="inp-f1-temp" value="22" onchange="setPhaseConfig('fase1', 'tempSp', this.value)" class="w-10 bg-slate-950 border border-slate-800 rounded text-center outline-none py-0.5 font-mono text-slate-200"> <span class="text-slate-500">ºC</span></div>
+                      <div class="flex items-center gap-1"><label class="text-slate-500 font-bold whitespace-nowrap">SP Hum:</label><input type="number" id="inp-f1-hum" value="60" onchange="setPhaseConfig('fase1', 'humSp', this.value)" class="w-10 bg-slate-950 border border-slate-800 rounded text-center outline-none py-0.5 font-mono text-slate-200"> <span class="text-slate-500">%</span></div>
+                    </div>
+                  </div>
+                  <div class="bg-slate-900/40 p-1.5 rounded border border-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <span class="text-[8.5px] font-black text-amber-400">FASE 2: ASSECAT</span>
+                    <div class="grid grid-cols-3 gap-2 text-[8.5px] w-full sm:w-auto">
+                      <div class="flex items-center gap-1"><label class="text-slate-500 font-bold whitespace-nowrap">Durada:</label><input type="number" id="inp-f2-dur" value="30" onchange="setPhaseConfig('fase2', 'duration', this.value)" class="w-10 bg-slate-950 border border-slate-800 rounded text-center outline-none py-0.5 font-mono text-slate-200"> <span class="text-slate-500">s</span></div>
+                      <div class="flex items-center gap-1"><label class="text-slate-500 font-bold whitespace-nowrap">SP Temp:</label><input type="number" id="inp-f2-temp" value="65" onchange="setPhaseConfig('fase2', 'tempSp', this.value)" class="w-10 bg-slate-950 border border-slate-800 rounded text-center outline-none py-0.5 font-mono text-slate-200"> <span class="text-slate-500">ºC</span></div>
+                      <div class="flex items-center gap-1"><label class="text-slate-500 font-bold whitespace-nowrap">SP Hum:</label><input type="number" id="inp-f2-hum" value="25" onchange="setPhaseConfig('fase2', 'humSp', this.value)" class="w-10 bg-slate-950 border border-slate-800 rounded text-center outline-none py-0.5 font-mono text-slate-200"> <span class="text-slate-500">%</span></div>
+                    </div>
+                  </div>
+                  <div class="bg-slate-900/40 p-1.5 rounded border border-slate-900 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                    <span class="text-[8.5px] font-black text-sky-400">FASE 3: REFREDAMENT</span>
+                    <div class="grid grid-cols-3 gap-2 text-[8.5px] w-full sm:w-auto">
+                      <div class="flex items-center gap-1"><label class="text-slate-500 font-bold whitespace-nowrap">Durada:</label><input type="number" id="inp-f3-dur" value="15" onchange="setPhaseConfig('fase3', 'duration', this.value)" class="w-10 bg-slate-950 border border-slate-800 rounded text-center outline-none py-0.5 font-mono text-slate-200"> <span class="text-slate-500">s</span></div>
+                      <div class="flex items-center gap-1"><label class="text-slate-500 font-bold whitespace-nowrap">SP Temp:</label><input type="number" id="inp-f3-temp" value="30" onchange="setPhaseConfig('fase3', 'tempSp', this.value)" class="w-10 bg-slate-950 border border-slate-800 rounded text-center outline-none py-0.5 font-mono text-slate-200"> <span class="text-slate-500">ºC</span></div>
+                      <div class="flex items-center gap-1"><label class="text-slate-500 font-bold whitespace-nowrap">SP Hum:</label><input type="number" id="inp-f3-hum" value="50" onchange="setPhaseConfig('fase3', 'humSp', this.value)" class="w-10 bg-slate-950 border border-slate-800 rounded text-center outline-none py-0.5 font-mono text-slate-200"> <span class="text-slate-500">%</span></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ACOBLAMENT I DESACOBLAMENT CARD -->
+          <div class="mt-3 bg-slate-950 p-2.5 rounded-xl border border-slate-850">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-900 pb-1.5 mb-2 gap-2">
+              <span class="text-[10px] font-black text-amber-500 uppercase tracking-wider">MATRIU D'ACOBLAMENT I DESACOBLAMENT MULTIVARIABLE</span>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[8.5px] text-slate-400 font-bold">Desacoblament:</span>
+                <select id="decoupling-mode" onchange="setDecouplingMode(this.value)" class="bg-slate-900 border border-slate-800 text-[9px] font-bold rounded px-1.5 py-0.5 text-slate-300 outline-none">
+                  <option value="NONE">Sense Desacoblament (Coupled)</option>
+                  <option value="MATRIX">Opció A: Matriu de Desacoblament Completa</option>
+                  <option value="SIMPLIFIED">Opció B: Compensació Directa Simplificada</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div id="sld-coupling-kht" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+              <div id="sld-coupling-kth" class="bg-slate-900/40 p-1.5 rounded border border-slate-900"></div>
+              <div class="bg-slate-900/40 p-2 rounded border border-slate-900 flex flex-col justify-center text-[9px] font-mono text-slate-400 space-y-1">
+                <div class="flex justify-between"><span id="lbl-direct-signals">PIDs directes (v<sub>T</sub>, v<sub>H</sub>):</span><span class="text-white font-bold" id="txt-direct-pids">0%, 0%</span></div>
+                <div class="flex justify-between"><span>Senyals final (u<sub>T</sub>, u<sub>H</sub>):</span><span class="text-amber-400 font-bold" id="txt-final-actuators">0%, 0%</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- COLUMNA DRETA -->
+      <div class="lg:col-span-5 flex flex-col gap-4">
+
+        <!-- PLOTS (Grafiques posades dalt dels calculs en vertical) -->
+        <div class="grid grid-cols-1 gap-3">
+          <div class="bg-slate-900/90 rounded-xl p-2.5 border border-slate-800 shadow-md flex items-center justify-between text-[9px] font-bold text-slate-300">
+            <span class="tracking-wider uppercase">Escala de temps gràfiques:</span>
+            <div class="flex gap-1" id="chart-time-scale-buttons">
+              <button onclick="setChartTimeScale(15)" id="btn-scale-15" class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 transition font-mono cursor-pointer">15s</button>
+              <button onclick="setChartTimeScale(30)" id="btn-scale-30" class="px-2 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-800 hover:bg-slate-900 transition font-mono cursor-pointer">30s</button>
+              <button onclick="setChartTimeScale(60)" id="btn-scale-60" class="px-2 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-800 hover:bg-slate-900 transition font-mono cursor-pointer">60s</button>
+              <button onclick="setChartTimeScale(120)" id="btn-scale-120" class="px-2 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-800 hover:bg-slate-900 transition font-mono cursor-pointer">120s</button>
+              <button onclick="setChartTimeScale('all')" id="btn-scale-all" class="px-2 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-800 hover:bg-slate-900 transition font-mono cursor-pointer">Tot el cicle</button>
+            </div>
+          </div>
+          <div class="bg-slate-900/90 rounded-xl p-2.5 border border-slate-800 shadow-md">
+            <div class="flex justify-between text-[10px] font-bold text-slate-300 mb-1">
+              <span>TEMPERATURA (ºC) vs CONSIGNA</span>
+              <span class="text-rose-400" id="plot-temp-val">20.0 ºC</span>
+            </div>
+            <canvas id="canvas-temp" class="w-full h-32 bg-slate-950 rounded-lg border border-slate-900"></canvas>
+          </div>
+          <div class="bg-slate-900/90 rounded-xl p-2.5 border border-slate-800 shadow-md">
+            <div class="flex justify-between text-[10px] font-bold text-slate-300 mb-1">
+              <span>HUMIDITAT (%) vs CONSIGNA</span>
+              <span class="text-sky-400" id="plot-hum-val">40.0 % HR</span>
+            </div>
+            <canvas id="canvas-hum" class="w-full h-32 bg-slate-950 rounded-lg border border-slate-900"></canvas>
+          </div>
+        </div>
+        
+        <!-- CÀLCULS I EQUACIONS DE CONTROL -->
+        <div class="bg-slate-900/90 rounded-xl p-4 border border-slate-800 shadow-lg">
+          <div class="border-b border-slate-850 pb-2 mb-3 flex items-center gap-2">
+            <span class="w-2.5 h-2.5 bg-amber-500 rounded-full"></span>
+            <h2 class="text-xs font-bold text-slate-300 uppercase tracking-wider">CÀLCULS I EQUACIONS EN TENSIÓ (0-10V)</h2>
+          </div>
+
+          <div class="space-y-3 text-[10px] font-mono leading-tight">
+            <!-- TEMP CALCS -->
+            <div class="bg-slate-950 p-2 rounded border border-slate-900">
+              <div class="flex justify-between items-center border-b border-slate-900 pb-1 mb-1">
+                <span class="text-rose-400 font-bold block uppercase tracking-wide">Càlculs Temperatura (ºC -> Volts)</span>
+                <span id="lbl-math-temp-mode" class="text-[8px] bg-rose-950/60 text-rose-300 px-1 py-0.5 rounded border border-rose-900 font-bold">PID</span>
+              </div>
+              <div id="panel-math-temp" class="text-slate-300 space-y-1"></div>
+            </div>
+
+            <!-- HUM CALCS -->
+            <div class="bg-slate-950 p-2 rounded border border-slate-900">
+              <div class="flex justify-between items-center border-b border-slate-900 pb-1 mb-1">
+                <span class="text-sky-400 font-bold block uppercase tracking-wide">Càlculs Humitat (% -> Volts)</span>
+                <span id="lbl-math-hum-mode" class="text-[8px] bg-sky-950/60 text-sky-300 px-1 py-0.5 rounded border border-sky-900 font-bold">PID</span>
+              </div>
+              <div id="panel-math-hum" class="text-slate-300 space-y-1"></div>
+            </div>
+
+            <!-- EQUACIONS ACOBLAMENT -->
+            <div class="bg-slate-950 p-2.5 rounded border border-slate-900 text-slate-400 space-y-1">
+              <span class="text-amber-500 font-bold block uppercase tracking-wide border-b border-slate-900 pb-1 mb-1">Equacions d'Acomplament i Desacoblament</span>
+              <div><span class="font-bold text-slate-300">Acomplament Natural Planta:</span><br/>
+                &nbsp;&nbsp;&bull; u'<sub>T</sub> = u<sub>T</sub> - K<sub>HT</sub> · u<sub>H</sub> (L'evaporació del vapor d'aigua refreda l'aire)<br/>
+                &nbsp;&nbsp;&bull; u'<sub>H</sub> = u<sub>H</sub> - K<sub>TH</sub> · u<sub>T</sub> (El calefactor asseca l'aire)
+              </div>
+              <div id="panel-math-decoupling" class="pt-1.5 border-t border-slate-900 text-slate-300"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CONSOLE SERIAL MONITOR -->
+        <div class="bg-slate-900/90 rounded-xl p-3 border border-slate-800 shadow-md flex flex-col flex-grow min-h-[250px]">
+          <div class="flex justify-between items-center border-b border-slate-850 pb-1.5 mb-2">
+            <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span id="log-dot" class="w-2.5 h-2.5 bg-emerald-500 shadow-sm rounded-full"></span> MONITOR SÈRIE SCADA
+            </h3>
+            <div class="flex items-center gap-1.5">
+              <button onclick="toggleLogging()" id="btn-log-toggle" class="text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded border bg-emerald-700/85 hover:bg-emerald-600 text-white border-emerald-500/20 transition">Registre: ON</button>
+              <button onclick="downloadCsv()" class="text-[9px] text-sky-300 hover:text-sky-100 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">Descarregar CSV</button>
+              <button onclick="clearLogs()" class="text-[9px] text-slate-400 hover:text-slate-200 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">Esborrar</button>
+            </div>
+          </div>
+          <div id="serial-logs" class="flex-grow bg-slate-950 rounded-lg p-3 font-mono text-emerald-400 overflow-y-auto space-y-1 border border-slate-900 text-[10.5px] max-h-[300px]"></div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- HELP MODAL -->
+  <div id="help-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 p-5 rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto space-y-4 text-xs">
+      <div class="flex justify-between items-center border-b border-slate-800 pb-2.5">
+        <div class="flex items-center gap-2 text-amber-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25"/></svg>
+          <span class="font-black uppercase tracking-wider text-sm">Guia de l'Usuari - Sala de Pintura Multivariable</span>
+        </div>
+        <button onclick="toggleHelpModal()" class="text-slate-400 hover:text-white font-bold text-base cursor-pointer">✕</button>
+      </div>
+      
+      <div class="space-y-3.5 text-slate-300 leading-relaxed">
+        <div>
+          <h4 class="font-bold text-slate-100 uppercase tracking-wide text-[11px] mb-1 text-emerald-400">1. Descripció del Sistema</h4>
+          <p>El simulador representa el control ambiental d'una <strong>sala de pintura industrial</strong>. Per obtenir un acabat de pintura professional, cal mantenir constants i acoblades la <strong>Temperatura (T)</strong> i la <strong>Humitat Relativa (H)</strong> dins de la cabina.</p>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-100 uppercase tracking-wide text-[11px] mb-1 text-emerald-400">2. Símbols i Equivalències Elèctriques</h4>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong>Temperatura (T):</strong> Rang de 0ºC a 100ºC. S'obté mitjançant una sonda de temperatura industrial que dóna un senyal de <strong>0-10 V</strong> (on 10V = 100ºC).</li>
+            <li><strong>Humitat (H):</strong> Rang de 0% a 100% HR. S'obté d'una sonda que dóna un senyal de <strong>0-10 V</strong> (on 10V = 100% HR).</li>
+            <li><strong>Actuadors (u_T, u_H):</strong> Corresponen a la potència del calefactor (u_T) i obertura de la vàlvula de vapor (u_H) regulats de 0 a 100%.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-100 uppercase tracking-wide text-[11px] mb-1 text-emerald-400">3. El Problema de l'Acoblament Multivariable</h4>
+          <p>Aquest sistema és <strong>altament acoblat (MIMO)</strong>, el que significa que l'acció d'un actuador afecta la variable de l'altre:</p>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>El <strong>Calefactor (u_T)</strong> escalfa la sala, de manera natural, però alhora <strong>asseca l'aire</strong> (fa baixar la humitat, H).</li>
+            <li>El <strong>Sistema d'Humitat (u_H)</strong> augmenta la humitat, però a causa de l'evaporació o efecte adiabàtic, <strong>fa baixar la temperatura (T)</strong>.</li>
+            <li>Podeu ajustar aquests efectes amb els guanys creuats de la planta: K_TH (Calefactor asseca la Humitat) i K_HT (Humitat refreda la Temperatura).</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-100 uppercase tracking-wide text-[11px] mb-1 text-emerald-400">4. Mètodes de Desacoblament</h4>
+          <p>Per solucionar l'acoblament, l'SCADA permet triar tres modes de funcionament:</p>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong>Sense desacoblament:</strong> Els PIDs actuen de forma independent directe sobre els actuadors. S'observaran fortes oscil·lacions en creuar consignes.</li>
+            <li><strong>Opció A (Matriu Completa):</strong> Aplica una matriu de desacoblament creuat que calcula les senyals reals corregides per neutralitzar els efectes encreuats.</li>
+            <li><strong>Opció B (Compensació Simplificada):</strong> Aplica una correcció simplificada compensant directament l'efecte proporcional d'un llaç sobre l'altre.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-100 uppercase tracking-wide text-[11px] mb-1 text-emerald-400">5. Modes de Control de cadascun dels Reguladors</h4>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong>PID:</strong> Algorisme proporcional-integral-derivatiu amb l'opció d'Anti-Windup (AW) per evitar la saturació de la part integral.</li>
+            <li><strong>On-Off:</strong> Control de tot o res bàsic.</li>
+            <li><strong>Histeresi:</strong> Control tot o res millorat amb un marge simètric ajustat pel slider de <em>Histeresi</em>.</li>
+            <li><strong>Manual/MQTT:</strong> Permet fixar directament el percentatge de sortida de l'actuador amb el slider de <em>Control Manual</em>.</li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="font-bold text-slate-100 uppercase tracking-wide text-[11px] mb-1 text-emerald-400">6. Integració MQTT (SCADA Bi-direccional)</h4>
+          <p>El simulador es pot connectar a qualsevol Broker MQTT (p. ex. HiveMQ o broker local) utilitzant protocols WebSockets (wss://). Els tòpics suportats són:</p>
+          <ul class="list-disc pl-5 space-y-1 font-mono text-[9.5px]">
+            <li><span class="text-emerald-400">iesebre/salapintura/telemetria</span> : Envia un JSON complet amb l'estat en temps real.</li>
+            <li><span class="text-emerald-400">iesebre/salapintura/telemetria/temperatura</span> : Temperatura de la sala.</li>
+            <li><span class="text-emerald-400">iesebre/salapintura/telemetria/humitat</span> : Humitat de la sala.</li>
+            <li><span class="text-emerald-400">iesebre/salapintura/cmd</span> : Rebi ordres JSON com {"action": "start"}, {"action": "reset"}, o actualitzacions de consigna.</li>
+            <li><span class="text-emerald-400">iesebre/salapintura/telemetria/control_temp/set</span> : Rebi un valor de potència de calefactor directa en mode Manual.</li>
+            <li><span class="text-emerald-400">iesebre/salapintura/telemetria/control_hum/set</span> : Rebi un valor d'obertura de vàlvula directa en mode Manual.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 flex justify-end">
+        <button onclick="toggleHelpModal()" class="px-4 py-1.5 bg-emerald-600 text-white rounded-lg font-bold hover:bg-emerald-500 transition cursor-pointer">Entès</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HELP & TELEMETRY CONFIG MODAL -->
+  <div id="telemetry-modal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-2xl max-w-md w-full space-y-3 text-[11px]">
+      <div class="flex justify-between items-center border-b border-slate-850 pb-2">
+        <span class="font-bold text-emerald-400 uppercase tracking-wider">Configuració Granular de Telemetria</span>
+        <button onclick="toggleTelemetryWindow()" class="text-slate-400 hover:text-white font-bold">✕</button>
+      </div>
+      <div class="space-y-2" id="telemetry-settings-container"></div>
+      <div class="pt-2 border-t border-slate-850 flex justify-end">
+        <button onclick="toggleTelemetryWindow()" class="px-3 py-1 bg-emerald-600 text-white rounded font-bold hover:bg-emerald-500 transition">Desar i Tancar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- 1. Polyfill de Temporitzadors amb Web Worker ---
+    const timerWorkerCode = `
+      const activeTimers = new Map();
+      self.onmessage = function(e) {
+        const { type, id, delay, isInterval } = e.data;
+        if (type === 'setInterval' || type === 'setTimeout') {
+          const cb = () => {
+            self.postMessage({ id, isInterval });
+            if (!isInterval) activeTimers.delete(id);
+          };
+          const timerId = isInterval ? setInterval(cb, delay) : setTimeout(cb, delay);
+          activeTimers.set(id, { timerId, isInterval });
+        } else if (type === 'clearInterval' || type === 'clearTimeout') {
+          const timer = activeTimers.get(id);
+          if (timer) {
+            timer.isInterval ? clearInterval(timer.timerId) : clearTimeout(timer.timerId);
+            activeTimers.delete(id);
+          }
+        }
+      };
+    `;
+    const timerBlob = new Blob([timerWorkerCode], { type: 'application/javascript' });
+    const timerWorker = new Worker(URL.createObjectURL(timerBlob));
+    const activeCallbacks = new Map();
+    let uniqueIdCounter = 0;
+
+    function customSetInterval(cb, delay) {
+      const id = uniqueIdCounter++;
+      activeCallbacks.set(id, cb);
+      timerWorker.postMessage({ type: 'setInterval', id, delay, isInterval: true });
+      return id;
+    }
+    function customClearInterval(id) {
+      timerWorker.postMessage({ type: 'clearInterval', id });
+      activeCallbacks.delete(id);
+    }
+    timerWorker.onmessage = function(e) {
+      const { id } = e.data;
+      const cb = activeCallbacks.get(id);
+      if (cb) cb();
+    };
+
+    // --- 2. Estat Inicial de la Planta ---
+    const INITIAL_STATE = {
+      // Physical state
+      temp: 20.0,
+      hum: 40.0,
+      tempSetpoint: 22.0,
+      humSetpoint: 60.0,
+      
+      // Control values
+      vTemp: 0.0, // PID Temperature output %
+      vHum: 0.0,  // PID Humidity output %
+      tempOutput: 0.0, // Final heater input %
+      humOutput: 0.0,  // Final steam valve input %
+      tempOutputRaw: 0.0,
+      humOutputRaw: 0.0,
+
+      // Regulators parameters
+      tempInertia: 15.0,
+      humInertia: 10.0,
+      tempPerturbation: 0.0, // in V (-2V to 2V)
+      humPerturbation: 0.0,  // in V (-2V to 2V)
+      kTH: 0.50, // drying gain of heater on humidity
+      kHT: 0.40, // cooling gain of steam on temperature
+
+      // PID state terms
+      tempIntegral: 0.0,
+      tempLastError: 0.0,
+      tempPrevError: 0.0,
+      tempPValue: 0.0,
+      tempIValue: 0.0,
+      tempDValue: 0.0,
+      tempWindupActive: false,
+
+      humIntegral: 0.0,
+      humLastError: 0.0,
+      humPrevError: 0.0,
+      humPValue: 0.0,
+      humIValue: 0.0,
+      humDValue: 0.0,
+      humWindupActive: false,
+
+      // Timings & state machine
+      processState: 'IDLE',
+      timer: 0.0,
+      totalCycleTimer: 0.0,
+      realTimeCounter: 0.0,
+      simSpeed: 1,
+      running: false,
+      showGreenCar: false,
+
+      // Control modes
+      tempControlMode: 'PID',
+      humControlMode: 'PID',
+      tempHysteresis: 2.0, // ºC
+      humHysteresis: 5.0,  // % HR
+      tempExternal: 0.0,   // Manual/MQTT output %
+      humExternal: 0.0,    // Manual/MQTT output %
+      decouplingMode: 'NONE', // 'NONE' | 'MATRIX' | 'SIMPLIFIED'
+
+      tempPid: { kp: 2.5, ki: 0.08, kd: 4.0, antiWindup: true },
+      humPid: { kp: 3.0, ki: 0.12, kd: 2.0, antiWindup: true },
+
+      // Phase configurations
+      phaseConfigs: {
+        fase1: { duration: 20, tempSp: 22, humSp: 60 },
+        fase2: { duration: 30, tempSp: 65, humSp: 25 },
+        fase3: { duration: 15, tempSp: 30, humSp: 50 }
+      },
+
+      logs: ['[SISTEMA] Simulador de Sala de Pintura Multivariable inicialitzat.'],
+
+      // Granular Telemetry Publish Configuration
+      telemetry: {
+        temperatura: { enabled: true, deadbandAbs: 0.2, minInterval: 250, lastValue: null, lastPublishTime: 0 },
+        humitat: { enabled: true, deadbandAbs: 0.5, minInterval: 250, lastValue: null, lastPublishTime: 0 },
+        control_temp: { enabled: true, deadbandAbs: 1.0, minInterval: 250, lastValue: null, lastPublishTime: 0 },
+        control_hum: { enabled: true, deadbandAbs: 1.0, minInterval: 250, lastValue: null, lastPublishTime: 0 }
+      }
+    };
+
+    let state = JSON.parse(JSON.stringify(INITIAL_STATE));
+    let loggingEnabled = true;
+    let mqttEnabled = false;
+    let mqttClient = null;
+    let lastSendTime = 0;
+    let tempData = [];
+    let humData = [];
+
+    // Particle system for paint booth animation
+    let paintParticles = [];
+    let steamParticles = [];
+    let heatWaves = [];
+
+    // --- 3. SCADA Sliders Config ---
+    const sliderConfigs = [
+      { id: 'sld-temp-sp', label: 'SP (Temp)', min: 0, max: 100, step: 1, color: 'blue', valuePath: 'tempSetpoint', callback: (v) => { state.tempSetpoint = v; } },
+      { id: 'sld-temp-kp', label: 'Kp', min: 0, max: 20, step: 0.1, color: 'amber', valuePath: 'tempPid.kp', callback: (v) => { state.tempPid.kp = v; } },
+      { id: 'sld-temp-ki', label: 'Ki', min: 0, max: 2.0, step: 0.01, color: 'teal', valuePath: 'tempPid.ki', callback: (v) => { state.tempPid.ki = v; } },
+      { id: 'sld-temp-kd', label: 'Kd', min: 0, max: 20, step: 0.1, color: 'fuchsia', valuePath: 'tempPid.kd', callback: (v) => { state.tempPid.kd = v; } },
+      { id: 'sld-temp-hist', label: 'Hist. (T)', min: 0.1, max: 10, step: 0.1, color: 'orange', valuePath: 'tempHysteresis', callback: (v) => { state.tempHysteresis = v; } },
+      { id: 'sld-temp-ext', label: 'Ctrl. Manual (u_T)', min: 0, max: 100, step: 1, color: 'rose', valuePath: 'tempExternal', callback: (v) => { state.tempExternal = v; } },
+      { id: 'sld-temp-inertia', label: 'Inèrcia', min: 5, max: 50, step: 1, color: 'slate', valuePath: 'tempInertia', callback: (v) => { state.tempInertia = v; } },
+      { id: 'sld-temp-pert', label: 'Pert. (V)', min: -2.0, max: 2.0, step: 0.1, color: 'violet', valuePath: 'tempPerturbation', callback: (v) => { state.tempPerturbation = v; } },
+
+      { id: 'sld-hum-sp', label: 'SP (Hum)', min: 0, max: 100, step: 1, color: 'blue', valuePath: 'humSetpoint', callback: (v) => { state.humSetpoint = v; } },
+      { id: 'sld-hum-kp', label: 'Kp', min: 0, max: 20, step: 0.1, color: 'amber', valuePath: 'humPid.kp', callback: (v) => { state.humPid.kp = v; } },
+      { id: 'sld-hum-ki', label: 'Ki', min: 0, max: 2.0, step: 0.01, color: 'teal', valuePath: 'humPid.ki', callback: (v) => { state.humPid.ki = v; } },
+      { id: 'sld-hum-kd', label: 'Kd', min: 0, max: 20, step: 0.1, color: 'fuchsia', valuePath: 'humPid.kd', callback: (v) => { state.humPid.kd = v; } },
+      { id: 'sld-hum-hist', label: 'Hist. (H)', min: 0.5, max: 25, step: 0.5, color: 'orange', valuePath: 'humHysteresis', callback: (v) => { state.humHysteresis = v; } },
+      { id: 'sld-hum-ext', label: 'Ctrl. Manual (u_H)', min: 0, max: 100, step: 1, color: 'sky', valuePath: 'humExternal', callback: (v) => { state.humExternal = v; } },
+      { id: 'sld-hum-inertia', label: 'Inèrcia', min: 5, max: 30, step: 1, color: 'slate', valuePath: 'humInertia', callback: (v) => { state.humInertia = v; } },
+      { id: 'sld-hum-pert', label: 'Pert. (V)', min: -2.0, max: 2.0, step: 0.1, color: 'violet', valuePath: 'humPerturbation', callback: (v) => { state.humPerturbation = v; } },
+
+      { id: 'sld-coupling-kht', label: 'K_HT Fred Hum->Temp', min: 0, max: 2.0, step: 0.05, color: 'slate', valuePath: 'kHT', callback: (v) => { state.kHT = v; } },
+      { id: 'sld-coupling-kth', label: 'K_TH Calef->Hum', min: 0, max: 2.0, step: 0.05, color: 'slate', valuePath: 'kTH', callback: (v) => { state.kTH = v; } }
+    ];
+
+    const colorMaps = {
+      blue: 'text-blue-400 accent-blue-500 bg-blue-950/80 border-blue-500/20 text-blue-300',
+      amber: 'text-amber-400 accent-amber-500 bg-amber-950/80 border-amber-500/20 text-amber-300',
+      teal: 'text-teal-400 accent-teal-500 bg-teal-950/80 border-teal-500/20 text-teal-300',
+      fuchsia: 'text-fuchsia-400 accent-fuchsia-500 bg-fuchsia-950/80 border-fuchsia-500/20 text-fuchsia-300',
+      slate: 'text-slate-400 accent-slate-300 bg-slate-800 border-slate-700/20 text-slate-300',
+      violet: 'text-violet-400 accent-violet-500 bg-violet-950/80 border-violet-500/20 text-violet-300',
+      orange: 'text-orange-400 accent-orange-500 bg-orange-950/80 border-orange-500/20 text-orange-300',
+      rose: 'text-rose-400 accent-rose-500 bg-rose-950/80 border-rose-500/20 text-rose-300',
+      sky: 'text-sky-400 accent-sky-500 bg-sky-950/80 border-sky-500/20 text-sky-300'
+    };
+
+    function getValueByPath(path) {
+      const parts = path.split('.');
+      let val = state;
+      for (const p of parts) val = val[p];
+      return val;
+    }
+
+    function generateSliderMarkup(cfg) {
+      const currentVal = getValueByPath(cfg.valuePath) || 0;
+      const mode = cfg.id.includes('temp') ? state.tempControlMode : state.humControlMode;
+      let isDisabled = false;
+
+      if (mode === 'PID') {
+        if (cfg.id.includes('-hist') || cfg.id.includes('-ext')) isDisabled = true;
+      } else if (mode === 'HYSTERESIS') {
+        if (cfg.id.includes('-kp') || cfg.id.includes('-ki') || cfg.id.includes('-kd') || cfg.id.includes('-ext')) isDisabled = true;
+      } else if (mode === 'ON_OFF') {
+        if (cfg.id.includes('-kp') || cfg.id.includes('-ki') || cfg.id.includes('-kd') || cfg.id.includes('-hist') || cfg.id.includes('-ext')) isDisabled = true;
+      } else if (mode === 'MQTT') {
+        // En mode MQTT només s'utilitza el control manual (ext), inercia i perturbacio. El tunning i el setpoint estan inoperatius.
+        if (cfg.id.includes('-kp') || cfg.id.includes('-ki') || cfg.id.includes('-kd') || cfg.id.includes('-hist') || cfg.id.includes('-sp')) isDisabled = true;
+      }
+
+      const cl = colorMaps[cfg.color] || colorMaps.slate;
+      const [lblColor, accent, bg, border, txtColor] = cl.split(' ');
+      const valStr = isDisabled ? '-' : currentVal.toFixed(cfg.step < 1 ? (cfg.step < 0.1 ? 2 : 1) : 0);
+
+      return `
+        <div class="flex justify-between items-center text-[9px] font-bold ${isDisabled ? 'opacity-30' : ''}">
+          <span class="${lblColor}">${cfg.label}</span>
+          <span class="val-display font-mono ${txtColor} px-1 rounded text-[8px] font-black min-w-[28px] text-center bg-slate-950 border ${border}">
+            ${valStr}
+          </span>
+        </div>
+        <div class="flex items-center mt-0.5 ${isDisabled ? 'opacity-30 pointer-events-none' : ''}">
+          <input type="range" min="${cfg.min}" max="${cfg.max}" step="${cfg.step}" value="${isDisabled ? cfg.min : currentVal}" 
+            oninput="sliderOnInput('${cfg.id}', this.value)" class="w-full cursor-pointer outline-none ${accent}" ${isDisabled ? 'disabled' : ''}>
+        </div>`;
+    }
+
+    function sliderOnInput(id, val) {
+      const cfg = sliderConfigs.find(c => c.id === id);
+      if (cfg) {
+        cfg.callback(Number(val));
+        
+        // Actualitzar dinàmicament només el contingut visual de text per evitar re-renderitzar el node DOM i no perdre el focus de drag
+        const container = document.getElementById(id);
+        if (container) {
+          const valDisplay = container.querySelector('.val-display');
+          if (valDisplay) {
+            valDisplay.textContent = Number(val).toFixed(cfg.step < 1 ? (cfg.step < 0.1 ? 2 : 1) : 0);
+          }
+        }
+        
+        saveConfigToLocal();
+      }
+    }
+
+    function renderSliders() {
+      sliderConfigs.forEach(cfg => {
+        const el = document.getElementById(cfg.id);
+        if (el) el.innerHTML = generateSliderMarkup(cfg);
+      });
+    }
+
+    // --- 4. Presets i dades locals ---
+    function applyPreset(name) {
+      if (name === 'estable') {
+        state.tempPid = { kp: 2.5, ki: 0.08, kd: 4.0, antiWindup: true };
+        state.humPid = { kp: 3.0, ki: 0.12, kd: 2.0, antiWindup: true };
+        addLog("[CONSIGNA] Preset ESTABLE aplicat.");
+      } else if (name === 'optimitzat') {
+        state.tempPid = { kp: 7.5, ki: 0.28, kd: 8.5, antiWindup: true };
+        state.humPid = { kp: 8.0, ki: 0.35, kd: 4.5, antiWindup: true };
+        addLog("[CONSIGNA] Preset OPTIMITZAT (MOLT RÀPID) aplicat per a màxima velocitat de resposta i estabilitat.");
+      } else if (name === 'p') {
+        state.tempPid = { kp: 4.0, ki: 0, kd: 0, antiWindup: false };
+        state.humPid = { kp: 5.0, ki: 0, kd: 0, antiWindup: false };
+        addLog("[CONSIGNA] Preset NOMÉS P aplicat.");
+      } else if (name === 'inestable') {
+        state.tempPid = { kp: 15.0, ki: 0.8, kd: 0, antiWindup: false };
+        state.humPid = { kp: 20.0, ki: 1.0, kd: 0, antiWindup: false };
+        addLog("[CONSIGNA] Preset INESTABLE aplicat.");
+      }
+      saveConfigToLocal();
+      renderSliders();
+      updateAWButtons();
+    }
+
+    function toggleAW(type) {
+      if (type === 'temp') state.tempPid.antiWindup = !state.tempPid.antiWindup;
+      if (type === 'hum') state.humPid.antiWindup = !state.humPid.antiWindup;
+      updateAWButtons();
+      saveConfigToLocal();
+    }
+
+    function updateAWButtons() {
+      const btnT = document.getElementById('btn-aw-temp');
+      const btnH = document.getElementById('btn-aw-hum');
+      
+      if (state.tempPid.antiWindup) {
+        btnT.className = "w-8 h-4.5 flex items-center border rounded-full p-0.5 bg-emerald-950 border-emerald-800";
+        btnT.children[0].className = "bg-emerald-400 w-3.5 h-3.5 rounded-full shadow transform translate-x-3.5 transition";
+      } else {
+        btnT.className = "w-8 h-4.5 flex items-center border rounded-full p-0.5 bg-rose-950/80 border-rose-800";
+        btnT.children[0].className = "bg-rose-400 w-3.5 h-3.5 rounded-full shadow transform translate-x-0 transition";
+      }
+
+      if (state.humPid.antiWindup) {
+        btnH.className = "w-8 h-4.5 flex items-center border rounded-full p-0.5 bg-emerald-950 border-emerald-800";
+        btnH.children[0].className = "bg-emerald-400 w-3.5 h-3.5 rounded-full shadow transform translate-x-3.5 transition";
+      } else {
+        btnH.className = "w-8 h-4.5 flex items-center border rounded-full p-0.5 bg-rose-950/80 border-rose-800";
+        btnH.children[0].className = "bg-rose-400 w-3.5 h-3.5 rounded-full shadow transform translate-x-0 transition";
+      }
+    }
+
+    function setControlMode(type, val) {
+      if (type === 'temp') state.tempControlMode = val;
+      if (type === 'hum') state.humControlMode = val;
+      renderSliders();
+      saveConfigToLocal();
+      addLog(`[REGULADOR] Mode de control de ${type === 'temp' ? 'Temperatura' : 'Humitat'} canviat a: ${val}`);
+    }
+
+    function setDecouplingMode(val) {
+      state.decouplingMode = val;
+      saveConfigToLocal();
+      addLog(`[MATRIU] Mode de desacoblament canviat a: ${val}`);
+    }
+
+    function setSimSpeed(speed) {
+      state.simSpeed = speed;
+      [1, 2, 4, 8, 10].forEach(s => {
+        const btn = document.getElementById(`speed-x${s}`);
+        if (btn) {
+          if (s === speed) {
+            btn.className = "px-1.5 py-0.5 rounded text-[8px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800 transition";
+          } else {
+            btn.className = "px-1.5 py-0.5 rounded text-[8px] font-bold bg-slate-950 text-slate-400 border border-slate-800 hover:bg-slate-800 transition";
+          }
+        }
+      });
+      addLog(`[SIMULADOR] Velocitat de simulació canviada a x${speed}.`);
+    }
+
+    function setPhaseConfig(phase, prop, val) {
+      state.phaseConfigs[phase][prop] = Number(val);
+      saveConfigToLocal();
+    }
+
+    // --- 5. Motor de Simulació (Tick) ---
+    function tick(dtMs, forceStep = false) {
+      if (state.running || forceStep) {
+        const prevProcessState = state.processState;
+        const dt = dtMs / 1000;
+        state.realTimeCounter += dt * state.simSpeed;
+
+        // Cicle de Pintura d'Estats
+        const totalCycleDuration = state.phaseConfigs.fase1.duration + state.phaseConfigs.fase2.duration + state.phaseConfigs.fase3.duration;
+        
+        if (state.processState === 'IDLE') {
+          if (state.running || forceStep) {
+            state.processState = 'FASE_1';
+            state.timer = 0;
+            state.totalCycleTimer = 0;
+            
+            // Reset to normal conditions (20ºC and 40% humidity)
+            state.temp = 20.0;
+            state.hum = 40.0;
+            
+            // Reset PID states for a clean run
+            state.tempIntegral = 0.0;
+            state.tempLastError = 0.0;
+            state.tempPrevError = 0.0;
+            state.tempPValue = 0.0;
+            state.tempIValue = 0.0;
+            state.tempDValue = 0.0;
+            
+            state.humIntegral = 0.0;
+            state.humLastError = 0.0;
+            state.humPrevError = 0.0;
+            state.humPValue = 0.0;
+            state.humIValue = 0.0;
+            state.humDValue = 0.0;
+            
+            state.showGreenCar = false;
+            
+            state.tempSetpoint = state.phaseConfigs.fase1.tempSp;
+            state.humSetpoint = state.phaseConfigs.fase1.humSp;
+            addLog(`[CICLE] Iniciant cicle de pintura. FASE 1: APLICACIÓ (Pintat). SP_T: ${state.tempSetpoint}ºC, SP_H: ${state.humSetpoint}%`);
+          }
+        } else if (state.processState === 'FASE_1') {
+        state.timer += dt * state.simSpeed;
+        state.totalCycleTimer += dt * state.simSpeed;
+        state.tempSetpoint = state.phaseConfigs.fase1.tempSp;
+        state.humSetpoint = state.phaseConfigs.fase1.humSp;
+        if (state.timer >= state.phaseConfigs.fase1.duration) {
+          state.processState = 'FASE_2';
+          state.timer = 0;
+          state.tempSetpoint = state.phaseConfigs.fase2.tempSp;
+          state.humSetpoint = state.phaseConfigs.fase2.humSp;
+          addLog(`[CICLE] Canvi a FASE 2: ASSECAT (Forn/Curat). SP_T: ${state.phaseConfigs.fase2.tempSp}ºC, SP_H: ${state.phaseConfigs.fase2.humSp}%`);
+        }
+      } else if (state.processState === 'FASE_2') {
+        state.timer += dt * state.simSpeed;
+        state.totalCycleTimer += dt * state.simSpeed;
+        state.tempSetpoint = state.phaseConfigs.fase2.tempSp;
+        state.humSetpoint = state.phaseConfigs.fase2.humSp;
+        if (state.timer >= state.phaseConfigs.fase2.duration) {
+          state.processState = 'FASE_3';
+          state.timer = 0;
+          state.tempSetpoint = state.phaseConfigs.fase3.tempSp;
+          state.humSetpoint = state.phaseConfigs.fase3.humSp;
+          addLog(`[CICLE] Canvi a FASE 3: REFREDAMENT. SP_T: ${state.phaseConfigs.fase3.tempSp}ºC, SP_H: ${state.phaseConfigs.fase3.humSp}%`);
+        }
+      } else if (state.processState === 'FASE_3') {
+        state.timer += dt * state.simSpeed;
+        state.totalCycleTimer += dt * state.simSpeed;
+        state.tempSetpoint = state.phaseConfigs.fase3.tempSp;
+        state.humSetpoint = state.phaseConfigs.fase3.humSp;
+        if (state.timer >= state.phaseConfigs.fase3.duration) {
+          state.processState = 'IDLE';
+          state.timer = 0;
+          state.running = false;
+          state.showGreenCar = true; // Stay painted in green when finished
+          const btn = document.getElementById('btn-play');
+          btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> <span>Iniciar Cicle</span>`;
+          btn.className = "px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow transition";
+          addLog("[CICLE] Procés de pintura completat!");
+        }
+      }
+
+      if (state.processState !== prevProcessState) {
+        renderSliders();
+      }
+
+      // 1. PID de Temperatura en Tensió (0-10V on 10V = 100ºC)
+      const errorTempV = (state.tempSetpoint - state.temp) / 10;
+      let vtRaw = 0;
+      state.tempWindupActive = false;
+
+      if (state.processState === 'IDLE') {
+        vtRaw = 0;
+        state.tempIntegral = 0;
+        state.tempLastError = 0;
+        state.tempPValue = 0;
+        state.tempIValue = 0;
+        state.tempDValue = 0;
+      } else if (state.tempControlMode === 'PID') {
+        const p = state.tempPid.kp * errorTempV;
+        
+        let de_dt = 0;
+        let d = 0;
+        if (state.tempLastError !== null) {
+          de_dt = (errorTempV - state.tempLastError) / (dt * state.simSpeed);
+          d = state.tempPid.kd * de_dt;
+        }
+
+        // Terme integral provisional de cara al càlcul de saturació de l'Anti-windup
+        const iTermPrevia = state.tempPid.ki * (state.tempIntegral + errorTempV * (dt * state.simSpeed));
+        const uPreviaPct = (p + iTermPrevia + d) * 10;
+
+        const isSaturated = uPreviaPct < 0 || uPreviaPct > 100;
+        const windup = isSaturated && ((uPreviaPct < 0 && errorTempV < 0) || (uPreviaPct > 100 && errorTempV > 0));
+        
+        state.tempWindupActive = state.tempPid.antiWindup && windup;
+
+        if (state.tempPid.ki === 0) {
+          state.tempIntegral = 0;
+        } else if (!state.tempWindupActive) {
+          state.tempIntegral += errorTempV * (dt * state.simSpeed);
+        }
+
+        const i = state.tempPid.ki * state.tempIntegral;
+        vtRaw = (p + i + d) * 10; // converteix a %
+
+        state.tempPValue = p;
+        state.tempIValue = i;
+        state.tempDValue = d;
+        state.tempPrevError = state.tempLastError || 0;
+        state.tempLastError = errorTempV;
+      } else if (state.tempControlMode === 'ON_OFF') {
+        vtRaw = state.tempSetpoint > state.temp ? 100 : 0;
+      } else if (state.tempControlMode === 'HYSTERESIS') {
+        if (state.tempSetpoint - state.temp > state.tempHysteresis) vtRaw = 100;
+        else if (state.tempSetpoint - state.temp < -state.tempHysteresis) vtRaw = 0;
+        else vtRaw = state.vTemp;
+      } else {
+        // MQTT
+        vtRaw = state.tempExternal || 0;
+      }
+      state.vTemp = Math.max(0, Math.min(100, vtRaw));
+
+      // 2. PID d'Humitat en Tensió (0-10V on 10V = 100% HR)
+      const errorHumV = (state.humSetpoint - state.hum) / 10;
+      let vhRaw = 0;
+      state.humWindupActive = false;
+
+      if (state.processState === 'IDLE') {
+        vhRaw = 0;
+        state.humIntegral = 0;
+        state.humLastError = 0;
+        state.humPValue = 0;
+        state.humIValue = 0;
+        state.humDValue = 0;
+      } else if (state.humControlMode === 'PID') {
+        const p = state.humPid.kp * errorHumV;
+        
+        let de_dt = 0;
+        let d = 0;
+        if (state.humLastError !== null) {
+          de_dt = (errorHumV - state.humLastError) / (dt * state.simSpeed);
+          d = state.humPid.kd * de_dt;
+        }
+
+        // Terme integral provisional de cara al càlcul de saturació de l'Anti-windup
+        const iTermPrevia = state.humPid.ki * (state.humIntegral + errorHumV * (dt * state.simSpeed));
+        const uPreviaPct = (p + iTermPrevia + d) * 10;
+
+        const isSaturated = uPreviaPct < 0 || uPreviaPct > 100;
+        const windup = isSaturated && ((uPreviaPct < 0 && errorHumV < 0) || (uPreviaPct > 100 && errorHumV > 0));
+
+        state.humWindupActive = state.humPid.antiWindup && windup;
+
+        if (state.humPid.ki === 0) {
+          state.humIntegral = 0;
+        } else if (!state.humWindupActive) {
+          state.humIntegral += errorHumV * (dt * state.simSpeed);
+        }
+
+        const i = state.humPid.ki * state.humIntegral;
+        vhRaw = (p + i + d) * 10;
+
+        state.humPValue = p;
+        state.humIValue = i;
+        state.humDValue = d;
+        state.humPrevError = state.humLastError || 0;
+        state.humLastError = errorHumV;
+      } else if (state.humControlMode === 'ON_OFF') {
+        vhRaw = state.humSetpoint > state.hum ? 100 : 0;
+      } else if (state.humControlMode === 'HYSTERESIS') {
+        if (state.humSetpoint - state.hum > state.humHysteresis) vhRaw = 100;
+        else if (state.humSetpoint - state.hum < -state.humHysteresis) vhRaw = 0;
+        else vhRaw = state.vHum;
+      } else {
+        vhRaw = state.humExternal || 0;
+      }
+      state.vHum = Math.max(0, Math.min(100, vhRaw));
+
+      // 3. Aplicar Desacoblament
+      let ut = state.vTemp;
+      let uh = state.vHum;
+
+      if (state.decouplingMode === 'MATRIX') {
+        const denom = Math.max(0.01, 1 - (state.kTH * state.kHT));
+        ut = (state.vTemp + state.kHT * state.vHum) / denom;
+        uh = (state.vHum + state.kTH * state.vTemp) / denom;
+      } else if (state.decouplingMode === 'SIMPLIFIED') {
+        ut = state.vTemp + state.kHT * state.vHum;
+        uh = state.vHum + state.kTH * state.vTemp;
+      }
+
+      state.tempOutputRaw = ut;
+      state.humOutputRaw = uh;
+      state.tempOutput = Math.max(0, Math.min(100, ut));
+      state.humOutput = Math.max(0, Math.min(100, uh));
+
+      // 4. Simulació Física de la Planta amb Substepping
+      const substeps = Math.max(10, Math.round(10 * state.simSpeed));
+      const dtSub = (dt * state.simSpeed) / substeps;
+
+      for (let s = 0; s < substeps; s++) {
+        // Entrada real de regulació que rep la planta considerant l'acoblament físic
+        const uPrimeT = state.tempOutput - state.kHT * state.humOutput;
+        const uPrimeH = state.humOutput - state.kTH * state.tempOutput;
+
+        // Temperatura: Tambient = 20ºC, K_T = 0.6ºC/%
+        const T_ss = 20.0 + (0.6 * uPrimeT) + (state.tempPerturbation * 10);
+        state.temp += ((T_ss - state.temp) / state.tempInertia) * dtSub;
+        state.temp = Math.max(0, Math.min(100, state.temp));
+
+        // Humitat: Hambient = 40%, K_H = 0.6%/%
+        const H_ss = 40.0 + (0.6 * uPrimeH) + (state.humPerturbation * 10);
+        state.hum += ((H_ss - state.hum) / state.humInertia) * dtSub;
+        state.hum = Math.max(0, Math.min(100, state.hum));
+      }
+
+      // Guardar dades gràfica
+      tempData.push({
+        time: Number(state.realTimeCounter.toFixed(1)),
+        actual: Number(state.temp.toFixed(2)),
+        setpoint: Number(state.tempSetpoint.toFixed(2)),
+        output: Number(state.tempOutput.toFixed(2))
+      });
+      if (tempData.length > 5000) tempData.shift();
+
+      humData.push({
+        time: Number(state.realTimeCounter.toFixed(1)),
+        actual: Number(state.hum.toFixed(2)),
+        setpoint: Number(state.humSetpoint.toFixed(2)),
+        output: Number(state.humOutput.toFixed(2))
+      });
+      if (humData.length > 5000) humData.shift();
+
+      // Envia telemetria via MQTT
+      const now = Date.now();
+      if (mqttEnabled && mqttClient && now - lastSendTime > 100) {
+        lastSendTime = now;
+        sendMqttTelemetry();
+      }
+      }
+
+      updateUIElements();
+    }
+
+    // --- 6. Interfície Gràfica i Animacions ---
+    function drawPaintBooth() {
+      const canvas = document.getElementById('canvas-paint-booth');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width = canvas.parentElement.clientWidth;
+      const h = canvas.height = canvas.parentElement.clientHeight || 300;
+
+      // Fons de la cabina
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, w, h);
+
+      // Reixes de ventilació
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 2;
+      for (let x = 10; x < w; x += 20) {
+        ctx.beginPath(); ctx.moveTo(x, 15); ctx.lineTo(x + 10, 15); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(x, h - 15); ctx.lineTo(x + 10, h - 15); ctx.stroke();
+      }
+
+      // Estructura Cabina de Pintura
+      ctx.strokeStyle = '#334155';
+      ctx.strokeRect(5, 5, w - 10, h - 10);
+
+      // 1. Calefactor (Sostre) - Brilla segons tempOutput
+      const heatIntensity = state.tempOutput / 100;
+      ctx.fillStyle = `rgba(239, 68, 68, ${0.1 + 0.4 * heatIntensity})`;
+      ctx.fillRect(20, 20, w - 40, 25);
+      ctx.strokeStyle = `rgb(${100 + 155 * heatIntensity}, 50, 50)`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let x = 30; x < w - 30; x += 15) {
+        ctx.arc(x, 32, 5, 0, Math.PI, true);
+      }
+      ctx.stroke();
+
+      // Animació d'ones de calor
+      if (state.tempOutput > 1) {
+        if (Math.random() < 0.15 * state.simSpeed) {
+          heatWaves.push({ x: 30 + Math.random() * (w - 60), y: 45, o: 1 });
+        }
+      }
+      ctx.strokeStyle = '#f87171';
+      ctx.lineWidth = 1;
+      heatWaves.forEach((hw, idx) => {
+        ctx.beginPath();
+        ctx.arc(hw.x, hw.y, 8, -Math.PI / 4, Math.PI / 4);
+        ctx.stroke();
+        hw.y += 1.5 * state.simSpeed;
+        hw.o -= 0.02 * state.simSpeed;
+        if (hw.o <= 0 || hw.y > h - 30) heatWaves.splice(idx, 1);
+      });
+
+      // 2. Vàlvules de Vapor (Laterals)
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(10, h * 0.6, 12, 15);
+      ctx.fillRect(w - 22, h * 0.6, 12, 15);
+
+      // Partícules de vapor
+      if (state.humOutput > 1) {
+        if (Math.random() < 0.3 * state.simSpeed) {
+          steamParticles.push({ x: 22, y: h * 0.6 + 7, vx: 2 + Math.random() * 2, vy: -1 + Math.random() * 2, r: 2, o: 0.8 });
+          steamParticles.push({ x: w - 22, y: h * 0.6 + 7, vx: -2 - Math.random() * 2, vy: -1 + Math.random() * 2, r: 2, o: 0.8 });
+        }
+      }
+      ctx.fillStyle = 'rgba(186, 230, 253, 0.4)';
+      steamParticles.forEach((sp, idx) => {
+        ctx.beginPath();
+        ctx.arc(sp.x, sp.y, sp.r, 0, Math.PI * 2);
+        ctx.fill();
+        sp.x += sp.vx * state.simSpeed;
+        sp.y += sp.vy * state.simSpeed;
+        sp.r += 0.4 * state.simSpeed;
+        sp.o -= 0.03 * state.simSpeed;
+        if (sp.o <= 0 || sp.x < 10 || sp.x > w - 10) steamParticles.splice(idx, 1);
+      });
+
+      // 3. Pintat del Cotxe i Nozzles (Fase 1)
+      const isPainting = state.processState === 'FASE_1';
+      
+      // Spray nozzles al sostre
+      ctx.fillStyle = '#64748b';
+      ctx.fillRect(w * 0.3 - 5, 45, 10, 8);
+      ctx.fillRect(w * 0.7 - 5, 45, 10, 8);
+
+      if (isPainting) {
+        // Spray lines animació
+        ctx.strokeStyle = 'rgba(52, 211, 153, 0.25)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < 5; i++) {
+          ctx.beginPath(); ctx.moveTo(w * 0.3, 53); ctx.lineTo(w * 0.3 - 30 + i * 15, h * 0.65); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(w * 0.7, 53); ctx.lineTo(w * 0.7 - 30 + i * 15, h * 0.65); ctx.stroke();
+        }
+      }
+
+      // Cotxe dibuixat
+      const cx = w / 2;
+      const cy = h * 0.68;
+      
+      // Color del cotxe en funció de fase i progrés
+      let paintColor = '#475569'; // Gris base
+      if (state.processState === 'FASE_1') {
+        const p = state.timer / state.phaseConfigs.fase1.duration;
+        const r = Math.round(71 + (16 - 71) * p);
+        const g = Math.round(85 + (185 - 85) * p);
+        const b = Math.round(105 + (129 - 105) * p);
+        paintColor = `rgb(${r}, ${g}, ${b})`;
+      } else if (state.processState !== 'IDLE' || state.showGreenCar) {
+        paintColor = '#10b981'; // Pintat verd esmeralda
+      }
+
+      // Dibuix carrosseria
+      ctx.fillStyle = paintColor;
+      ctx.beginPath();
+      ctx.moveTo(cx - 70, cy);
+      ctx.lineTo(cx - 65, cy - 12);
+      ctx.lineTo(cx - 35, cy - 15);
+      ctx.lineTo(cx - 20, cy - 35);
+      ctx.lineTo(cx + 25, cy - 35);
+      ctx.lineTo(cx + 40, cy - 15);
+      ctx.lineTo(cx + 70, cy - 12);
+      ctx.lineTo(cx + 75, cy);
+      ctx.lineTo(cx + 75, cy + 18);
+      ctx.lineTo(cx - 70, cy + 18);
+      ctx.closePath();
+      ctx.fill();
+
+      // Vidres del cotxe
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.moveTo(cx - 16, cy - 31);
+      ctx.lineTo(cx - 28, cy - 17);
+      ctx.lineTo(cx + 3, cy - 17);
+      ctx.lineTo(cx + 3, cy - 31);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.moveTo(cx + 6, cy - 31);
+      ctx.lineTo(cx + 6, cy - 17);
+      ctx.lineTo(cx + 34, cy - 17);
+      ctx.lineTo(cx + 22, cy - 31);
+      ctx.closePath();
+      ctx.fill();
+
+      // Rodes (Cercles negres)
+      ctx.fillStyle = '#020617';
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(cx - 40, cy + 18, 12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.arc(cx + 40, cy + 18, 12, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+
+      // Transportador terra
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(cx - 95, cy + 30, 190, 4);
+
+      // Text Informatiu (Pantalla LED) a la paret de fons
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(cx - 80, 55, 160, 28);
+      ctx.strokeStyle = '#334155';
+      ctx.strokeRect(cx - 80, 55, 160, 28);
+
+      ctx.fillStyle = '#10b981';
+      ctx.font = 'bold 8.5px "JetBrains Mono"';
+      ctx.textAlign = 'center';
+      let ledText = `FASE: ${state.processState}`;
+      if (state.processState === 'FASE_1') ledText = "F1: APLICACIÓ (PINTAT)";
+      if (state.processState === 'FASE_2') ledText = "F2: ASSECAT (FORN)";
+      if (state.processState === 'FASE_3') ledText = "F3: REFREDAMENT";
+      ctx.fillText(ledText, cx, 66);
+      ctx.fillText(`T: ${state.temp.toFixed(1)}ºC  H: ${state.hum.toFixed(1)}%`, cx, 78);
+    }
+
+    let currentChartTimeScale = 15;
+
+    function renderCanvasChart(canvasId, dataArr, maxVal, minVal, key, spColor, pvColor, spLabel, pvLabel) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width = canvas.parentElement.clientWidth;
+      const h = canvas.height = 144;
+
+      if (!canvas.hasListeners) {
+        canvas.hasListeners = true;
+        canvas.addEventListener('mousemove', (e) => {
+          const rect = canvas.getBoundingClientRect();
+          canvas.hoverX = e.clientX - rect.left;
+          renderPlotters();
+        });
+        canvas.addEventListener('mouseleave', () => {
+          canvas.hoverX = null;
+          renderPlotters();
+        });
+        canvas.addEventListener('touchmove', (e) => {
+          if (e.touches && e.touches[0]) {
+            const rect = canvas.getBoundingClientRect();
+            canvas.hoverX = e.touches[0].clientX - rect.left;
+            renderPlotters();
+          }
+        }, { passive: true });
+        canvas.addEventListener('touchend', () => {
+          canvas.hoverX = null;
+          renderPlotters();
+        }, { passive: true });
+      }
+
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(0, 0, w, h);
+
+      const padLeft = 45;
+      const padRight = 45;
+      const padTop = 30;
+      const padBottom = 22;
+      const chartW = w - padLeft - padRight;
+      const chartH = h - padTop - padBottom;
+
+      // Filter data according to currentChartTimeScale
+      let filteredData = dataArr;
+      if (currentChartTimeScale !== 'all' && dataArr.length > 0) {
+        const latestTime = dataArr[dataArr.length - 1].time;
+        filteredData = dataArr.filter(pt => pt.time >= latestTime - currentChartTimeScale);
+      }
+
+      // Check if mouse is hovering and there's enough data
+      let hoverPt = null;
+      let hoverIdx = -1;
+      if (canvas.hoverX != null && filteredData.length >= 2) {
+        const hoverPct = (canvas.hoverX - padLeft) / chartW;
+        if (hoverPct >= 0 && hoverPct <= 1) {
+          hoverIdx = Math.round(hoverPct * (filteredData.length - 1));
+          if (hoverIdx >= 0 && hoverIdx < filteredData.length) {
+            hoverPt = filteredData[hoverIdx];
+          }
+        }
+      }
+
+      // Dibuixar llegenda a dalt (centrada/responsiva)
+      ctx.textBaseline = 'middle';
+      const unit = (key === 'temp') ? 'ºC' : '%';
+      const legGap = chartW / 4;
+
+      if (hoverPt) {
+        // Mode interactiu (Ratonet a sobre)
+        // Element 1: Setpoint (SP) amb valor actual sota cursor
+        ctx.strokeStyle = spColor;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(padLeft + 5, 15); ctx.lineTo(padLeft + 18, 15); ctx.stroke();
+        ctx.fillStyle = spColor;
+        ctx.font = 'bold 8.5px "Inter", sans-serif';
+        ctx.textAlign = 'left';
+        ctx.fillText(`SP: ${hoverPt.setpoint.toFixed(2)}${unit}`, padLeft + 22, 15);
+
+        // Element 2: Process Value (PV)
+        ctx.strokeStyle = pvColor;
+        ctx.beginPath(); ctx.moveTo(padLeft + 5 + legGap, 15); ctx.lineTo(padLeft + 18 + legGap, 15); ctx.stroke();
+        ctx.fillStyle = pvColor;
+        ctx.fillText(`REAL: ${hoverPt.actual.toFixed(2)}${unit}`, padLeft + 22 + legGap, 15);
+
+        // Element 3: Actuador (U)
+        ctx.strokeStyle = 'rgba(168, 85, 247, 0.85)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(padLeft + 5 + 2 * legGap, 15); ctx.lineTo(padLeft + 18 + 2 * legGap, 15); ctx.stroke();
+        ctx.fillStyle = '#c084fc';
+        ctx.fillText(`ACT: ${hoverPt.output.toFixed(1)}%`, padLeft + 22 + 2 * legGap, 15);
+
+        // Element 4: Temps
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 8.5px "JetBrains Mono"';
+        ctx.fillText(`T: ${hoverPt.time.toFixed(1)}s`, padLeft + 5 + 3 * legGap, 15);
+      } else {
+        // Mode normal
+        ctx.font = 'bold 8px "Inter", sans-serif';
+        ctx.textAlign = 'left';
+
+        // Element 1: Setpoint (SP)
+        ctx.strokeStyle = spColor;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.moveTo(padLeft + 5, 15); ctx.lineTo(padLeft + 18, 15); ctx.stroke();
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText(`SP: ${spLabel}`, padLeft + 22, 15);
+
+        // Element 2: Process Value (PV)
+        ctx.strokeStyle = pvColor;
+        ctx.beginPath(); ctx.moveTo(padLeft + 5 + legGap, 15); ctx.lineTo(padLeft + 18 + legGap, 15); ctx.stroke();
+        ctx.fillText(`PV: ${pvLabel}`, padLeft + 22 + legGap, 15);
+
+        // Element 3: Actuador (U)
+        ctx.strokeStyle = 'rgba(168, 85, 247, 0.85)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(padLeft + 5 + 2 * legGap, 15); ctx.lineTo(padLeft + 18 + 2 * legGap, 15); ctx.stroke();
+        ctx.fillText("U: Actuador (Lila)", padLeft + 22 + 2 * legGap, 15);
+      }
+
+      // Marc del gràfic
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(padLeft, padTop, chartW, chartH);
+
+      // Quadrícula Horitzontal i Escales de l'eix Y
+      const yTicks = [0, 25, 50, 75, 100];
+      ctx.textAlign = 'right';
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '8px "JetBrains Mono"';
+      
+      yTicks.forEach(tickVal => {
+        const yVal = padTop + chartH - (tickVal / 100) * chartH;
+        
+        // Línia de quadrícula
+        ctx.strokeStyle = '#111827';
+        ctx.beginPath(); ctx.moveTo(padLeft, yVal); ctx.lineTo(padLeft + chartW, yVal); ctx.stroke();
+
+        // Escala esquerra (PV i SP)
+        const unit = (key === 'temp') ? 'ºC' : '%';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText(`${tickVal}${unit}`, padLeft - 6, yVal);
+
+        // Escala dreta (Actuador %)
+        ctx.textAlign = 'left';
+        ctx.fillStyle = '#c084fc'; // lila clar
+        ctx.fillText(`${tickVal}%`, padLeft + chartW + 6, yVal);
+        ctx.textAlign = 'right';
+      });
+
+      if (filteredData.length < 2) {
+        ctx.fillStyle = '#475569';
+        ctx.textAlign = 'center';
+        ctx.font = '9px "Inter", sans-serif';
+        ctx.fillText("Esperant dades de telemetria...", padLeft + chartW / 2, padTop + chartH / 2);
+        return;
+      }
+
+      const scaleY = (val) => padTop + chartH - ((val - minVal) / (maxVal - minVal)) * chartH;
+      const scaleX = (idx) => padLeft + (idx / (filteredData.length - 1)) * chartW;
+
+      // Quadrícula Vertical i Escales de l'eix X (Temps)
+      const numXTicks = 5;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#64748b';
+      ctx.strokeStyle = '#111827';
+      for (let i = 0; i < numXTicks; i++) {
+        const idx = Math.round((i / (numXTicks - 1)) * (filteredData.length - 1));
+        const xVal = scaleX(idx);
+        const pt = filteredData[idx];
+        
+        // Línia de quadrícula vertical
+        if (i > 0 && i < numXTicks - 1) {
+          ctx.beginPath(); ctx.moveTo(xVal, padTop); ctx.lineTo(xVal, padTop + chartH); ctx.stroke();
+        }
+
+        // Etiqueta de temps (X)
+        if (pt) {
+          ctx.fillText(`${pt.time.toFixed(1)}s`, xVal, padTop + chartH + 13);
+        }
+      }
+
+      // Dibuixar Actuador (U) en color lila
+      ctx.strokeStyle = 'rgba(168, 85, 247, 0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      filteredData.forEach((pt, idx) => {
+        const x = scaleX(idx);
+        const y = padTop + chartH - (pt.output / 100) * chartH;
+        if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // Dibuixar Setpoint (SP)
+      ctx.strokeStyle = spColor;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      filteredData.forEach((pt, idx) => {
+        const x = scaleX(idx);
+        const y = scaleY(pt.setpoint);
+        if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // Dibuixar PV (Sonda Real)
+      ctx.strokeStyle = pvColor;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      filteredData.forEach((pt, idx) => {
+        const x = scaleX(idx);
+        const y = scaleY(pt.actual);
+        if (idx === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      });
+      ctx.stroke();
+
+      // Dibuixar tracking de l'usuari (Vertical line i cercles sobre corbes)
+      if (hoverPt && hoverIdx !== -1) {
+        const xVal = scaleX(hoverIdx);
+
+        // Línia vertical discontínua
+        ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.moveTo(xVal, padTop);
+        ctx.lineTo(xVal, padTop + chartH);
+        ctx.stroke();
+        ctx.setLineDash([]); // Restablir línia contínua
+
+        // Punt sobre Actuador (U)
+        ctx.fillStyle = '#c084fc';
+        ctx.beginPath();
+        ctx.arc(xVal, padTop + chartH - (hoverPt.output / 100) * chartH, 4, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = '#020617';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Punt sobre Setpoint (SP)
+        ctx.fillStyle = spColor;
+        ctx.beginPath();
+        ctx.arc(xVal, scaleY(hoverPt.setpoint), 4, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = '#020617';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Punt sobre PV (Sonda Real)
+        ctx.fillStyle = pvColor;
+        ctx.beginPath();
+        ctx.arc(xVal, scaleY(hoverPt.actual), 5, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.strokeStyle = '#020617';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+
+    function renderPlotters() {
+      renderCanvasChart('canvas-temp', tempData, 100, 0, 'temp', '#ef4444', '#10b981', 'Consigna Temp (Vermell)', 'Temp Real (Verd)');
+      renderCanvasChart('canvas-hum', humData, 100, 0, 'hum', '#ef4444', '#10b981', 'Consigna Hum (Vermell)', 'Hum Real (Verd)');
+    }
+
+    function setChartTimeScale(scale) {
+      currentChartTimeScale = scale;
+      
+      const scales = [15, 30, 60, 120, 'all'];
+      scales.forEach(s => {
+        const btn = document.getElementById(`btn-scale-${s}`);
+        if (btn) {
+          if (s === scale) {
+            btn.className = "px-2 py-0.5 rounded bg-emerald-950 text-emerald-400 border border-emerald-800 transition font-mono cursor-pointer";
+          } else {
+            btn.className = "px-2 py-0.5 rounded bg-slate-950 text-slate-400 border border-slate-800 hover:bg-slate-900 transition font-mono cursor-pointer";
+          }
+        }
+      });
+      
+      renderPlotters();
+    }
+
+    // --- 7. Panell de càlculs matemàtics ---
+    function updateMathPanels() {
+      const tSp = state.tempSetpoint;
+      const tPv = state.temp;
+      const tErr = tSp - tPv;
+      const tErrV = tErr / 10;
+
+      const pTemp = document.getElementById('panel-math-temp');
+      document.getElementById('lbl-math-temp-mode').textContent = state.tempControlMode;
+      
+      if (state.tempControlMode === 'PID') {
+        const dtSim = 0.05 * state.simSpeed;
+        const kp = state.tempPid.kp;
+        const ki = state.tempPid.ki;
+        const kd = state.tempPid.kd;
+        
+        const de = tErrV - (state.tempPrevError || 0);
+        const de_dt = dtSim > 0 ? de / dtSim : 0;
+        
+        // Anti-windup analysis
+        const provSum = state.tempIntegral + tErrV * dtSim;
+        const provI = ki * provSum;
+        const uPreviaPct = (state.tempPValue + provI + state.tempDValue) * 10;
+        const isSaturated = uPreviaPct < 0 || uPreviaPct > 100;
+        const sameSign = ((uPreviaPct < 0 && tErrV < 0) || (uPreviaPct > 100 && tErrV > 0));
+        const windupTriggered = isSaturated && sameSign;
+        const awActive = state.tempPid.antiWindup && windupTriggered;
+
+        pTemp.innerHTML = `
+          <!-- Error -->
+          <div class="mb-1.5 pb-1 border-b border-slate-900/50">
+            <span class="text-rose-400 font-bold">1. Error e[k] (Volts):</span><br/>
+            <span class="pl-2 text-slate-400">e[k] = (SP - PV) / 10</span><br/>
+            <span class="pl-2 text-slate-300">e[k] = (${tSp.toFixed(1)}ºC - ${tPv.toFixed(1)}ºC) / 10 = <span class="text-white font-black">${tErrV.toFixed(4)} V</span></span>
+          </div>
+
+          <!-- Terme P -->
+          <div class="mb-1.5 pb-1 border-b border-slate-900/50">
+            <span class="text-amber-400 font-bold">2. Proporcional P[k]:</span><br/>
+            <span class="pl-2 text-slate-400">P[k] = Kp · e[k]</span><br/>
+            <span class="pl-2 text-slate-300">P[k] = ${kp.toFixed(1)} · ${tErrV.toFixed(4)} = <span class="text-amber-300 font-bold">${state.tempPValue.toFixed(4)} V</span></span>
+          </div>
+
+          <!-- Terme I -->
+          <div class="mb-1.5 pb-1 border-b border-slate-900/50">
+            <span class="text-teal-400 font-bold">3. Integral I[k] (Suma):</span><br/>
+            <span class="pl-2 text-slate-400">S[k] = S[k-1] + e[k] · dt</span> <span class="text-[8px] text-slate-500">(dt = ${dtSim.toFixed(3)}s)</span><br/>
+            <span class="pl-2 text-slate-400">Increment: e[k] · dt = ${tErrV.toFixed(4)} · ${dtSim.toFixed(3)}s = <span class="text-slate-300 font-mono">${(tErrV * dtSim).toFixed(5)} V·s</span></span><br/>
+            <span class="pl-2 text-slate-400">Suma provisional: S[k] = ${provSum.toFixed(4)} V·s</span><br/>
+            <span class="pl-2 text-slate-300">Suma real utilitzada: <span class="text-teal-300 font-bold">${state.tempIntegral.toFixed(4)} V·s</span></span><br/>
+            <span class="pl-2 text-slate-400">I[k] = Ki · S[k] = ${ki.toFixed(2)} · ${state.tempIntegral.toFixed(4)} = <span class="text-teal-300 font-bold">${state.tempIValue.toFixed(4)} V</span></span>
+          </div>
+
+          <!-- Terme D -->
+          <div class="mb-1.5 pb-1 border-b border-slate-900/50">
+            <span class="text-fuchsia-400 font-bold">4. Derivatiu D[k] (Diferència):</span><br/>
+            <span class="pl-2 text-slate-400">Δe = e[k] - e[k-1] = ${tErrV.toFixed(4)} - ${(state.tempPrevError || 0).toFixed(4)} = <span class="text-slate-300">${de.toFixed(4)} V</span></span><br/>
+            <span class="pl-2 text-slate-400">D[k] = Kd · Δe / dt = ${kd.toFixed(1)} · (${de.toFixed(4)} / ${dtSim.toFixed(3)}s) = <span class="text-fuchsia-300 font-bold">${state.tempDValue.toFixed(4)} V</span></span>
+          </div>
+
+          <!-- Anti-Windup -->
+          <div class="mb-1.5 pb-1 border-b border-slate-900/50 bg-slate-950/40 p-1.5 rounded border border-slate-900">
+            <span class="text-orange-400 font-bold">5. Anti-Windup (AW):</span><br/>
+            <span class="pl-2 text-slate-400">u_prev = (P + I_prov + D) · 10 = <span class="text-white font-mono">${uPreviaPct.toFixed(1)}%</span></span><br/>
+            <span class="pl-2 text-slate-400">Saturat (&gt;100% o &lt;0%)? <span class="font-bold ${isSaturated ? 'text-red-400' : 'text-slate-500'}">${isSaturated ? 'SÍ' : 'NO'}</span></span><br/>
+            <span class="pl-2 text-slate-400">Mateix signe error/u? <span class="font-bold ${sameSign ? 'text-red-400' : 'text-slate-500'}">${sameSign ? 'SÍ' : 'NO'}</span></span><br/>
+            <span class="pl-2 text-slate-400">AW Actiu (Suma congelada): <span class="font-black ${awActive ? 'text-rose-500' : 'text-emerald-500'}">${awActive ? 'SÍ, INTEGRAL CONGELADA' : 'NO, INTEGRAL ACUMULANT'}</span></span>
+          </div>
+
+          <div class="pt-1 font-bold">
+            <span class="text-slate-400">6. Senyal de Control v_T[k] (%):</span><br/>
+            <span class="pl-2 text-rose-400">v_T[k] = (P + I + D) · 10 = (${(state.tempPValue + state.tempIValue + state.tempDValue).toFixed(4)}V) · 10 = <span class="text-white text-xs font-black bg-rose-950/40 px-1.5 py-0.5 border border-rose-900 rounded">${state.vTemp.toFixed(1)}%</span></span>
+          </div>`;
+      } else {
+        pTemp.innerHTML = `<div class="text-slate-400 py-1">Operant en mode discret ${state.tempControlMode}. Sortida de regulador directa: <span class="text-rose-400 font-bold">${state.vTemp.toFixed(1)}%</span></div>`;
+      }
+
+      const hSp = state.humSetpoint;
+      const hPv = state.hum;
+      const hErr = hSp - hPv;
+      const hErrV = hErr / 10;
+
+      const pHum = document.getElementById('panel-math-hum');
+      document.getElementById('lbl-math-hum-mode').textContent = state.humControlMode;
+
+      if (state.humControlMode === 'PID') {
+        const dtSim = 0.05 * state.simSpeed;
+        const kp = state.humPid.kp;
+        const ki = state.humPid.ki;
+        const kd = state.humPid.kd;
+        
+        const de = hErrV - (state.humPrevError || 0);
+        const de_dt = dtSim > 0 ? de / dtSim : 0;
+        
+        // Anti-windup analysis
+        const provSum = state.humIntegral + hErrV * dtSim;
+        const provI = ki * provSum;
+        const uPreviaPct = (state.humPValue + provI + state.humDValue) * 10;
+        const isSaturated = uPreviaPct < 0 || uPreviaPct > 100;
+        const sameSign = ((uPreviaPct < 0 && hErrV < 0) || (uPreviaPct > 100 && hErrV > 0));
+        const windupTriggered = isSaturated && sameSign;
+        const awActive = state.humPid.antiWindup && windupTriggered;
+
+        pHum.innerHTML = `
+          <!-- Error -->
+          <div class="mb-1.5 pb-1 border-b border-slate-900/50">
+            <span class="text-sky-400 font-bold">1. Error e[k] (Volts):</span><br/>
+            <span class="pl-2 text-slate-400">e[k] = (SP - PV) / 10</span><br/>
+            <span class="pl-2 text-slate-300">e[k] = (${hSp.toFixed(1)}% - ${hPv.toFixed(1)}%) / 10 = <span class="text-white font-black">${hErrV.toFixed(4)} V</span></span>
+          </div>
+
+          <!-- Terme P -->
+          <div class="mb-1.5 pb-1 border-b border-slate-900/50">
+            <span class="text-amber-400 font-bold">2. Proporcional P[k]:</span><br/>
+            <span class="pl-2 text-slate-400">P[k] = Kp · e[k]</span><br/>
+            <span class="pl-2 text-slate-300">P[k] = ${kp.toFixed(1)} · ${hErrV.toFixed(4)} = <span class="text-amber-300 font-bold">${state.humPValue.toFixed(4)} V</span></span>
+          </div>
+
+          <!-- Terme I -->
+          <div class="mb-1.5 pb-1 border-b border-slate-900/50">
+            <span class="text-teal-400 font-bold">3. Integral I[k] (Suma):</span><br/>
+            <span class="pl-2 text-slate-400">S[k] = S[k-1] + e[k] · dt</span> <span class="text-[8px] text-slate-500">(dt = ${dtSim.toFixed(3)}s)</span><br/>
+            <span class="pl-2 text-slate-400">Increment: e[k] · dt = ${hErrV.toFixed(4)} · ${dtSim.toFixed(3)}s = <span class="text-slate-300 font-mono">${(hErrV * dtSim).toFixed(5)} V·s</span></span><br/>
+            <span class="pl-2 text-slate-400">Suma provisional: S[k] = ${provSum.toFixed(4)} V·s</span><br/>
+            <span class="pl-2 text-slate-300">Suma real utilitzada: <span class="text-teal-300 font-bold">${state.humIntegral.toFixed(4)} V·s</span></span><br/>
+            <span class="pl-2 text-slate-400">I[k] = Ki · S[k] = ${ki.toFixed(2)} · ${state.humIntegral.toFixed(4)} = <span class="text-teal-300 font-bold">${state.humIValue.toFixed(4)} V</span></span>
+          </div>
+
+          <!-- Terme D -->
+          <div class="mb-1.5 pb-1 border-b border-slate-900/50">
+            <span class="text-fuchsia-400 font-bold">4. Derivatiu D[k] (Diferència):</span><br/>
+            <span class="pl-2 text-slate-400">Δe = e[k] - e[k-1] = ${hErrV.toFixed(4)} - ${(state.humPrevError || 0).toFixed(4)} = <span class="text-slate-300">${de.toFixed(4)} V</span></span><br/>
+            <span class="pl-2 text-slate-400">D[k] = Kd · Δe / dt = ${kd.toFixed(1)} · (${de.toFixed(4)} / ${dtSim.toFixed(3)}s) = <span class="text-fuchsia-300 font-bold">${state.humDValue.toFixed(4)} V</span></span>
+          </div>
+
+          <!-- Anti-Windup -->
+          <div class="mb-1.5 pb-1 border-b border-slate-900/50 bg-slate-950/40 p-1.5 rounded border border-slate-900">
+            <span class="text-orange-400 font-bold">5. Anti-Windup (AW):</span><br/>
+            <span class="pl-2 text-slate-400">u_prev = (P + I_prov + D) · 10 = <span class="text-white font-mono">${uPreviaPct.toFixed(1)}%</span></span><br/>
+            <span class="pl-2 text-slate-400">Saturat (&gt;100% o &lt;0%)? <span class="font-bold ${isSaturated ? 'text-red-400' : 'text-slate-500'}">${isSaturated ? 'SÍ' : 'NO'}</span></span><br/>
+            <span class="pl-2 text-slate-400">Mateix signe error/u? <span class="font-bold ${sameSign ? 'text-red-400' : 'text-slate-500'}">${sameSign ? 'SÍ' : 'NO'}</span></span><br/>
+            <span class="pl-2 text-slate-400">AW Actiu (Suma congelada): <span class="font-black ${awActive ? 'text-rose-500' : 'text-emerald-500'}">${awActive ? 'SÍ, INTEGRAL CONGELADA' : 'NO, INTEGRAL ACUMULANT'}</span></span>
+          </div>
+
+          <div class="pt-1 font-bold">
+            <span class="text-slate-400">6. Senyal de Control v_H[k] (%):</span><br/>
+            <span class="pl-2 text-sky-400">v_H[k] = (P + I + D) · 10 = (${(state.humPValue + state.humIValue + state.humDValue).toFixed(4)}V) · 10 = <span class="text-white text-xs font-black bg-sky-950/40 px-1.5 py-0.5 border border-sky-900 rounded">${state.vHum.toFixed(1)}%</span></span>
+          </div>`;
+      } else {
+        pHum.innerHTML = `<div class="text-slate-400 py-1">Operant en mode discret ${state.humControlMode}. Sortida de regulador directa: <span class="text-sky-400 font-bold">${state.vHum.toFixed(1)}%</span></div>`;
+      }
+
+      // Desacoblament math panel
+      const pDec = document.getElementById('panel-math-decoupling');
+      if (state.decouplingMode === 'NONE') {
+        pDec.innerHTML = `<div><span class="text-slate-500 font-bold">Sense desacoblament:</span><br/>&nbsp;&nbsp;u<sub>T</sub> = v<sub>T</sub> = ${state.vTemp.toFixed(1)}%<br/>&nbsp;&nbsp;u<sub>H</sub> = v<sub>H</sub> = ${state.vHum.toFixed(1)}%</div>`;
+            } else if (state.decouplingMode === 'MATRIX') {
+        const denomVal = 1 - (state.kTH * state.kHT);
+        pDec.innerHTML = `<div><span class="text-amber-400 font-bold">Opció A: Matriu Completa (G<sub>dec</sub>):</span><br/>
+          &nbsp;&nbsp;u<sub>T</sub> = (v<sub>T</sub> + K<sub>HT</sub> · v<sub>H</sub>) / (1 - K<sub>TH</sub> · K<sub>HT</sub>) = (${state.vTemp.toFixed(1)} + ${state.kHT} · ${state.vHum.toFixed(1)}) / (1 - ${state.kTH} · ${state.kHT}) = <span class="text-white">${state.tempOutputRaw.toFixed(1)}%</span><br/>
+          &nbsp;&nbsp;u<sub>H</sub> = (v<sub>H</sub> + K<sub>TH</sub> · v<sub>T</sub>) / (1 - K<sub>TH</sub> · K<sub>HT</sub>) = (${state.vHum.toFixed(1)} + ${state.kTH} · ${state.vTemp.toFixed(1)}) / (1 - ${state.kTH} · ${state.kHT}) = <span class="text-white">${state.humOutputRaw.toFixed(1)}%</span></div>`;
+      } else {
+        pDec.innerHTML = `<div><span class="text-amber-400 font-bold">Opció B: Compensació Simplificada:</span><br/>
+          &nbsp;&nbsp;u<sub>T</sub> = v<sub>T</sub> + K<sub>HT</sub> · v<sub>H</sub> = ${state.vTemp.toFixed(1)} + ${state.kHT} · ${state.vHum.toFixed(1)} = <span class="text-white">${state.tempOutputRaw.toFixed(1)}%</span><br/>
+          &nbsp;&nbsp;u<sub>H</sub> = v<sub>H</sub> + K<sub>TH</sub> · v<sub>T</sub> = ${state.vHum.toFixed(1)} + ${state.kTH} · ${state.vTemp.toFixed(1)} = <span class="text-white">${state.humOutputRaw.toFixed(1)}%</span></div>`;
+      }
+    }
+
+    // --- 8. Elements de la Interfície ---
+    function updateUIElements() {
+      document.getElementById('process-state').textContent = state.processState;
+      if (state.processState === 'FASE_1') {
+        document.getElementById('process-state').className = "px-2 py-0.5 rounded text-[9px] font-bold bg-emerald-950 text-emerald-400 border border-emerald-800 shadow animate-pulse";
+      } else if (state.processState === 'FASE_2') {
+        document.getElementById('process-state').className = "px-2 py-0.5 rounded text-[9px] font-bold bg-amber-950 text-amber-400 border border-amber-800 shadow animate-pulse";
+      } else if (state.processState === 'FASE_3') {
+        document.getElementById('process-state').className = "px-2 py-0.5 rounded text-[9px] font-bold bg-sky-950 text-sky-400 border border-sky-800 shadow animate-pulse";
+      } else {
+        document.getElementById('process-state').className = "px-2 py-0.5 rounded text-[9px] font-bold bg-slate-900 text-slate-400 border border-slate-800 shadow";
+      }
+
+      // Actualitzar valors numèrics i barres
+      document.getElementById('txt-temp-out').textContent = `${state.tempOutput.toFixed(1)}%`;
+      document.getElementById('bar-temp-out').style.width = `${state.tempOutput}%`;
+      document.getElementById('txt-hum-out').textContent = `${state.humOutput.toFixed(1)}%`;
+      document.getElementById('bar-hum-out').style.width = `${state.humOutput}%`;
+
+      // Lectura sensors
+      document.getElementById('txt-sensor-temp-pv').textContent = `${state.temp.toFixed(1)} ºC`;
+      document.getElementById('txt-sensor-temp-volt').textContent = `${(state.temp / 10).toFixed(2)} V`;
+      document.getElementById('txt-sensor-hum-pv').textContent = `${state.hum.toFixed(1)} % HR`;
+      document.getElementById('txt-sensor-hum-volt').textContent = `${(state.hum / 10).toFixed(2)} V`;
+
+      document.getElementById('plot-temp-val').textContent = `${state.temp.toFixed(1)} ºC (SP: ${state.tempSetpoint.toFixed(1)}ºC)`;
+      document.getElementById('plot-hum-val').textContent = `${state.hum.toFixed(1)} % HR (SP: ${state.humSetpoint.toFixed(1)}%)`;
+
+      // Actualitzar l'etiqueta de senyals directes segons el mode de control actiu
+      const translateMode = (m) => {
+        if (m === 'PID') return 'PID';
+        if (m === 'ON_OFF') return 'On-Off';
+        if (m === 'HYSTERESIS') return 'Histèresi';
+        if (m === 'MQTT') return 'Manual';
+        return m;
+      };
+      const modeT = translateMode(state.tempControlMode);
+      const modeH = translateMode(state.humControlMode);
+      let labelText = '';
+      if (state.tempControlMode === 'PID' && state.humControlMode === 'PID') {
+        labelText = 'PIDs directes';
+      } else {
+        labelText = `${modeT}/${modeH} dir.`;
+      }
+      const lblEl = document.getElementById('lbl-direct-signals');
+      if (lblEl) {
+        lblEl.innerHTML = `${labelText} (v<sub>T</sub>, v<sub>H</sub>):`;
+      }
+
+      document.getElementById('txt-direct-pids').textContent = `${state.vTemp.toFixed(1)}%, ${state.vHum.toFixed(1)}%`;
+      document.getElementById('txt-final-actuators').textContent = `${state.tempOutput.toFixed(1)}%, ${state.humOutput.toFixed(1)}%`;
+
+      // Timers i cicles
+      const durationF1 = state.phaseConfigs.fase1.duration;
+      const durationF2 = state.phaseConfigs.fase2.duration;
+      const durationF3 = state.phaseConfigs.fase3.duration;
+      const totalDur = durationF1 + durationF2 + durationF3;
+
+      let pTimerMax = durationF1;
+      if (state.processState === 'FASE_2') pTimerMax = durationF2;
+      if (state.processState === 'FASE_3') pTimerMax = durationF3;
+
+      document.getElementById('txt-phase-timer').textContent = `${state.processState === 'IDLE' ? '0.0s' : state.timer.toFixed(1)}s / ${state.processState === 'IDLE' ? '-' : pTimerMax}s`;
+      document.getElementById('txt-cycle-timer').textContent = `${state.totalCycleTimer.toFixed(1)}s / ${totalDur}s`;
+
+      let phaseText = 'Repòs (IDLE)';
+      if (state.processState === 'FASE_1') phaseText = 'FASE 1: APLICACIÓ (Pintat)';
+      if (state.processState === 'FASE_2') phaseText = 'FASE 2: ASSECAT (Curat)';
+      if (state.processState === 'FASE_3') phaseText = 'FASE 3: REFREDAMENT';
+
+      const overallPct = state.processState === 'IDLE' ? 0 : Math.min(100, Math.round((state.totalCycleTimer / totalDur) * 100));
+      document.getElementById('txt-cycle-progress-pct').textContent = `${phaseText} [ ${overallPct}% ]`;
+      document.getElementById('bar-cycle-progress').style.width = `${overallPct}%`;
+
+      // Selects sync
+      document.getElementById('temp-mode').value = state.tempControlMode;
+      document.getElementById('hum-mode').value = state.humControlMode;
+      document.getElementById('decoupling-mode').value = state.decouplingMode;
+
+      drawPaintBooth();
+      updateMathPanels();
+      renderPlotters();
+    }
+
+    // --- 9. Comunicació MQTT i Receptora d'ordres ---
+    function toggleMqttConnection() {
+      if (mqttEnabled) {
+        if (mqttClient) { mqttClient.end(); mqttClient = null; }
+        mqttEnabled = false;
+        document.getElementById('mqtt-dot').className = "w-2.5 h-2.5 rounded-full bg-rose-500";
+        document.getElementById('btn-mqtt-conn').textContent = "Connectar Broker";
+        document.getElementById('btn-mqtt-conn').className = "px-3 py-0.5 bg-rose-900 hover:bg-rose-800 text-rose-100 text-[9px] font-bold rounded transition border border-rose-800/40";
+        addLog("[MQTT] Desconnectat manualment del Broker.");
+      } else {
+        const host = document.getElementById('mqtt-host').value;
+        const topic = document.getElementById('mqtt-topic').value;
+        const user = document.getElementById('mqtt-user').value;
+        const pass = document.getElementById('mqtt-pass').value;
+
+        addLog(`[MQTT] Intentant connectar a: ${host}...`);
+        
+        try {
+          const opts = {};
+          if (user) opts.username = user;
+          if (pass) opts.password = pass;
+
+          mqttClient = mqtt.connect(host, opts);
+
+          mqttClient.on('connect', () => {
+            mqttEnabled = true;
+            document.getElementById('mqtt-dot').className = "w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]";
+            document.getElementById('btn-mqtt-conn').textContent = "Desconnectar";
+            document.getElementById('btn-mqtt-conn').className = "px-3 py-0.5 bg-emerald-700 hover:bg-emerald-600 text-emerald-100 text-[9px] font-bold rounded transition border border-emerald-500/30";
+            addLog(`[MQTT] CONNECTAT correctament a HiveMQ Broker.`);
+
+            // Subscripcions directes i granulars
+            mqttClient.subscribe(`${topic}cmd`);
+            mqttClient.subscribe(`${topic}telemetria/control_temp/set`);
+            mqttClient.subscribe(`${topic}telemetria/control_hum/set`);
+            addLog(`[MQTT] Subscrit al canal d'ordres: ${topic}cmd`);
+          });
+
+          mqttClient.on('error', (err) => {
+            addLog(`[MQTT ERROR] No s'ha pogut establir connexió: ${err.message}`);
+          });
+
+          mqttClient.on('message', (topicReceived, message) => {
+            const topicBase = document.getElementById('mqtt-topic').value;
+            const payload = message.toString();
+
+            if (topicReceived === `${topicBase}telemetria/control_temp/set`) {
+              const val = Number(payload);
+              if (!isNaN(val)) {
+                state.tempExternal = Math.max(0, Math.min(100, val));
+                addLog(`[MQTT RECEIVE] Control Temperatura manual extern (MQTT): ${val.toFixed(1)}%`);
+                updateUIElements();
+                renderSliders();
+              }
+            } else if (topicReceived === `${topicBase}telemetria/control_hum/set`) {
+              const val = Number(payload);
+              if (!isNaN(val)) {
+                state.humExternal = Math.max(0, Math.min(100, val));
+                addLog(`[MQTT RECEIVE] Control Humitat manual extern (MQTT): ${val.toFixed(1)}%`);
+                updateUIElements();
+                renderSliders();
+              }
+            } else if (topicReceived === `${topicBase}cmd`) {
+              try {
+                const cmd = JSON.parse(payload);
+                addLog(`[MQTT CMD] Ordre JSON rebuda: ${payload}`);
+                
+                if (cmd.action === 'start') {
+                  if (!state.running) toggleRunning();
+                } else if (cmd.action === 'stop') {
+                  if (state.running) toggleRunning();
+                } else if (cmd.action === 'reset') {
+                  resetSim();
+                }
+
+                if (cmd.config) {
+                  // Actualització dinàmica de l'estat des de comandes JSON externes (MQTT)
+                  if (cmd.config.tempSetpoint !== undefined) state.tempSetpoint = Math.max(0, Math.min(100, cmd.config.tempSetpoint));
+                  if (cmd.config.humSetpoint !== undefined) state.humSetpoint = Math.max(0, Math.min(100, cmd.config.humSetpoint));
+                  if (cmd.config.tempControlMode !== undefined) state.tempControlMode = cmd.config.tempControlMode;
+                  if (cmd.config.humControlMode !== undefined) state.humControlMode = cmd.config.humControlMode;
+                  if (cmd.config.decouplingMode !== undefined) state.decouplingMode = cmd.config.decouplingMode;
+                  updateUIElements();
+                  renderSliders();
+                }
+              } catch (e) {
+                addLog(`[MQTT ERROR] Format JSON incorrecte en cmd: ${payload}`);
+              }
+            }
+          });
+        } catch (err) {
+          addLog(`[MQTT ERROR] Connexió fallida: ${err.message}`);
+        }
+      }
+    }
+
+    function sendMqttTelemetry() {
+      if (!mqttClient) return;
+      const topicBase = document.getElementById('mqtt-topic').value;
+      const now = Date.now();
+
+      // Granular telemetry helper
+      const checkAndPublish = (key, val, topicSub) => {
+        const conf = state.telemetry[key];
+        if (!conf.enabled) return;
+        const delta = conf.lastValue === null ? null : Math.abs(val - conf.lastValue);
+        const timeElapsed = now - conf.lastPublishTime;
+
+        if (conf.lastValue === null || delta >= conf.deadbandAbs || timeElapsed >= conf.minInterval) {
+          mqttClient.publish(`${topicBase}telemetria/${topicSub}`, val.toFixed(2));
+          mqttClient.publish(`${topicBase}ts/telemetria/${topicSub}-ts`, now.toString());
+          conf.lastValue = val;
+          conf.lastPublishTime = now;
+        }
+      };
+
+      // Publishes individuals granulars
+      checkAndPublish('temperatura', state.temp, 'temperatura');
+      checkAndPublish('humitat', state.hum, 'humitat');
+      checkAndPublish('control_temp', state.tempOutput, 'control_temp');
+      checkAndPublish('control_hum', state.humOutput, 'control_hum');
+
+      // Publish global payload
+      const globalPayload = {
+        temperatura: Number(state.temp.toFixed(2)),
+        humitat: Number(state.hum.toFixed(2)),
+        estat_proces: state.processState,
+        consigna_temp: state.tempSetpoint,
+        consigna_hum: state.humSetpoint,
+        control_temp: Number(state.tempOutput.toFixed(2)),
+        control_hum: Number(state.humOutput.toFixed(2)),
+        decoupling_mode: state.decouplingMode
+      };
+      mqttClient.publish(`${topicBase}telemetria`, JSON.stringify(globalPayload));
+    }
+
+    // --- 10. Serial Logging i Captura Logs ---
+    function addLog(msg) {
+      if (!loggingEnabled) return;
+      const time = new Date().toLocaleTimeString();
+      const formatted = `[${time}] ${msg}`;
+      state.logs.push(formatted);
+      if (state.logs.length > 100) state.logs.shift();
+      renderLogs();
+    }
+
+    function renderLogs() {
+      const el = document.getElementById('serial-logs');
+      if (!el) return;
+      el.innerHTML = state.logs.map(log => `<div>${log}</div>`).join('');
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function clearLogs() {
+      state.logs = [];
+      renderLogs();
+    }
+
+    function toggleLogging() {
+      loggingEnabled = !loggingEnabled;
+      const btn = document.getElementById('btn-log-toggle');
+      if (loggingEnabled) {
+        btn.textContent = "Registre: ON";
+        btn.className = "text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded border bg-emerald-700/85 hover:bg-emerald-600 text-white border-emerald-500/20 transition";
+      } else {
+        btn.textContent = "Registre: OFF";
+        btn.className = "text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded border bg-slate-900 hover:bg-slate-850 text-slate-400 border-slate-800 transition";
+      }
+    }
+
+    function downloadCsv() {
+      if (tempData.length === 0 && humData.length === 0) {
+        addLog("[SISTEMA] No hi ha dades de telemetria capturades encara.");
+        return;
+      }
+      let csv = "\uFEFF"; // UTF-8 BOM
+      csv += "Temps (s);Temperatura (ºC);Consigna Temp (ºC);Control Calefactor (%);Humitat (% HR);Consigna Humitat (%);Control Vapor (%)\n";
+      
+      const len = Math.max(tempData.length, humData.length);
+      for (let i = 0; i < len; i++) {
+        const t = tempData[i] || { time: '', actual: '', setpoint: '', output: '' };
+        const h = humData[i] || { time: '', actual: '', setpoint: '', output: '' };
+        csv += `${String(t.time).replace('.', ',')};${String(t.actual).replace('.', ',')};${String(t.setpoint).replace('.', ',')};${String(t.output).replace('.', ',')};` +
+               `${String(h.actual).replace('.', ',')};${String(h.setpoint).replace('.', ',')};${String(h.output).replace('.', ',')}\n`;
+      }
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `telemetria_sala_pintura_${Date.now()}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      addLog("[SISTEMA] Dades descarregades com a fitxer CSV.");
+    }
+
+    // --- 11. Modal de configuració granular ---
+    function toggleTelemetryWindow() {
+      const modal = document.getElementById('telemetry-modal');
+      modal.classList.toggle('hidden');
+      if (!modal.classList.contains('hidden')) {
+        renderTelemetrySettings();
+      }
+    }
+
+    function renderTelemetrySettings() {
+      const container = document.getElementById('telemetry-settings-container');
+      container.innerHTML = Object.keys(state.telemetry).map(key => {
+        const conf = state.telemetry[key];
+        return `
+          <div class="bg-slate-950 p-2 rounded border border-slate-850 space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-slate-300 uppercase">${key}</span>
+              <input type="checkbox" ${conf.enabled ? 'checked' : ''} onchange="state.telemetry['${key}'].enabled = this.checked; saveConfigToLocal();" class="accent-emerald-500">
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-[9px] text-slate-500">
+              <div class="flex flex-col">
+                <label>Banda Morta (Abs)</label>
+                <input type="number" step="0.1" value="${conf.deadbandAbs}" onchange="state.telemetry['${key}'].deadbandAbs = Number(this.value); saveConfigToLocal();" class="bg-slate-900 border border-slate-800 rounded text-slate-200 p-0.5 outline-none font-mono text-center">
+              </div>
+              <div class="flex flex-col">
+                <label>Min Interval (ms)</label>
+                <input type="number" step="50" value="${conf.minInterval}" onchange="state.telemetry['${key}'].minInterval = Number(this.value); saveConfigToLocal();" class="bg-slate-900 border border-slate-800 rounded text-slate-200 p-0.5 outline-none font-mono text-center">
+              </div>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    function toggleHelpModal() {
+      const modal = document.getElementById('help-modal');
+      modal.classList.toggle('hidden');
+    }
+
+    // --- 12. Flux del Cicle ---
+    function toggleRunning() {
+      state.running = !state.running;
+      const btn = document.getElementById('btn-play');
+      if (state.running) {
+        btn.innerHTML = `<svg class="w-3.5 h-3.5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 19l-4.5-4.5"/></svg> <span>Aturar Cicle</span>`;
+        btn.className = "px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-amber-600 hover:bg-amber-500 text-white shadow transition";
+        addLog("[SISTEMA] Cicle Iniciat.");
+      } else {
+        btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> <span>Iniciar Cicle</span>`;
+        btn.className = "px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow transition";
+        addLog("[SISTEMA] Cicle Aturat per l'usuari.");
+      }
+      saveConfigToLocal();
+    }
+
+    function stepSim() {
+      tick(50, true);
+    }
+
+    function resetSim() {
+      state.temp = 20.0;
+      state.hum = 40.0;
+      state.timer = 0;
+      state.totalCycleTimer = 0;
+      state.realTimeCounter = 0;
+      state.tempIntegral = 0;
+      state.humIntegral = 0;
+      state.tempLastError = 0;
+      state.humLastError = 0;
+      state.running = false;
+      state.processState = 'IDLE';
+      state.showGreenCar = false;
+
+      const btn = document.getElementById('btn-play');
+      btn.innerHTML = `<svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg> <span>Iniciar Cicle</span>`;
+      btn.className = "px-4 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shadow transition";
+
+      tempData = [];
+      humData = [];
+      heatWaves = [];
+      steamParticles = [];
+      
+      addLog("[SISTEMA] Reset complet. Cabina en condicions ambientals.");
+      updateUIElements();
+    }
+
+    // --- 13. Persistència de dades local ---
+    function saveConfigToLocal() {
+      const config = {
+        tempPid: state.tempPid,
+        humPid: state.humPid,
+        tempInertia: state.tempInertia,
+        humInertia: state.humInertia,
+        tempControlMode: state.tempControlMode,
+        humControlMode: state.humControlMode,
+        tempExternal: state.tempExternal,
+        humExternal: state.humExternal,
+        decouplingMode: state.decouplingMode,
+        kTH: state.kTH,
+        kHT: state.kHT,
+        phaseConfigs: state.phaseConfigs,
+        telemetry: state.telemetry
+      };
+      localStorage.setItem('iesebre_salapintura_cfg', JSON.stringify(config));
+    }
+
+    function restoreConfigFromLocal() {
+      try {
+        const saved = localStorage.getItem('iesebre_salapintura_cfg');
+        if (saved) {
+          const cfg = JSON.parse(saved);
+          Object.assign(state, cfg);
+          addLog("[SISTEMA] Configuració d'usuari restaurada correctament.");
+        }
+      } catch (e) {
+        addLog("[SISTEMA] Error en carregar la configuració desada.");
+      }
+    }
+
+    // --- 14. Inicialització de l'App ---
+    window.addEventListener('DOMContentLoaded', () => {
+      restoreConfigFromLocal();
+
+      // Sincronitzar camps de text fase
+      document.getElementById('inp-f1-dur').value = state.phaseConfigs.fase1.duration;
+      document.getElementById('inp-f1-temp').value = state.phaseConfigs.fase1.tempSp;
+      document.getElementById('inp-f1-hum').value = state.phaseConfigs.fase1.humSp;
+
+      document.getElementById('inp-f2-dur').value = state.phaseConfigs.fase2.duration;
+      document.getElementById('inp-f2-temp').value = state.phaseConfigs.fase2.tempSp;
+      document.getElementById('inp-f2-hum').value = state.phaseConfigs.fase2.humSp;
+
+      document.getElementById('inp-f3-dur').value = state.phaseConfigs.fase3.duration;
+      document.getElementById('inp-f3-temp').value = state.phaseConfigs.fase3.tempSp;
+      document.getElementById('inp-f3-hum').value = state.phaseConfigs.fase3.humSp;
+
+      renderSliders();
+      updateAWButtons();
+      updateUIElements();
+      renderLogs();
+
+      // Engegar el bucle de simulació principal
+      customSetInterval(() => {
+        tick(50);
+      }, 50);
+    });
+  </script>
+</body>
+</html>
