@@ -447,7 +447,17 @@
             <li><span class="text-emerald-400">iesebre/salapintura/telemetria</span> : Envia un JSON complet amb l'estat en temps real.</li>
             <li><span class="text-emerald-400">iesebre/salapintura/telemetria/temperatura</span> : Temperatura de la sala.</li>
             <li><span class="text-emerald-400">iesebre/salapintura/telemetria/humitat</span> : Humitat de la sala.</li>
-            <li><span class="text-emerald-400">iesebre/salapintura/cmd</span> : Rebi ordres JSON com {"action": "start"}, {"action": "reset"}, o actualitzacions de consigna.</li>
+            <li>
+              <span class="text-emerald-400">iesebre/salapintura/cmd</span> : Rebre ordres JSON per controlar el simulador remotament. Exemples d'accions disponibles:<br/>
+              <ul class="list-[circle] pl-4 mt-1 space-y-0.5 text-[8.5px] text-slate-400">
+                <li><code class="text-amber-400">{"action": "start"}</code>: Inicia el cicle de simulació.</li>
+                <li><code class="text-amber-400">{"action": "stop"}</code>: Atura la simulació.</li>
+                <li><code class="text-amber-400">{"action": "reset"}</code>: Reinicia la simulació als valors inicials.</li>
+                <li><code class="text-amber-400">{"config": {"tempSetpoint": 30, "humSetpoint": 50}}</code>: Modifica les consignes de temperatura i humitat.</li>
+                <li><code class="text-amber-400">{"config": {"tempControlMode": "PID", "humControlMode": "ON_OFF"}}</code>: Modifica el mode de control (opcions: 'PID', 'ON_OFF', 'HYSTERESIS', 'MANUAL').</li>
+                <li><code class="text-amber-400">{"config": {"decouplingMode": "MATRIX"}}</code>: Modifica el mode de desacoblament (opcions: 'NONE', 'MATRIX', 'SIMPLIFIED').</li>
+              </ul>
+            </li>
             <li><span class="text-emerald-400">iesebre/salapintura/telemetria/control_temp/set</span> : Rebi un valor de potència de calefactor directa en mode Manual.</li>
             <li><span class="text-emerald-400">iesebre/salapintura/telemetria/control_hum/set</span> : Rebi un valor d'obertura de vàlvula directa en mode Manual.</li>
           </ul>

@@ -73,3 +73,16 @@ S'implementarà un selector per triar el mètode de desacoblament perquè els al
    * Redissenyar la visualització 2D del Canvas (representació d'un cotxe, aspersió de pintura, escalfador de calor en vermell, vapor en blau).
    * Actualitzar els sliders de configuració, gràfiques de temps real (Temperatura i Humitat), logs, comandes MQTT i configuracions de presets.
 4. **Verificació de Compilació i Linter**: Comprovar que el fitxer està lliure d'errors sintàctics i que el servidor arrenca correctament.
+
+---
+
+## 7. Millores Aplicades a posteriori
+
+Des de la planificació inicial, s'han implementat i integrat diverses millores segons l'evolució i anàlisi del sistema:
+
+* **Correcció del Model Físic (Refredament per Humitat)**:
+  S'ha actualitzat l'equació natural de la planta per reflectir que l'augment d'humitat té un efecte de **refredament adiabàtic** sobre l'ambient, no d'escalfament. Això ha provocat l'ajust de les fórmules matemàtiques ($u'_T = u_T - K_{HT} \cdot u_H$) i conseqüentment dels algoritmes de desacoblament (Matriu i Simplificat).
+* **Millora en la documentació MQTT (Topic `cmd`)**:
+  S'ha detallat al panell d'Ajuda els diferents payloads JSON acceptats per poder controlar remotament la planta (canvis de consigna, alteració del mode de desacoblament, estats d'execució com Start, Stop, Reset).
+* **Verificació del sistema Anti-Windup**:
+  S'ha analitzat i comprovat el comportament integral per a assegurar que davant d'errors llargs i saturació de l'actuador (com els canvis dràstics que succeeixen entre fases del procés de pintura), l'actuador no quedi bloquejat artificialment a valors diferents de 0 o 100%, evitant retards en les reaccions dels PID de temperatura i humitat.
