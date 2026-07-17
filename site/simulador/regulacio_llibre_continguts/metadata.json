@@ -1,0 +1,8 @@
+{
+  "name": "Conceptes cap1",
+  "description": "A standalone HTML application using Vanilla JS and CSS for literal code replication and iterative development.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
